@@ -1197,6 +1197,9 @@ body.swap-mode .xi-pitch::after {
   color: var(--paper, #fff);
 }
 .ad-slot__house-title strong { color: #69C9D0; }
+/* Eatography variant — warm orange accent */
+.ad-slot__house--eatography .ad-slot__house-eyebrow { color: #FF6B35; }
+.ad-slot__house--eatography .ad-slot__house-title strong { color: #FF6B35; }
 .ad-slot__house-sub {
   font-family: var(--font-mono);
   font-size: 10px;
