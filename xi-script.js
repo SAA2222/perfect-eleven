@@ -2007,6 +2007,13 @@ function initSlots() {
 const PREMIUM_UNLOCK_KEY = 'pe_premium_unlocked';
 const PREMIUM_MODES = new Set(['top50', 'legends']);
 
+// Stripe Payment Link — set this to your real Stripe Payment Link URL.
+// Create one at https://dashboard.stripe.com/payment-links (one-time $4.99 product).
+// In Stripe link config, set the Confirmation page to:
+//   https://perfect-eleven.vercel.app/?premium=success
+// so the redirect back here triggers an automatic unlock.
+const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/REPLACE_ME_WITH_REAL_LINK';
+
 function isPremium() {
   return localStorage.getItem(PREMIUM_UNLOCK_KEY) === '1';
 }
@@ -2021,6 +2028,18 @@ function unlockPremium() {
 }
 function openPaywall() { $('paywallModal').hidden = false; }
 function closePaywall() { $('paywallModal').hidden = true; }
+
+// Auto-unlock when Stripe redirects back with ?premium=success.
+function handleStripeReturn() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('premium') === 'success') {
+    unlockPremium();
+    // Clean the URL so refreshes don't keep showing the toast
+    const cleanUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, document.title, cleanUrl);
+    setTimeout(() => toast('🎉 PREMIUM UNLOCKED · TOP 50 + LEGENDS LIVE'), 600);
+  }
+}
 
 function initModes() {
   // sync lock state at boot
@@ -2051,24 +2070,31 @@ function initModes() {
     });
   });
 
-  // paywall wiring
+  // paywall wiring — REAL Stripe Payment Link checkout
   $('paywallClose')?.addEventListener('click', closePaywall);
   $('paywallBackdrop')?.addEventListener('click', closePaywall);
   $('paywallUnlock')?.addEventListener('click', () => {
-    // DEMO — production: window.location.href = 'https://checkout.stripe.com/c/pay/cs_...';
-    unlockPremium();
-    closePaywall();
-    toast('PREMIUM UNLOCKED · TOP 50 + LEGENDS LIVE');
+    if (!STRIPE_PAYMENT_LINK || STRIPE_PAYMENT_LINK.includes('REPLACE_ME')) {
+      toast('PAYMENT LINK NOT CONFIGURED — CONTACT SUPPORT');
+      return;
+    }
+    // Redirect to Stripe — they handle card capture + 3DS + receipts.
+    // On success Stripe sends users back to ?premium=success, which auto-unlocks.
+    window.location.href = STRIPE_PAYMENT_LINK;
   });
   $('paywallRestore')?.addEventListener('click', (e) => {
     e.preventDefault();
-    unlockPremium();
-    closePaywall();
-    toast('PURCHASE RESTORED');
+    // Honest behaviour: paywall state lives in this device's localStorage. A real
+    // multi-device restore would need an auth backend; until then, ask the user
+    // to email a receipt so we can manually unlock.
+    const subject = encodeURIComponent('Perfect Eleven — restore premium');
+    const body = encodeURIComponent('Hi — I purchased Perfect Eleven premium and need it restored on a new device. My Stripe receipt email / last-4: ');
+    window.location.href = `mailto:saarim1745@gmail.com?subject=${subject}&body=${body}`;
   });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  handleStripeReturn();   // auto-unlock if Stripe redirected back with ?premium=success
   initSlots();
   initModes();
   buildSpinnerCards();
