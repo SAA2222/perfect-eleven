@@ -61,7 +61,7 @@ const SPONSORS = [
   { name: 'YOUR BRAND',    tagline: 'AVAILABLE FOR SPONSORSHIP · CONTACT', accent: '#00ff85' },
   { name: 'POLYMARKET',    tagline: 'PREDICT THE WORLD CUP',               accent: '#1652F0' },
   { name: '@CASUALZFC',    tagline: 'NOW ON TIKTOK',                       accent: '#69C9D0' },
-  { name: '@EATOGRAPHY',   tagline: 'PLATES WORTH CHASING',                accent: '#FF6B35' },
+  { name: '@EATOGRAPHY',   tagline: 'PLATES WORTH CHASING · NOW ON TIKTOK',accent: '#FF6B35' },
 ];
 
 function renderSponsorTicker() {
