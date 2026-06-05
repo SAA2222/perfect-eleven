@@ -1524,7 +1524,8 @@ function renderPolymarketCTA() {
   // tiebreak by total rating. This avoids '1 of your players is from X' fallback.
   entries.sort((a, b) => (b[1].count - a[1].count) || (b[1].rating - a[1].rating));
   const [code, info] = entries[0];
-  const url = `https://polymarket.com/event/fifa-world-cup-winner-2026?utm_source=${POLYMARKET_PARTNER_ID}&utm_medium=xi-builder&utm_campaign=complete-modal&xi_nation=${code}`;
+  // Direct deep-link to the 2026 World Cup Winner market — verified live.
+  const url = `https://polymarket.com/event/world-cup-winner?utm_source=${POLYMARKET_PARTNER_ID}&utm_medium=xi-builder&utm_campaign=complete-modal&xi_nation=${code}`;
   // Pick the right copy based on how many you have from this nation
   let copy;
   if (info.count >= 3) {
