@@ -1192,27 +1192,33 @@ function computeAwards() {
   const generalBias  = isLegendsMode ? {} : AWARD_BIAS;
   const assisterBias = isLegendsMode ? {} : TOP_ASSISTER_BIAS;
 
+  // Track winners to prevent the same player from sweeping multiple awards.
+  // Real World Cups never have one player winning Golden Boot + Top Assister + Best Mid + Young Player.
+  const taken = new Set();
+  const exclude = (arr) => arr.filter(p => !taken.has(p.name));
+  const claim = (player) => { if (player?.name) taken.add(player.name); return player; };
+
   // From the FULL tournament pool
-  const goldenBall = weightedTopPick(all, 10, generalBias);
+  const goldenBall = claim(weightedTopPick(all, 10, generalBias));
 
-  const attackers = all.filter(p => ['ST','LW','RW'].includes(p.role));
-  const goldenBoot = attackers.length ? weightedTopPick(attackers, 10, generalBias) : null;
+  const attackers = exclude(all.filter(p => ['ST','LW','RW'].includes(p.role)));
+  const goldenBoot = attackers.length ? claim(weightedTopPick(attackers, 10, generalBias)) : null;
 
-  // Top assister: playmakers, exclude the Golden Boot winner
-  const playmakers = all.filter(p => ['CAM','CM','LW','RW'].includes(p.role) && p.name !== goldenBoot?.name);
-  const topAssister = playmakers.length ? weightedTopPick(playmakers, 12, assisterBias) : null;
+  // Top assister: playmakers, exclude already-claimed winners
+  const playmakers = exclude(all.filter(p => ['CAM','CM','LW','RW'].includes(p.role)));
+  const topAssister = playmakers.length ? claim(weightedTopPick(playmakers, 12, assisterBias)) : null;
 
-  const keepers = all.filter(p => p.role === 'GK');
-  const goldenGlove = keepers.length ? weightedTopPick(keepers, 5, generalBias) : null;
+  const keepers = exclude(all.filter(p => p.role === 'GK'));
+  const goldenGlove = keepers.length ? claim(weightedTopPick(keepers, 5, generalBias)) : null;
 
-  const youngs = all.filter(p => typeof U25_PLAYERS !== 'undefined' && U25_PLAYERS.has(p.name));
-  const youngPlayer = youngs.length ? weightedTopPick(youngs, 8, generalBias) : null;
+  const youngs = exclude(all.filter(p => typeof U25_PLAYERS !== 'undefined' && U25_PLAYERS.has(p.name)));
+  const youngPlayer = youngs.length ? claim(weightedTopPick(youngs, 8, generalBias)) : null;
 
-  const defenders = all.filter(p => ['CB','LB','RB'].includes(p.role));
-  const bestDefender = defenders.length ? weightedTopPick(defenders, 8, generalBias) : null;
+  const defenders = exclude(all.filter(p => ['CB','LB','RB'].includes(p.role)));
+  const bestDefender = defenders.length ? claim(weightedTopPick(defenders, 8, generalBias)) : null;
 
-  const mids = all.filter(p => ['CDM','CM','CAM'].includes(p.role));
-  const bestMid = mids.length ? weightedTopPick(mids, 8, generalBias) : null;
+  const mids = exclude(all.filter(p => ['CDM','CM','CAM'].includes(p.role)));
+  const bestMid = mids.length ? claim(weightedTopPick(mids, 8, generalBias)) : null;
 
   // CAPTAIN — from the user's XI (highest outfield rating). Deterministic, not weighted.
   const userPlayers = Object.values(state.roster);
