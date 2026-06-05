@@ -137,8 +137,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="preconnect" href="https://flagcdn.com" />
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=20260605ca" />
-<link rel="stylesheet" href="build-xi.css?v=20260605ca" />
+<link rel="stylesheet" href="styles.css?v=20260605cb" />
+<link rel="stylesheet" href="build-xi.css?v=20260605cb" />
 <!-- Google AdSense verification + loader -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9372890411087994"
         crossorigin="anonymous"></script>
@@ -360,12 +360,12 @@
          data-ad-slot="0000000000"
          data-ad-format="auto"
          data-full-width-responsive="true"></ins>
-    <a class="ad-slot__house ad-slot__house--casualz" href="https://www.tiktok.com/@casualzfc" target="_blank" rel="noopener" data-house-ad>
+    <a class="ad-slot__house ad-slot__house--casualz" href="https://www.tiktok.com/@casualzfc" target="_blank" rel="noopener" data-house-ad style="display:none">
       <span class="ad-slot__house-eyebrow">FOR YOU</span>
       <span class="ad-slot__house-title">FOLLOW <strong>@CASUALZFC</strong> ON TIKTOK</span>
       <span class="ad-slot__house-sub">MORE WORLD CUP CONTENT · TAP TO FOLLOW →</span>
     </a>
-    <a class="ad-slot__house ad-slot__house--eatography" href="https://www.tiktok.com/@eatography" target="_blank" rel="noopener" data-house-ad>
+    <a class="ad-slot__house ad-slot__house--eatography" href="https://www.tiktok.com/@eatography" target="_blank" rel="noopener" data-house-ad style="display:none">
       <span class="ad-slot__house-eyebrow">PLATES WORTH CHASING</span>
       <span class="ad-slot__house-title">FOLLOW <strong>@EATOGRAPHY</strong> ON TIKTOK</span>
       <span class="ad-slot__house-sub">FOOD CONTENT YOU WON'T SCROLL PAST · TAP TO FOLLOW →</span>
@@ -373,22 +373,21 @@
     <script>
       (window.adsbygoogle = window.adsbygoogle || []).push({});
       (function(){
-        // Weighted house-ad pick: 75% CasualzFC (WC-themed), 25% Eatography
-        var houses = document.querySelectorAll('#leaderboardAdSlot [data-house-ad]');
-        if (!houses.length) return;
-        var casualz    = document.querySelector('#leaderboardAdSlot .ad-slot__house--casualz');
-        var eatography = document.querySelector('#leaderboardAdSlot .ad-slot__house--eatography');
-        var pick = (Math.random() < 0.75) ? casualz : eatography;
-        houses.forEach(function(h){ if (h !== pick) h.style.display = 'none'; });
-
-        // After 4s, hide all house ads if AdSense rendered a real ad.
+        // House ads start HIDDEN. After 3s, check if AdSense actually rendered
+        // an ad. If yes → leave the slot to Google. If no → reveal one
+        // house ad (75% CasualzFC / 25% Eatography) as a fallback.
         setTimeout(function(){
           var ins = document.querySelector('#leaderboardAdSlot .adsbygoogle');
           if (!ins) return;
           var status = ins.getAttribute('data-adsbygoogle-status') || '';
           var filled = (ins.offsetHeight > 40) || status === 'done';
-          if (filled) houses.forEach(function(h){ h.style.display = 'none'; });
-        }, 4000);
+          if (filled) return; // AdSense rendered a real ad — show nothing else
+          // AdSense didn't fill — reveal one house ad
+          var casualz    = document.querySelector('#leaderboardAdSlot .ad-slot__house--casualz');
+          var eatography = document.querySelector('#leaderboardAdSlot .ad-slot__house--eatography');
+          var pick = (Math.random() < 0.75) ? casualz : eatography;
+          if (pick) pick.style.display = '';
+        }, 3000);
       })();
     </script>
   </div>
@@ -687,9 +686,9 @@
   </div>
 </footer>
 
-<script src="live-stats.js?v=20260605ca"></script>
-<script src="xi-data.js?v=20260605ca"></script>
-<script src="xi-script.js?v=20260605ca"></script>
-<script src="extras.js?v=20260605ca"></script>
+<script src="live-stats.js?v=20260605cb"></script>
+<script src="xi-data.js?v=20260605cb"></script>
+<script src="xi-script.js?v=20260605cb"></script>
+<script src="extras.js?v=20260605cb"></script>
 </body>
 </html>
