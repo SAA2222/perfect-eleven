@@ -896,7 +896,9 @@ function initLiveBadge() {
   badge.textContent = `LIVE · ${phase}`;
   target.appendChild(badge);
 }
-// Replace simulated award winners with real tournament leaders once available
+// Replace simulated award winners with real tournament leaders once available.
+// Once tournament is LIVE: prefer real data > TBD placeholder. Never falls back to
+// bias-simulated picks during tournament — that would lie about reality.
 function applyLiveAwards(awards) {
   if (!isTournamentLive() || !awards) return awards;
   const live = window.LIVE_STATS.awards || {};
@@ -908,15 +910,31 @@ function applyLiveAwards(awards) {
     }
     return null;
   };
+  // Derive Golden Boot / Top Assister directly from per-player stats as backup
+  // (the scraper does this too, but this is belt-and-suspenders if awards.* is null)
+  const derive = (key) => {
+    const players = window.LIVE_STATS.players || {};
+    const entries = Object.entries(players)
+      .map(([name, s]) => [name, s[key] || 0])
+      .filter(([, v]) => v > 0)
+      .sort((a, b) => b[1] - a[1]);
+    if (!entries.length) return null;
+    return { name: entries[0][0], value: entries[0][1] };
+  };
+  const liveOrTBD = (target, derivedTarget, tbdLabel) => {
+    const real = lookup(target) || lookup(derivedTarget);
+    if (real) return real;
+    return { __tbd: true, name: 'TBD', tbdLabel: tbdLabel || 'AWAITING TOURNAMENT DATA' };
+  };
   return {
     ...awards,
-    goldenBall:   lookup(live.goldenBall)   || awards.goldenBall,
-    goldenBoot:   lookup(live.goldenBoot)   || awards.goldenBoot,
-    topAssister:  lookup(live.topAssister)  || awards.topAssister,
-    goldenGlove:  lookup(live.goldenGlove)  || awards.goldenGlove,
-    youngPlayer:  lookup(live.youngPlayer)  || awards.youngPlayer,
-    bestDefender: lookup(live.bestDefender) || awards.bestDefender,
-    bestMid:      lookup(live.bestMidfielder) || awards.bestMid,
+    goldenBall:   liveOrTBD(live.goldenBall,   null,                'NO MOTM DATA YET'),
+    goldenBoot:   liveOrTBD(live.goldenBoot,   derive('G'),         'NO GOALS SCORED YET'),
+    topAssister:  liveOrTBD(live.topAssister,  derive('A'),         'NO ASSISTS YET'),
+    goldenGlove:  liveOrTBD(live.goldenGlove,  null,                'NO CLEAN SHEETS YET'),
+    youngPlayer:  liveOrTBD(live.youngPlayer,  null,                'TBD'),
+    bestDefender: liveOrTBD(live.bestDefender, null,                'TBD'),
+    bestMid:      liveOrTBD(live.bestMidfielder, null,              'TBD'),
   };
 }
 
@@ -1077,6 +1095,20 @@ function computeAwards() {
 
 function awardCardHTML(emoji, label, awardKey, player) {
   if (!player) return '';
+  // TBD card — when tournament has started but no data yet for this award
+  if (player.__tbd) {
+    return `
+      <div class="xi-award xi-award--tbd">
+        <span class="xi-award__icon">${emoji}</span>
+        <div class="xi-award__body">
+          <span class="xi-award__label">${label}</span>
+          <span class="xi-award__player">TBD</span>
+          <span class="xi-award__stat">${player.tbdLabel || 'AWAITING DATA'}</span>
+          <span class="xi-award__meta">UPDATES WHEN MATCHES HAPPEN</span>
+        </div>
+      </div>
+    `;
+  }
   const stat = statFor(awardKey, player);
   // Is this award winner in the user's XI?
   const userNames = new Set(Object.values(state.roster).map(p => p.name));
@@ -1143,8 +1175,15 @@ function showCompleteModal() {
   const awards = computeAwards();
   const awardsContainer = document.getElementById('xiAwards');
   if (awardsContainer && awards) {
+    const live = isTournamentLive();
+    const updatedAt = window.LIVE_STATS?.updatedAt || '';
+    const phase = window.LIVE_STATS?.status || 'PRE';
+    const caption = live
+      ? `<div class="xi-awards__caption xi-awards__caption--live">● LIVE · ${phase} · UPDATED ${updatedAt}</div>`
+      : `<div class="xi-awards__caption">SIMULATED · TOURNAMENT KICKS OFF JUNE 11</div>`;
     awardsContainer.innerHTML = `
       <h3 class="xi-awards__title">TOURNAMENT AWARDS</h3>
+      ${caption}
       <div class="xi-awards__grid">
         ${awardCardHTML('🏆', 'GOLDEN BALL',     'goldenBall',   awards.goldenBall)}
         ${awardCardHTML('Ⓒ',  'CAPTAIN (XI)',    'captain',      awards.captain)}

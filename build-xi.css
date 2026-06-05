@@ -1374,6 +1374,46 @@ body.swap-mode .xi-pitch::after {
   font-weight: 700;
   margin-top: 2px;
 }
+/* Awards data-freshness caption */
+.xi-awards__caption {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--mute);
+  font-weight: 700;
+  margin: -4px 0 14px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.03);
+  border-left: 2px solid var(--mute);
+  border-radius: 2px;
+}
+.xi-awards__caption--live {
+  color: var(--crimson, #ff2e4d);
+  background: rgba(255, 46, 77, 0.06);
+  border-left-color: var(--crimson, #ff2e4d);
+}
+/* TBD award card — shown when tournament is live but no data yet */
+.xi-award--tbd {
+  opacity: 0.6;
+  border: 1px dashed var(--rule) !important;
+  background: rgba(255,255,255,0.02) !important;
+}
+.xi-award--tbd .xi-award__player {
+  color: var(--mute) !important;
+  letter-spacing: 0.16em;
+}
+.xi-award--tbd .xi-award__stat {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--mute);
+  letter-spacing: 0.1em;
+}
+.xi-award--tbd .xi-award__meta {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--mute-2, #555);
+  letter-spacing: 0.1em;
+}
 /* Award winner who is IN your XI — green pitch border + badge */
 .xi-award--in-xi {
   background: linear-gradient(135deg, rgba(0,255,133,0.10), rgba(0,255,133,0.04)) !important;
