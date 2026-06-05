@@ -137,8 +137,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="preconnect" href="https://flagcdn.com" />
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=20260605cb" />
-<link rel="stylesheet" href="build-xi.css?v=20260605cb" />
+<link rel="stylesheet" href="styles.css?v=20260605cc" />
+<link rel="stylesheet" href="build-xi.css?v=20260605cc" />
 <!-- Google AdSense verification + loader -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9372890411087994"
         crossorigin="anonymous"></script>
@@ -347,6 +347,11 @@
     <h2 class="section__title">THE <em>LEADERBOARD.</em></h2>
     <p class="section__lede">The highest-rated teams built by readers this week. Beat the top score.</p>
   </div>
+  <a class="leaderboard__cta" href="#xiapp">
+    <span class="leaderboard__cta-eyebrow">★ NOT ON HERE YET?</span>
+    <span class="leaderboard__cta-title">BUILD YOUR XI &amp; CLAIM A SPOT WITH YOUR NAME + CITY →</span>
+    <span class="leaderboard__cta-sub">FREE · TAKES 60 SECONDS · NO SIGNUP</span>
+  </a>
   <div class="leaderboard__grid" id="leaderboardGrid"></div>
 
   <!-- AdSense banner — auto-ads fill this slot once Google approves the site.
@@ -468,10 +473,15 @@
     <div id="xiPolymarket"></div>
     <div class="xi-summary" id="xiSummary"></div>
 
-    <div class="submit-row">
-      <label class="submit-row__label" for="lineupName">BUILT BY</label>
-      <input class="submit-row__input" id="lineupName" type="text" placeholder="YOUR NAME IN YOUR CITY" maxlength="40" autocomplete="off" />
-      <button class="xi-btn xi-btn--ink" id="submitLineupBtn">SUBMIT TO LEADERBOARD →</button>
+    <div class="submit-row submit-row--hero">
+      <div class="submit-row__topline">
+        <label class="submit-row__label" for="lineupName">🏷️ CLAIM YOUR SPOT — ADD YOUR NAME + CITY</label>
+        <span class="submit-row__hint">Friends spot you instantly. No signup.</span>
+      </div>
+      <div class="submit-row__inputrow">
+        <input class="submit-row__input" id="lineupName" type="text" placeholder="e.g. MARK · LONDON" maxlength="40" autocomplete="off" />
+        <button class="xi-btn xi-btn--ink" id="submitLineupBtn">POST TO GLOBAL LEADERBOARD →</button>
+      </div>
     </div>
 
     <div class="modal__foot modal__foot--complete">
@@ -686,9 +696,9 @@
   </div>
 </footer>
 
-<script src="live-stats.js?v=20260605cb"></script>
-<script src="xi-data.js?v=20260605cb"></script>
-<script src="xi-script.js?v=20260605cb"></script>
-<script src="extras.js?v=20260605cb"></script>
+<script src="live-stats.js?v=20260605cc"></script>
+<script src="xi-data.js?v=20260605cc"></script>
+<script src="xi-script.js?v=20260605cc"></script>
+<script src="extras.js?v=20260605cc"></script>
 </body>
 </html>
