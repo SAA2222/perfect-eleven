@@ -1135,6 +1135,207 @@ function copyToClipboard() {
 }
 
 // ============================================================
+// SHARE XI CARD as PNG — canvas-rendered, 1080×1080 for TikTok/IG/X
+// ============================================================
+const XI_CARD_SLOT_POS = {
+  // % of card width / height — matches pitch layout in index.html
+  0:  { x:0.18, y:0.27, label:'LW'  },   // LW
+  1:  { x:0.50, y:0.23, label:'ST'  },   // ST
+  2:  { x:0.82, y:0.27, label:'RW'  },   // RW
+  3:  { x:0.30, y:0.40, label:'LCM' },   // LCM
+  4:  { x:0.70, y:0.40, label:'RCM' },   // RCM
+  5:  { x:0.50, y:0.52, label:'CDM' },   // CDM
+  6:  { x:0.18, y:0.74, label:'LB'  },   // LB
+  7:  { x:0.39, y:0.72, label:'LCB' },   // LCB
+  8:  { x:0.61, y:0.72, label:'RCB' },   // RCB
+  9:  { x:0.82, y:0.74, label:'RB'  },   // RB
+  10: { x:0.50, y:0.88, label:'GK'  },   // GK
+};
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+async function shareXICardImage() {
+  if (Object.keys(state.roster).length !== 11) {
+    toast('FINISH THE XI FIRST');
+    return;
+  }
+  toast('RENDERING CARD…');
+
+  const W = 1080, H = 1080;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // === Background ===
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#0c1410');
+  bg.addColorStop(1, '#06090a');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  // === Header ===
+  ctx.fillStyle = '#00c853';
+  ctx.fillRect(64, 64, 56, 56);
+  ctx.fillStyle = '#0c1410';
+  ctx.font = 'bold 36px Impact, "Arial Black", sans-serif';
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  ctx.fillText('11', 92, 92);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 38px Impact, "Arial Black", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('PERFECT ELEVEN', 140, 92);
+  ctx.fillStyle = '#7a8590';
+  ctx.font = 'bold 18px ui-monospace, "JetBrains Mono", monospace';
+  ctx.fillText('/ 2026 WORLD CUP', 460, 96);
+
+  // === Pitch area ===
+  const PITCH_X = 60, PITCH_Y = 160, PITCH_W = W - 120, PITCH_H = 760;
+  ctx.fillStyle = '#0d1f15';
+  ctx.fillRect(PITCH_X, PITCH_Y, PITCH_W, PITCH_H);
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 2;
+  // halfway line
+  ctx.beginPath();
+  ctx.moveTo(PITCH_X, PITCH_Y + PITCH_H/2);
+  ctx.lineTo(PITCH_X + PITCH_W, PITCH_Y + PITCH_H/2);
+  ctx.stroke();
+  // center circle
+  ctx.beginPath();
+  ctx.arc(PITCH_X + PITCH_W/2, PITCH_Y + PITCH_H/2, 90, 0, Math.PI*2);
+  ctx.stroke();
+  // outer border
+  ctx.strokeRect(PITCH_X, PITCH_Y, PITCH_W, PITCH_H);
+  // penalty boxes
+  ctx.strokeRect(PITCH_X + PITCH_W*0.22, PITCH_Y, PITCH_W*0.56, 100);
+  ctx.strokeRect(PITCH_X + PITCH_W*0.22, PITCH_Y + PITCH_H - 100, PITCH_W*0.56, 100);
+
+  // === Preload all flag images first ===
+  const flagImgs = {};
+  await Promise.all(Object.values(state.roster).map(async p => {
+    const code = p.iso || (NATIONS.find(n => n.code === p.code)?.iso);
+    if (!code || flagImgs[code]) return;
+    try { flagImgs[code] = await loadImage(`https://flagcdn.com/w160/${code}.png`); } catch (e) {}
+  }));
+
+  // === Draw player cards ===
+  const CARD_W = 160, CARD_H = 110;
+  for (let i = 0; i < 11; i++) {
+    const p = state.roster[i];
+    const pos = XI_CARD_SLOT_POS[i];
+    const cx = PITCH_X + PITCH_W * pos.x;
+    const cy = PITCH_Y + PITCH_H * pos.y;
+    const x = cx - CARD_W/2, y = cy - CARD_H/2;
+
+    // card background
+    ctx.fillStyle = '#101a14';
+    ctx.fillRect(x, y, CARD_W, CARD_H);
+    ctx.strokeStyle = '#00c853';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, CARD_W, CARD_H);
+
+    // position label
+    ctx.fillStyle = '#7a8590';
+    ctx.font = 'bold 12px ui-monospace, "JetBrains Mono", monospace';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(pos.label, x + 8, y + 6);
+
+    if (!p) {
+      ctx.fillStyle = '#3a4b40';
+      ctx.font = 'bold 22px Impact, "Arial Black", sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('OPEN', cx, cy + 8);
+      continue;
+    }
+
+    // flag
+    const code = p.iso || NATIONS.find(n => n.code === p.code)?.iso;
+    if (code && flagImgs[code]) {
+      ctx.drawImage(flagImgs[code], cx - 22, y + 24, 44, 30);
+    }
+
+    // name (cleaned)
+    const cleaned = shortName(p.name);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 18px Impact, "Arial Black", sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(cleaned, cx, y + 60);
+
+    // rating
+    ctx.fillStyle = '#00c853';
+    ctx.font = 'bold 26px Impact, "Arial Black", sans-serif';
+    ctx.fillText(String(p.rating), cx, y + 80);
+  }
+
+  // === Footer stats ===
+  const ovr = computeFinalOVR();
+  const chem = teamChemistry();
+  const filled = Object.keys(state.roster).length;
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 56px Impact, "Arial Black", sans-serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(String(ovr), 80, 990);
+  ctx.fillStyle = '#7a8590';
+  ctx.font = 'bold 14px ui-monospace, "JetBrains Mono", monospace';
+  ctx.fillText('OVR', 80, 1028);
+
+  ctx.fillStyle = '#ffc400';
+  ctx.font = 'bold 56px Impact, "Arial Black", sans-serif';
+  ctx.fillText(String(chem), 240, 990);
+  ctx.fillStyle = '#7a8590';
+  ctx.font = 'bold 14px ui-monospace, "JetBrains Mono", monospace';
+  ctx.fillText('CHEM', 240, 1028);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 56px Impact, "Arial Black", sans-serif';
+  ctx.fillText(`${filled}/11`, 400, 990);
+  ctx.fillStyle = '#7a8590';
+  ctx.font = 'bold 14px ui-monospace, "JetBrains Mono", monospace';
+  ctx.fillText('SLOTS', 400, 1028);
+
+  // tagline
+  ctx.fillStyle = '#7a8590';
+  ctx.font = 'bold 16px ui-monospace, "JetBrains Mono", monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText('PERFECT-ELEVEN.VERCEL.APP', W - 80, 990);
+  const nameInput = document.getElementById('lineupName');
+  const builtBy = (nameInput && nameInput.value) ? nameInput.value.toUpperCase() : 'ANONYMOUS';
+  ctx.fillText(`BUILT BY ${builtBy}`, W - 80, 1024);
+
+  // === Export ===
+  const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+  if (!blob) { toast('IMAGE EXPORT FAILED'); return; }
+
+  const file = new File([blob], 'perfect-eleven.png', { type: 'image/png' });
+  // Prefer Web Share API on mobile (lets user post directly to IG/TikTok/X)
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: 'My Perfect Eleven',
+        text: `${ovr} OVR · ${chem} CHEM — build yours at perfect-eleven.vercel.app`,
+      });
+      return;
+    } catch (e) { /* user cancelled — fall through to download */ }
+  }
+  // Desktop / no Web Share: download
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'perfect-eleven.png';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast('IMAGE DOWNLOADED — POST IT!');
+}
+
+// ============================================================
 // SUBMIT TO LEADERBOARD
 // ============================================================
 function submitLineupToLeaderboard() {
@@ -1346,6 +1547,8 @@ document.addEventListener('DOMContentLoaded', () => {
     resetRoster();
   });
   $('copyBtn').addEventListener('click', copyToClipboard);
+  const shareImgBtn = document.getElementById('shareImgBtn');
+  if (shareImgBtn) shareImgBtn.addEventListener('click', shareXICardImage);
   const submitBtn = document.getElementById('submitLineupBtn');
   if (submitBtn) submitBtn.addEventListener('click', submitLineupToLeaderboard);
   // HELP MODAL
