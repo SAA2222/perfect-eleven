@@ -1193,23 +1193,48 @@ function computeAwards() {
   const assisterBias = isLegendsMode ? {} : TOP_ASSISTER_BIAS;
 
   // Track winners to prevent the same player from sweeping multiple awards.
-  // Real World Cups never have one player winning Golden Boot + Top Assister + Best Mid + Young Player.
   const taken = new Set();
   const exclude = (arr) => arr.filter(p => !taken.has(p.name));
   const claim = (player) => { if (player?.name) taken.add(player.name); return player; };
 
-  // From the FULL tournament pool
-  const goldenBall = claim(weightedTopPick(all, 10, generalBias));
+  // Helper: pick the top player by a canonical stat (G/A/CS) with weighted-random
+  // tiebreak among players sharing the top stat. Guarantees Boot winner actually
+  // has more goals than anyone else — same for Top Assister + Golden Glove.
+  const pickTopByStat = (pool, statKey, bias) => {
+    if (!pool.length) return null;
+    const stats = pool.map(p => ({ player: p, stat: playerCanonicalStats(p)[statKey], eff: p.rating + (bias[p.name] || 0) }));
+    const topStat = Math.max(...stats.map(s => s.stat));
+    const tied = stats.filter(s => s.stat === topStat);
+    if (tied.length === 1) return tied[0].player;
+    // Weighted random among ties (higher effRating → more likely)
+    const floor = Math.min(...tied.map(t => t.eff)) - 1;
+    const weights = tied.map(t => Math.pow(t.eff - floor, 1.8));
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total;
+    for (let i = 0; i < tied.length; i++) {
+      r -= weights[i];
+      if (r <= 0) return tied[i].player;
+    }
+    return tied[0].player;
+  };
 
-  const attackers = exclude(all.filter(p => ['ST','LW','RW'].includes(p.role)));
-  const goldenBoot = attackers.length ? claim(weightedTopPick(attackers, 10, generalBias)) : null;
+  // === GOLDEN BOOT FIRST — top scorer by goals, NOT by rating ===
+  // (Real World Cup logic — guarantees Boot winner has the most goals)
+  const attackers = all.filter(p => ['ST','LW','RW'].includes(p.role));
+  const goldenBoot = attackers.length ? claim(pickTopByStat(attackers, 'G', generalBias)) : null;
 
-  // Top assister: playmakers, exclude already-claimed winners
+  // === TOP ASSISTER — most assists, excluding Boot winner ===
   const playmakers = exclude(all.filter(p => ['CAM','CM','LW','RW'].includes(p.role)));
-  const topAssister = playmakers.length ? claim(weightedTopPick(playmakers, 12, assisterBias)) : null;
+  const topAssister = playmakers.length ? claim(pickTopByStat(playmakers, 'A', assisterBias)) : null;
 
+  // === GOLDEN GLOVE — most clean sheets among keepers ===
   const keepers = exclude(all.filter(p => p.role === 'GK'));
-  const goldenGlove = keepers.length ? claim(weightedTopPick(keepers, 5, generalBias)) : null;
+  const goldenGlove = keepers.length ? claim(pickTopByStat(keepers, 'CS', generalBias)) : null;
+
+  // === GOLDEN BALL — best overall player, weighted by rating, EXCLUDES Boot ===
+  // (So Ball winner naturally has fewer goals than Boot winner. Real WC pattern:
+  //  Messi '22 Ball [7 G] · Mbappé '22 Boot [8 G], Forlán '10 Ball · Müller '10 Boot, etc.)
+  const goldenBall = claim(weightedTopPick(exclude(all), 10, generalBias));
 
   const youngs = exclude(all.filter(p => typeof U25_PLAYERS !== 'undefined' && U25_PLAYERS.has(p.name)));
   const youngPlayer = youngs.length ? claim(weightedTopPick(youngs, 8, generalBias)) : null;
