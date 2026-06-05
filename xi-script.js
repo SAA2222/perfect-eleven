@@ -992,14 +992,37 @@ function computeAwards() {
   const all = buildFullTournamentPool();
   if (!all.length) return null;
 
-  // Weighted top-N: top-8 by rating, weighted exponentially.
-  // Top player wins ~35% of the time; bottom of top-8 wins ~3-5%. Stops Mbappé-always.
+  // AWARD_BIAS — proven clutch performers up, unproven young guns down.
+  // Only affects award odds, not the player's displayed rating.
+  const AWARD_BIAS = {
+    'Cristiano Ronaldo': 7,   // sixth World Cup, career goalscorer, narrative gold
+    'Harry Kane': 4,          // proven golden boot hunter
+    'Lionel Messi': 3,        // defending champion + captain
+    'Erling Haaland': 2,      // record-breaking PL season, generational
+    'Mohamed Salah': 2,       // big-game player
+    'Jude Bellingham': 2,     // clutch finals man
+    'Vinícius Júnior': 1,
+    'Kylian Mbappé': 1,
+    // Young / unproven on World Cup stage — high rating, lower trophy odds
+    'Lamine Yamal': -4,
+    'Endrick': -2,
+    'Désiré Doué': -2,
+    'Rayan Cherki': -2,
+    'Maghnes Akliouche': -2,
+    'Arda Güler': -2,
+    'Kenan Yıldız': -2,
+    'Lennart Karl': -2,
+    'Gilberto Mora': -2,
+  };
+  const effRating = (p) => p.rating + (AWARD_BIAS[p.name] || 0);
+
+  // Weighted top-N: top-8 by adjusted rating, weighted exponentially.
   const weightedTopPick = (arr, topN = 8) => {
     if (!arr.length) return null;
-    const sorted = arr.slice().sort((a, b) => b.rating - a.rating);
+    const sorted = arr.slice().sort((a, b) => effRating(b) - effRating(a));
     const top = sorted.slice(0, Math.min(topN, sorted.length));
-    const floor = top[top.length - 1].rating - 1;
-    const weights = top.map(p => Math.pow(p.rating - floor, 2.5));
+    const floor = effRating(top[top.length - 1]) - 1;
+    const weights = top.map(p => Math.pow(effRating(p) - floor, 2.5));
     const total = weights.reduce((a, b) => a + b, 0);
     let r = Math.random() * total;
     for (let i = 0; i < top.length; i++) {
