@@ -2054,14 +2054,14 @@ function unlockPremium() {
 function openPaywall() { $('paywallModal').hidden = false; }
 function closePaywall() { $('paywallModal').hidden = true; }
 
-// Auto-unlock when Stripe redirects back with ?premium=success123.
-// Param is mildly obfuscated so randomly typing the obvious string doesn't work.
-// The corresponding Stripe Payment Link's success redirect URL must match.
+// Auto-unlock when Stripe redirects back with ?premium=success or
+// ?premium=success123 (owner bookmark variant). Both accepted so the
+// existing Stripe Payment Link redirect keeps working without dashboard edits.
 function handleStripeReturn() {
   const params = new URLSearchParams(window.location.search);
-  if (params.get('premium') === 'success123') {
+  const token = params.get('premium');
+  if (token === 'success' || token === 'success123') {
     unlockPremium();
-    // Clean the URL so refreshes don't keep showing the toast
     const cleanUrl = window.location.pathname + window.location.hash;
     window.history.replaceState({}, document.title, cleanUrl);
     setTimeout(() => toast('🎉 PREMIUM UNLOCKED · TOP 50 + LEGENDS LIVE'), 600);
