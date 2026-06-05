@@ -54,7 +54,7 @@ const SPONSORS = [
   { name: 'COCA-COLA',    tagline: 'TASTE THE FEELING',                   accent: '#E40712' },
   { name: 'YOUR BRAND',   tagline: 'AVAILABLE FOR SPONSORSHIP · CONTACT', accent: '#00ff85' },
   { name: 'POLYMARKET',   tagline: 'PREDICT THE WORLD CUP',               accent: '#1652F0' },
-  { name: 'ROBINHOOD',    tagline: 'INVESTING FOR EVERYONE',              accent: '#007A33' },
+  { name: '@CASUALZFC',   tagline: 'NOW ON TIKTOK',                       accent: '#69C9D0' },
 ];
 
 function renderSponsorTicker() {
