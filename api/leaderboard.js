@@ -1,17 +1,33 @@
 /**
- * Global shared leaderboard endpoint — backed by Vercel KV (Upstash Redis).
+ * Global shared leaderboard endpoint — backed by Upstash Redis.
  *
  * GET  /api/leaderboard           → { entries: [top 100 by OVR] }
  * POST /api/leaderboard {entry}   → { ok: true, entry } | 400 | 429
  *
- * Requires env vars (auto-injected when KV is linked to the Vercel project):
- *   KV_REST_API_URL
- *   KV_REST_API_TOKEN
+ * Requires env vars (auto-injected when Upstash KV is linked to the project):
+ *   KV_REST_API_URL    (or UPSTASH_REDIS_REST_URL)
+ *   KV_REST_API_TOKEN  (or UPSTASH_REDIS_REST_TOKEN)
  *
  * If KV isn't connected the endpoint responds 503 — the client falls back to
  * localStorage so the app stays usable.
  */
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
+
+// fromEnv() reads UPSTASH_REDIS_REST_URL / TOKEN automatically.
+// Fallback to KV_REST_API_* if the Vercel-integration variant is in use.
+function makeKv() {
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    return Redis.fromEnv();
+  }
+  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+    return new Redis({
+      url: process.env.KV_REST_API_URL,
+      token: process.env.KV_REST_API_TOKEN,
+    });
+  }
+  return null;
+}
+const kv = makeKv();
 
 const KEY = 'pe:lineups:v1';
 const MAX_STORED = 200;
@@ -29,7 +45,7 @@ function sanitize(s, maxLen) {
 }
 
 function kvConfigured() {
-  return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+  return kv !== null;
 }
 
 export default async function handler(req, res) {
