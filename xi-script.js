@@ -318,13 +318,19 @@ function rerenderPickModalForSwapIn() {
   $('modalLede').textContent = `Pick a player from ${n.name} to SWAP IN. They'll replace your current player in that position.`;
 
   const html = n.players.map((p, idx) => {
-    const target = findFilledSlotForSwap(p);
-    const canSwap = target !== null;
-    const oldPlayer = canSwap ? state.roster[target.slotIdx] : null;
+    const matches = findAllFilledSlotsForSwap(p);
+    const canSwap = matches.length > 0;
     const league = clubToLeague(p.club);
-    const tag = canSwap
-      ? `↪ REPLACES ${oldPlayer.name.toUpperCase()}`
-      : '✕ NO SLOT TO SWAP';
+    let tag;
+    if (!canSwap) {
+      tag = '✕ NO SLOT TO SWAP';
+    } else if (matches.length === 1) {
+      tag = `↪ REPLACES ${state.roster[matches[0].slotIdx].name.toUpperCase()}`;
+    } else {
+      // Show the slot roles the user can pick from (e.g., "LCM / RCM / CDM")
+      const roles = matches.map(m => SLOT_DEF[m.slotIdx]?.role).filter(Boolean).join(' / ');
+      tag = `↪ CHOOSE: ${roles}`;
+    }
     return `
       <button class="player ${canSwap ? 'player--swap-in' : ''}" data-idx="${idx}" ${canSwap ? '' : 'disabled'}>
         <div class="player__top">
