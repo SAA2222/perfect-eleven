@@ -1171,6 +1171,38 @@ body.swap-mode .xi-pitch::after {
   letter-spacing: 0.16em;
   color: var(--mute-2, #555);
 }
+/* House-ad fallback shown when AdSense slot is empty (pre-approval) */
+.ad-slot__house {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+  text-decoration: none;
+  color: var(--paper, #fff);
+  padding: 14px 16px;
+  transition: transform 0.15s;
+}
+.ad-slot__house:hover { transform: translateY(-1px); }
+.ad-slot__house-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: #69C9D0;
+  font-weight: 800;
+}
+.ad-slot__house-title {
+  font-family: var(--font-display, Impact);
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  color: var(--paper, #fff);
+}
+.ad-slot__house-title strong { color: #69C9D0; }
+.ad-slot__house-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--mute);
+}
 
 @media (max-width: 600px) {
   .xi-polymarket { flex-direction: column; gap: 8px; text-align: center; }
