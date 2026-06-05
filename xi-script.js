@@ -1755,7 +1755,7 @@ async function shareXICardImage() {
 // ============================================================
 // SUBMIT TO LEADERBOARD
 // ============================================================
-function submitLineupToLeaderboard() {
+async function submitLineupToLeaderboard() {
   if (Object.keys(state.roster).length !== 11) {
     toast('FINISH THE XI FIRST');
     return;
@@ -1780,12 +1780,28 @@ function submitLineupToLeaderboard() {
     user: true,
   };
 
-  storeLineup(entry);
-  renderLeaderboard();
+  // Disable button to prevent double-submit, show progress
+  const btn = document.getElementById('submitLineupBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'SUBMITTING…'; }
+  toast('SUBMITTING TO GLOBAL LEADERBOARD…');
+
+  const result = await storeLineup(entry);  // global POST + local backup
+  await renderLeaderboard();                 // re-pull global top 12
+
+  if (btn) { btn.disabled = false; btn.innerHTML = 'SUBMIT TO LEADERBOARD →'; }
+
+  if (result?.ok) {
+    toast(`✓ SUBMITTED · ${final} OVR · GLOBAL LEADERBOARD UPDATED`);
+  } else if (result?.status === 429) {
+    toast('TOO MANY SUBMISSIONS — TRY AGAIN IN A MIN');
+  } else {
+    // API down — local entry was saved as fallback
+    toast(`SUBMITTED LOCALLY · ${final} OVR · GLOBAL OFFLINE`);
+  }
+
   $('completeModal').hidden = true;
   resetRoster();
   document.getElementById('leaderboard')?.scrollIntoView({ behavior: 'smooth' });
-  toast(`SUBMITTED · ${final} OVR · LEADERBOARD UPDATED`);
 }
 
 // ============================================================

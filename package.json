@@ -1,0 +1,15 @@
+{
+  "name": "perfect-eleven",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build the Perfect Eleven — 2026 World Cup XI builder",
+  "scripts": {
+    "fetch-stats": "node scripts/fetch-stats.js"
+  },
+  "dependencies": {
+    "@vercel/kv": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

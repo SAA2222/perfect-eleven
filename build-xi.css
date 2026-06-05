@@ -2334,6 +2334,25 @@ body { padding-bottom: 56px; }
   flex-direction: column;
   border-top: 1px solid var(--rule);
 }
+/* GLOBAL / LOCAL leaderboard status badge */
+.lb-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-align: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--rule);
+  text-transform: uppercase;
+}
+.lb-meta--global {
+  color: var(--pitch);
+  background: rgba(0, 200, 83, 0.06);
+}
+.lb-meta--local {
+  color: var(--mute);
+  background: rgba(255,255,255,0.02);
+}
 .lb-row {
   display: grid;
   grid-template-columns: 120px 1fr 100px;

@@ -89,30 +89,98 @@ const LEADERBOARD = [
   { ovr: 86, chem: 12, lineup: 'SON · LOZANO · SARR · JAMES · CASEMIRO · BARELLA · VAN DIJK · MARQUINHOS · DAVIES · HAKIMI · OCHOA', by: 'BUILT IN SEOUL', mode: 'CLASSIC' },
 ];
 
-// LocalStorage persistence
+// ============================================================
+// LEADERBOARD STORAGE — Vercel KV (global) with localStorage fallback
+// ============================================================
 const LINEUP_KEY = 'pe_lineups_v1';
+const API_URL    = '/api/leaderboard';
+let _leaderboardIsGlobal = false; // toggled true when API responded
+
 function loadStoredLineups() {
-  try {
-    return JSON.parse(localStorage.getItem(LINEUP_KEY) || '[]');
-  } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(LINEUP_KEY) || '[]'); }
+  catch { return []; }
 }
-function storeLineup(entry) {
+
+// Save locally as a backup so user's own entries survive even if API fails
+function saveStoredLineup(entry) {
   const arr = loadStoredLineups();
   arr.push(entry);
   arr.sort((a, b) => b.ovr - a.ovr);
   localStorage.setItem(LINEUP_KEY, JSON.stringify(arr.slice(0, 30)));
 }
 
-function renderLeaderboard() {
+async function fetchGlobalLeaderboard() {
+  try {
+    const r = await fetch(API_URL, { cache: 'no-store' });
+    if (!r.ok) return null;
+    const data = await r.json();
+    return Array.isArray(data?.entries) ? data.entries : null;
+  } catch { return null; }
+}
+
+async function submitGlobalLineup(entry) {
+  try {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return { ok: false, status: r.status, error: data?.error || r.statusText };
+    return { ok: true, entry: data.entry };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
+// Public API used by xi-script.js — async to wait on backend submit + refresh
+async function storeLineup(entry) {
+  // Mark user-owned for highlighting on render
+  const userEntry = { ...entry, user: true };
+  // Always save locally (so user sees their own entry even if API fails)
+  saveStoredLineup(userEntry);
+  // Submit to the shared global leaderboard
+  const result = await submitGlobalLineup({
+    by: entry.by, ovr: entry.ovr, chem: entry.chem,
+    mode: entry.mode, lineup: entry.lineup,
+  });
+  return result;
+}
+
+async function renderLeaderboard() {
   const grid = document.getElementById('leaderboardGrid');
   if (!grid) return;
-  const stored = loadStoredLineups();
-  const combined = [...stored, ...LEADERBOARD]
+
+  // Optimistically render local + demo so the page never looks empty
+  const local = loadStoredLineups();
+  let rows = [...local, ...LEADERBOARD];
+
+  // Try the global API in parallel
+  const remote = await fetchGlobalLeaderboard();
+  if (remote && remote.length) {
+    _leaderboardIsGlobal = true;
+    // Merge: global + local (so user's own pre-deploy entries still show)
+    // Mark which entries are user's own by matching against local timestamps/lineups
+    const localKeyset = new Set(local.map(e => `${e.by}|${e.ovr}|${e.lineup}`));
+    rows = remote.map(e => ({
+      ...e,
+      user: localKeyset.has(`${e.by}|${e.ovr}|${e.lineup}`),
+    }));
+  } else if (remote && remote.length === 0) {
+    _leaderboardIsGlobal = true;
+    rows = [...LEADERBOARD]; // empty global → show demo seed
+  } else {
+    _leaderboardIsGlobal = false;
+  }
+
+  const combined = rows
     .sort((a, b) => b.ovr - a.ovr)
     .slice(0, 12)
     .map((row, i) => ({ ...row, rank: i + 1 }));
 
-  grid.innerHTML = combined.map(row => `
+  const badge = _leaderboardIsGlobal
+    ? '<div class="lb-meta lb-meta--global">🌍 GLOBAL · TOP 12 ACROSS ALL PLAYERS</div>'
+    : '<div class="lb-meta lb-meta--local">📱 LOCAL · GLOBAL LEADERBOARD OFFLINE</div>';
+
+  grid.innerHTML = badge + combined.map(row => `
     <article class="lb-row ${row.user ? 'lb-row--user' : ''}">
       <div class="lb-row__rank">
         <span class="lb-row__rank-num">${String(row.rank).padStart(2, '0')}</span>
