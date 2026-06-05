@@ -1,0 +1,23 @@
+{
+  "name": "Perfect Eleven · 2026 World Cup",
+  "short_name": "Perfect Eleven",
+  "description": "Build the perfect starting XI for the 2026 FIFA World Cup.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c1410",
+  "theme_color": "#00c853",
+  "categories": ["sports", "games", "entertainment"],
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%2300c853'/%3E%3Ctext x='96' y='120' font-family='Impact,sans-serif' font-size='108' fill='%230c1410' text-anchor='middle'%3E11%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%2300c853'/%3E%3Ctext x='256' y='325' font-family='Impact,sans-serif' font-size='288' fill='%230c1410' text-anchor='middle'%3E11%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
