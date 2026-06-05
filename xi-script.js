@@ -788,7 +788,7 @@ function updateProgress() {
 // GRADE + PROJECTED FINISH (firstdown.studio-style)
 // ============================================================
 function gradeFromOVR(ovr, chem) {
-  const score = ovr + chem * 0.15;  // chem adds a small grade boost
+  const score = ovr + chem * 0.3;   // chem matters — max chem (33) = +9.9 grade swing
   if (score >= 95) return { letter: 'S',  color: 'var(--gold)',    blurb: 'Best in the world. Genuine title favorites.' };
   if (score >= 91) return { letter: 'A+', color: 'var(--pitch)',   blurb: 'A genuine super-team. Bookmark this lineup.' };
   if (score >= 88) return { letter: 'A',  color: 'var(--pitch)',   blurb: 'Elite talent in every line.' };
@@ -895,16 +895,21 @@ function fireConfetti(durationMs = 6000) {
 // BRACKET SIMULATION — each tier has an opponent + a result
 // score gap between your XI and the opp determines the margin
 // ============================================================
-// Championship is hard-earned but actually achievable with a great XI.
+// Winning the cup REQUIRES chemistry, not just rating. Max score with 95 OVR
+// and 0 chem = 95 (only reaches QF). To hit CHAMPIONS (108+) you need either
+// elite chemistry OR top-end OVR with decent chem. Three viable paths:
+//   - 95 OVR + 27 chem = 108.5  (elite + balanced)
+//   - 92 OVR + 33 chem = 108.5  (pure chemistry)
+//   - 98 OVR + 20 chem = 108.0  (peak talent + decent chem)
 const BRACKET = [
-  { tier:'CHAMPIONS',    label:'🏆 WORLD CUP CHAMPIONS',  threshold:93, opp:'BRAZIL',      oppRating:90, result:'WIN',  stage:'WON FINAL' },
-  { tier:'RUNNERS_UP',   label:'🥈 RUNNERS-UP',            threshold:90, opp:'FRANCE',      oppRating:93, result:'LOSS', stage:'LOST FINAL' },
-  { tier:'THIRD',        label:'🥉 THIRD PLACE',            threshold:87, opp:'NETHERLANDS', oppRating:87, result:'WIN',  stage:'WON 3RD-PLACE' },
-  { tier:'FOURTH',       label:'4TH PLACE',                 threshold:84, opp:'GERMANY',     oppRating:87, result:'LOSS', stage:'LOST 3RD-PLACE' },
-  { tier:'QUARTERFINAL', label:'QUARTERFINAL',              threshold:80, opp:'SPAIN',       oppRating:91, result:'LOSS', stage:'LOST QF' },
-  { tier:'R16',          label:'ROUND OF 16',               threshold:76, opp:'PORTUGAL',    oppRating:88, result:'LOSS', stage:'LOST R16' },
-  { tier:'R32',          label:'ROUND OF 32',               threshold:72, opp:'ENGLAND',     oppRating:89, result:'LOSS', stage:'LOST R32' },
-  { tier:'GROUP_OUT',    label:'GROUP STAGE EXIT',          threshold:0,  opp:null,          oppRating:0,  result:null,   stage:'GROUP STAGE OUT' },
+  { tier:'CHAMPIONS',    label:'🏆 WORLD CUP CHAMPIONS',  threshold:108, opp:'BRAZIL',      oppRating:90, result:'WIN',  stage:'WON FINAL' },
+  { tier:'RUNNERS_UP',   label:'🥈 RUNNERS-UP',            threshold:103, opp:'FRANCE',      oppRating:93, result:'LOSS', stage:'LOST FINAL' },
+  { tier:'THIRD',        label:'🥉 THIRD PLACE',            threshold:99,  opp:'NETHERLANDS', oppRating:87, result:'WIN',  stage:'WON 3RD-PLACE' },
+  { tier:'FOURTH',       label:'4TH PLACE',                 threshold:95,  opp:'GERMANY',     oppRating:87, result:'LOSS', stage:'LOST 3RD-PLACE' },
+  { tier:'QUARTERFINAL', label:'QUARTERFINAL',              threshold:90,  opp:'SPAIN',       oppRating:91, result:'LOSS', stage:'LOST QF' },
+  { tier:'R16',          label:'ROUND OF 16',               threshold:84,  opp:'PORTUGAL',    oppRating:88, result:'LOSS', stage:'LOST R16' },
+  { tier:'R32',          label:'ROUND OF 32',               threshold:78,  opp:'ENGLAND',     oppRating:89, result:'LOSS', stage:'LOST R32' },
+  { tier:'GROUP_OUT',    label:'GROUP STAGE EXIT',          threshold:0,   opp:null,          oppRating:0,  result:null,   stage:'GROUP STAGE OUT' },
 ];
 
 // ============================================================
@@ -1043,7 +1048,7 @@ function predictMatchScore(yourRating, oppRating, result) {
 
 function projectedFinish(ovr, chem, injuryLoss = 0) {
   const effOvr = ovr - injuryLoss;
-  const score = effOvr + chem * 0.18;  // weight tightened — chem helps but doesn't dominate
+  const score = effOvr + chem * 0.5;   // chem is a real lever — max chem (33) = +16.5
   for (const tier of BRACKET) {
     if (score >= tier.threshold) {
       if (!tier.opp) {
