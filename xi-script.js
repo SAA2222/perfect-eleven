@@ -1085,10 +1085,12 @@ function computeAwards() {
   const mids = all.filter(p => ['CDM','CM','CAM'].includes(p.role));
   const bestMid = mids.length ? weightedTopPick(mids) : null;
 
-  // CAPTAIN — from the user's XI (highest outfield rating)
+  // CAPTAIN — from the user's XI (highest outfield rating). Deterministic, not weighted.
   const userPlayers = Object.values(state.roster);
   const outfield = userPlayers.filter(p => p.role !== 'GK');
-  const captain = outfield.length ? max(outfield) : userPlayers[0];
+  const captain = outfield.length
+    ? outfield.reduce((m, p) => p.rating > m.rating ? p : m)
+    : userPlayers[0];
 
   return applyLiveAwards({ goldenBall, captain, goldenBoot, topAssister, goldenGlove, youngPlayer, bestDefender, bestMid });
 }
