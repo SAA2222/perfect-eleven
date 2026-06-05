@@ -48,13 +48,22 @@ function renderTicker() {
 // SPONSOR TICKER — bottom strip, brand integration
 // ============================================================
 const SPONSORS = [
-  { name: 'RED BULL',     tagline: 'GIVES YOU WINGS',                     accent: '#FFC906' },
-  { name: 'ADIDAS',       tagline: 'IMPOSSIBLE IS NOTHING',               accent: '#FFFFFF' },
-  { name: 'VISA',         tagline: 'EVERYWHERE YOU WANT TO BE',           accent: '#1A1F71' },
-  { name: 'COCA-COLA',    tagline: 'TASTE THE FEELING',                   accent: '#E40712' },
-  { name: 'YOUR BRAND',   tagline: 'AVAILABLE FOR SPONSORSHIP · CONTACT', accent: '#00ff85' },
-  { name: 'POLYMARKET',   tagline: 'PREDICT THE WORLD CUP',               accent: '#1652F0' },
-  { name: '@CASUALZFC',   tagline: 'NOW ON TIKTOK',                       accent: '#69C9D0' },
+  { name: 'RED BULL',      tagline: 'GIVES YOU WINGS',                     accent: '#FFC906' },
+  { name: 'ADIDAS',        tagline: 'IMPOSSIBLE IS NOTHING',               accent: '#FFFFFF' },
+  { name: 'NIKE',          tagline: 'JUST DO IT',                          accent: '#FFFFFF' },
+  { name: 'VISA',          tagline: 'EVERYWHERE YOU WANT TO BE',           accent: '#1A1F71' },
+  { name: 'MASTERCARD',    tagline: 'START SOMETHING PRICELESS',           accent: '#FF5F00' },
+  { name: 'COCA-COLA',     tagline: 'TASTE THE FEELING',                   accent: '#E40712' },
+  { name: 'BUDWEISER',     tagline: 'KING OF BEERS',                       accent: '#C8102E' },
+  { name: 'HEINEKEN',      tagline: 'OPEN YOUR WORLD',                     accent: '#00963E' },
+  { name: 'McDONALD\'S',   tagline: 'I\'M LOVIN\' IT',                     accent: '#FFC72C' },
+  { name: 'HYUNDAI',       tagline: 'NEW THINKING · NEW POSSIBILITIES',    accent: '#002C5F' },
+  { name: 'QATAR AIRWAYS', tagline: 'GOING PLACES TOGETHER',               accent: '#5C0F23' },
+  { name: 'HUBLOT',        tagline: 'FUSION OF INNOVATION',                accent: '#C9A24A' },
+  { name: 'DRAFTKINGS',    tagline: 'BET THE BIGGEST GAMES',               accent: '#53D337' },
+  { name: 'YOUR BRAND',    tagline: 'AVAILABLE FOR SPONSORSHIP · CONTACT', accent: '#00ff85' },
+  { name: 'POLYMARKET',    tagline: 'PREDICT THE WORLD CUP',               accent: '#1652F0' },
+  { name: '@CASUALZFC',    tagline: 'NOW ON TIKTOK',                       accent: '#69C9D0' },
 ];
 
 function renderSponsorTicker() {
