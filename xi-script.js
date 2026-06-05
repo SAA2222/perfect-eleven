@@ -981,8 +981,13 @@ function projectedFinish(ovr, chem, injuryLoss = 0) {
 // each comes with a plausible stat (goals/assists/clean sheets)
 // ============================================================
 function buildFullTournamentPool() {
+  // Use the CURRENT mode's pool — LEGENDS mode should award Pelé/Cruyff,
+  // not Mbappé/Kane. Top 50 includes missed nations (Italy/Nigeria/etc).
+  const pool = (typeof getNationPool === 'function')
+    ? getNationPool(state.mode)
+    : NATIONS;
   const all = [];
-  NATIONS.forEach(n => n.players.forEach(p => {
+  pool.forEach(n => n.players.forEach(p => {
     all.push({ ...p, nation: n.name, flag: n.flag, iso: n.iso, code: n.code });
   }));
   return all;
@@ -1063,27 +1068,33 @@ function computeAwards() {
     return top[0];
   };
 
+  // Modern-era biases don't apply in LEGENDS mode — ratings are already a
+  // curated all-time tier. Disable bias so Pelé/Maradona/etc. win on rating alone.
+  const isLegendsMode = state.mode === 'legends';
+  const generalBias  = isLegendsMode ? {} : AWARD_BIAS;
+  const assisterBias = isLegendsMode ? {} : TOP_ASSISTER_BIAS;
+
   // From the FULL tournament pool
-  const goldenBall = weightedTopPick(all, 10);
+  const goldenBall = weightedTopPick(all, 10, generalBias);
 
   const attackers = all.filter(p => ['ST','LW','RW'].includes(p.role));
-  const goldenBoot = attackers.length ? weightedTopPick(attackers, 10) : null;
+  const goldenBoot = attackers.length ? weightedTopPick(attackers, 10, generalBias) : null;
 
-  // Top assister: playmakers, exclude the Golden Boot winner, use creator-focused bias
+  // Top assister: playmakers, exclude the Golden Boot winner
   const playmakers = all.filter(p => ['CAM','CM','LW','RW'].includes(p.role) && p.name !== goldenBoot?.name);
-  const topAssister = playmakers.length ? weightedTopPick(playmakers, 12, TOP_ASSISTER_BIAS) : null;
+  const topAssister = playmakers.length ? weightedTopPick(playmakers, 12, assisterBias) : null;
 
   const keepers = all.filter(p => p.role === 'GK');
-  const goldenGlove = keepers.length ? weightedTopPick(keepers, 5) : null;
+  const goldenGlove = keepers.length ? weightedTopPick(keepers, 5, generalBias) : null;
 
   const youngs = all.filter(p => typeof U25_PLAYERS !== 'undefined' && U25_PLAYERS.has(p.name));
-  const youngPlayer = youngs.length ? weightedTopPick(youngs) : null;
+  const youngPlayer = youngs.length ? weightedTopPick(youngs, 8, generalBias) : null;
 
   const defenders = all.filter(p => ['CB','LB','RB'].includes(p.role));
-  const bestDefender = defenders.length ? weightedTopPick(defenders) : null;
+  const bestDefender = defenders.length ? weightedTopPick(defenders, 8, generalBias) : null;
 
   const mids = all.filter(p => ['CDM','CM','CAM'].includes(p.role));
-  const bestMid = mids.length ? weightedTopPick(mids) : null;
+  const bestMid = mids.length ? weightedTopPick(mids, 8, generalBias) : null;
 
   // CAPTAIN — from the user's XI (highest outfield rating). Deterministic, not weighted.
   const userPlayers = Object.values(state.roster);
