@@ -812,6 +812,153 @@ body.swap-mode .xi-pitch::after {
   border-radius: 3px;
 }
 .player__livestat--red { color: var(--crimson, #ff2e4d); background: rgba(255, 46, 77, 0.15); }
+/* ============================================================
+   ROSTERS MODAL — browse all 48 squads
+   ============================================================ */
+.modal__panel--rosters {
+  max-width: 920px;
+  width: 96vw;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+}
+.rosters__search-row {
+  display: flex;
+  gap: 12px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--rule);
+  align-items: center;
+}
+.rosters__search {
+  flex: 1;
+  background: var(--ink-2, #16191e);
+  border: 1px solid var(--rule);
+  color: var(--paper, #fff);
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.rosters__search:focus { outline: 1px solid var(--pitch); }
+.rosters__count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--mute);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+.rosters__grid {
+  padding: 16px 22px 22px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.roster__card {
+  background: var(--ink-2, #16191e);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.roster__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.roster__head::-webkit-details-marker { display: none; }
+.roster__head:hover { background: rgba(0, 200, 83, 0.06); }
+.roster__flag {
+  width: 32px;
+  height: 22px;
+  object-fit: cover;
+  border-radius: 2px;
+}
+.roster__nation {
+  font-family: var(--font-display, Impact);
+  font-size: 18px;
+  letter-spacing: 0.05em;
+  color: var(--paper, #fff);
+  flex: 1;
+}
+.roster__group {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--pitch);
+  font-weight: 800;
+  background: rgba(0, 200, 83, 0.1);
+  padding: 3px 8px;
+  border-radius: 3px;
+}
+.roster__size {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--mute);
+  letter-spacing: 0.12em;
+}
+.roster__body {
+  border-top: 1px solid var(--rule);
+  padding: 8px 0;
+}
+.roster__row {
+  display: grid;
+  grid-template-columns: 50px 1fr auto 40px;
+  gap: 12px;
+  padding: 6px 16px;
+  align-items: center;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.roster__row:last-child { border-bottom: none; }
+.roster__pos {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--mute);
+  text-align: center;
+}
+.roster__pos--gk { color: #ffaa00; }
+.roster__pos--def { color: #4dabff; }
+.roster__pos--mid { color: var(--pitch); }
+.roster__pos--fwd { color: var(--crimson, #ff2e4d); }
+.roster__name {
+  color: var(--paper, #fff);
+  font-weight: 600;
+}
+.roster__club {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--mute);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.roster__rating {
+  font-family: var(--font-display, Impact);
+  font-size: 16px;
+  color: var(--pitch);
+  text-align: right;
+  font-weight: 800;
+}
+.roster__empty {
+  text-align: center;
+  padding: 40px;
+  font-family: var(--font-mono);
+  color: var(--mute);
+  letter-spacing: 0.12em;
+}
+@media (max-width: 600px) {
+  .roster__row { grid-template-columns: 40px 1fr 40px; }
+  .roster__club { display: none; }
+}
+
 /* LIVE topbar pulse indicator (tournament in progress) */
 .topbar__livebadge {
   display: inline-flex;

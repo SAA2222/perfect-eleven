@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=20260605ac" />
-<link rel="stylesheet" href="build-xi.css?v=20260605ac" />
+<link rel="stylesheet" href="styles.css?v=20260605ad" />
+<link rel="stylesheet" href="build-xi.css?v=20260605ad" />
 </head>
 <body>
 
@@ -23,6 +23,7 @@
     </a>
     <nav class="nav">
       <a href="#" class="nav__link" data-help-jump="how">How To Play</a>
+      <a href="#" class="nav__link" id="rostersLink">Rosters</a>
       <a href="#" class="nav__link" data-help-jump="faq">FAQ</a>
       <a href="#" class="nav__link" data-help-jump="report">Report Bug</a>
       <a href="#" class="nav__link" data-help-jump="data">Data Sources</a>
@@ -84,14 +85,11 @@
           <span class="xi-res__pip on"></span>
           <span class="xi-res__pip on"></span>
           <span class="xi-res__pip on"></span>
-          <span class="xi-res__pip on"></span>
-          <span class="xi-res__pip on"></span>
         </span>
       </div>
       <div class="xi-res">
         <span class="xi-res__label">SWAPS</span>
         <span class="xi-res__pips" id="swapPips">
-          <span class="xi-res__pip on"></span>
           <span class="xi-res__pip on"></span>
           <span class="xi-res__pip on"></span>
         </span>
@@ -115,7 +113,7 @@
         <span class="xi-btn__arrow">→</span>
       </button>
       <button class="xi-btn xi-btn--gold" id="swapBtnTop" disabled>
-        <span>SWAP OUT (<span class="swap-count-num">3</span> LEFT)</span>
+        <span>SWAP OUT (<span class="swap-count-num">2</span> LEFT)</span>
         <span class="xi-btn__arrow">⇆</span>
       </button>
       <button class="xi-btn xi-btn--ghost" id="resetBtn">
@@ -167,7 +165,7 @@
 
     <div class="xi-share">
       <button class="xi-btn xi-btn--gold" id="swapBtn" disabled>
-        <span>SWAP (<span class="swap-count-num">3</span>)</span>
+        <span>SWAP (<span class="swap-count-num">2</span>)</span>
         <span class="xi-btn__arrow">⇆</span>
       </button>
       <button class="xi-btn xi-btn--ghost" id="shareBtn" disabled>SHARE YOUR ELEVEN →</button>
@@ -235,7 +233,7 @@
     <footer class="modal__foot modal__foot--pick">
       <button class="xi-btn xi-btn--ghost" id="passBtn">PASS — RE-SPIN (<span id="passCount">5</span> LEFT)</button>
       <button class="xi-btn xi-btn--gold" id="pickSwapBtn" disabled>
-        <span>SWAP IN (<span class="swap-count-num">3</span>)</span>
+        <span>SWAP IN (<span class="swap-count-num">2</span>)</span>
         <span class="xi-btn__arrow">⇆</span>
       </button>
     </footer>
@@ -272,10 +270,26 @@
         <button class="xi-btn xi-btn--gold" id="shareImgBtn">📸 SHARE AS IMAGE</button>
       </div>
       <button class="xi-btn xi-btn--gold" id="completeSwapBtn">
-        <span>SWAP OUT (<span class="swap-count-num">3</span>)</span>
+        <span>SWAP OUT (<span class="swap-count-num">2</span>)</span>
         <span class="xi-btn__arrow">⇆</span>
       </button>
     </div>
+  </div>
+</div>
+
+<!-- ======================== ROSTERS MODAL ======================== -->
+<div class="modal" id="rostersModal" hidden>
+  <div class="modal__backdrop" id="rostersBackdrop"></div>
+  <div class="modal__panel modal__panel--rosters">
+    <div class="modal__head">
+      <h2 id="rostersTitle">ALL 48 ROSTERS · 2026 WORLD CUP</h2>
+      <button class="modal__close" id="rostersClose" aria-label="Close">×</button>
+    </div>
+    <div class="rosters__search-row">
+      <input class="rosters__search" id="rostersSearch" type="text" placeholder="SEARCH NATION OR PLAYER…" autocomplete="off" />
+      <span class="rosters__count" id="rostersCount"></span>
+    </div>
+    <div class="rosters__grid" id="rostersGrid"></div>
   </div>
 </div>
 
@@ -461,9 +475,9 @@
   </div>
 </footer>
 
-<script src="live-stats.js?v=20260605ac"></script>
-<script src="xi-data.js?v=20260605ac"></script>
-<script src="xi-script.js?v=20260605ac"></script>
-<script src="extras.js?v=20260605ac"></script>
+<script src="live-stats.js?v=20260605ad"></script>
+<script src="xi-data.js?v=20260605ad"></script>
+<script src="xi-script.js?v=20260605ad"></script>
+<script src="extras.js?v=20260605ad"></script>
 </body>
 </html>

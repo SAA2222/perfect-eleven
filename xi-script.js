@@ -38,8 +38,8 @@ const POS_BLURB = {
   low:  'A cult classic. The neutrals\' team.'
 };
 
-const MAX_SKIPS = 5;
-const MAX_SWAPS = 3;
+const MAX_SKIPS = 3;
+const MAX_SWAPS = 2;
 
 let state = {
   mode: 'classic',
@@ -70,6 +70,36 @@ function buildSpinnerCards() {
   `).join('');
 }
 
+// ============================================================
+// NATION SPIN WEIGHTS — bigger teams spin more often than minnows.
+// Tiers reflect footballing strength, not pure rating.
+// Brazil (6) is 6x more likely than Haiti (1); Türkiye (2) is 2x.
+// ============================================================
+const NATION_TIER = {
+  // ELITE (6) — title contenders
+  BRA:6, ARG:6, FRA:6, ESP:6, GER:6, ENG:6, POR:6,
+  // STRONG (4) — heavyweight contenders + traditional powers
+  NED:4, BEL:4, ITA:4, CRO:4, URY:4, COL:4, MAR:4,
+  // MID-TIER (3) — competitive sides
+  SUI:3, MEX:3, USA:3, JPN:3, SEN:3, CIV:3, TUR:3, ECU:3, NOR:3, SWE:3, DEN:3, NGA:3,
+  // GROUP CONTENDERS (2) — outsiders / second-tier qualifiers
+  KOR:2, AUS:2, IRN:2, EGY:2, TUN:2, ALG:2, AUT:2, GHA:2, CZE:2, SCO:2, SRB:2, POL:2, UKR:2, PAR:2,
+  // DEBUTANTS / MINNOWS (1) — lowest spin weight
+  HAI:1, CUW:1, QAT:1, BIH:1, JOR:1, IRQ:1, UZB:1, PAN:1, RSA:1, NZL:1, COD:1, SAU:1, CPV:1,
+};
+
+function weightedPick(pool) {
+  // Build cumulative weight array
+  const weights = pool.map(n => NATION_TIER[n.code] || 2);
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < pool.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return pool[i];
+  }
+  return pool[pool.length - 1];
+}
+
 function spin() {
   if (state.isSpinning) return;
   const available = getNationPool(state.mode).filter(n => !state.usedNations.has(n.code));
@@ -81,7 +111,7 @@ function spin() {
 
   buildSpinnerCards();
 
-  const winner = available[Math.floor(Math.random() * available.length)];
+  const winner = weightedPick(available);
   state.currentNation = winner;
 
   const cards = $('spinnerCards');
@@ -723,16 +753,16 @@ function fireConfetti(durationMs = 6000) {
 // BRACKET SIMULATION — each tier has an opponent + a result
 // score gap between your XI and the opp determines the margin
 // ============================================================
-// CHAMPIONS now requires elite OVR + chemistry. Glory is earned.
+// Championship is hard-earned but actually achievable with a great XI.
 const BRACKET = [
-  { tier:'CHAMPIONS',    label:'🏆 WORLD CUP CHAMPIONS',  threshold:100, opp:'BRAZIL',      oppRating:90, result:'WIN',  stage:'WON FINAL' },
-  { tier:'RUNNERS_UP',   label:'🥈 RUNNERS-UP',            threshold:96,  opp:'FRANCE',      oppRating:93, result:'LOSS', stage:'LOST FINAL' },
-  { tier:'THIRD',        label:'🥉 THIRD PLACE',            threshold:93,  opp:'NETHERLANDS', oppRating:87, result:'WIN',  stage:'WON 3RD-PLACE' },
-  { tier:'FOURTH',       label:'4TH PLACE',                 threshold:90,  opp:'GERMANY',     oppRating:87, result:'LOSS', stage:'LOST 3RD-PLACE' },
-  { tier:'QUARTERFINAL', label:'QUARTERFINAL',              threshold:86,  opp:'SPAIN',       oppRating:91, result:'LOSS', stage:'LOST QF' },
-  { tier:'R16',          label:'ROUND OF 16',               threshold:81,  opp:'PORTUGAL',    oppRating:88, result:'LOSS', stage:'LOST R16' },
-  { tier:'R32',          label:'ROUND OF 32',               threshold:76,  opp:'ENGLAND',     oppRating:89, result:'LOSS', stage:'LOST R32' },
-  { tier:'GROUP_OUT',    label:'GROUP STAGE EXIT',          threshold:0,   opp:null,          oppRating:0,  result:null,   stage:'GROUP STAGE OUT' },
+  { tier:'CHAMPIONS',    label:'🏆 WORLD CUP CHAMPIONS',  threshold:93, opp:'BRAZIL',      oppRating:90, result:'WIN',  stage:'WON FINAL' },
+  { tier:'RUNNERS_UP',   label:'🥈 RUNNERS-UP',            threshold:90, opp:'FRANCE',      oppRating:93, result:'LOSS', stage:'LOST FINAL' },
+  { tier:'THIRD',        label:'🥉 THIRD PLACE',            threshold:87, opp:'NETHERLANDS', oppRating:87, result:'WIN',  stage:'WON 3RD-PLACE' },
+  { tier:'FOURTH',       label:'4TH PLACE',                 threshold:84, opp:'GERMANY',     oppRating:87, result:'LOSS', stage:'LOST 3RD-PLACE' },
+  { tier:'QUARTERFINAL', label:'QUARTERFINAL',              threshold:80, opp:'SPAIN',       oppRating:91, result:'LOSS', stage:'LOST QF' },
+  { tier:'R16',          label:'ROUND OF 16',               threshold:76, opp:'PORTUGAL',    oppRating:88, result:'LOSS', stage:'LOST R16' },
+  { tier:'R32',          label:'ROUND OF 32',               threshold:72, opp:'ENGLAND',     oppRating:89, result:'LOSS', stage:'LOST R32' },
+  { tier:'GROUP_OUT',    label:'GROUP STAGE EXIT',          threshold:0,  opp:null,          oppRating:0,  result:null,   stage:'GROUP STAGE OUT' },
 ];
 
 // ============================================================
@@ -1132,6 +1162,55 @@ function copyToClipboard() {
   }).catch(() => {
     toast('COPY FAILED — TRY MANUALLY');
   });
+}
+
+// ============================================================
+// ROSTERS MODAL — browse all 48 nations and their full squads
+// ============================================================
+function openRostersModal() {
+  renderRosters('');
+  $('rostersModal').hidden = false;
+  const search = document.getElementById('rostersSearch');
+  if (search) { search.value = ''; setTimeout(() => search.focus(), 50); }
+}
+
+function renderRosters(query) {
+  const q = (query || '').toLowerCase().trim();
+  const all = NATIONS.slice().sort((a, b) => (a.group || '').localeCompare(b.group || '') || a.name.localeCompare(b.name));
+  const filtered = all.filter(n => {
+    if (!q) return true;
+    if (n.name.toLowerCase().includes(q)) return true;
+    if (n.code.toLowerCase().includes(q)) return true;
+    return n.players.some(p => p.name.toLowerCase().includes(q) || (p.club || '').toLowerCase().includes(q));
+  });
+
+  const countEl = document.getElementById('rostersCount');
+  if (countEl) countEl.textContent = `${filtered.length} / ${all.length}`;
+
+  const html = filtered.map(n => {
+    const players = n.players.slice().sort((a, b) => b.rating - a.rating);
+    const playerRows = players.map(p => `
+      <div class="roster__row">
+        <span class="roster__pos roster__pos--${p.pos.toLowerCase()}">${p.role}</span>
+        <span class="roster__name">${p.name}</span>
+        <span class="roster__club">${p.club}</span>
+        <span class="roster__rating">${p.rating}</span>
+      </div>
+    `).join('');
+    return `
+      <details class="roster__card" ${q ? 'open' : ''}>
+        <summary class="roster__head">
+          <img class="roster__flag" src="https://flagcdn.com/w80/${n.iso}.png" srcset="https://flagcdn.com/w160/${n.iso}.png 2x" alt="${n.name}" />
+          <span class="roster__nation">${n.name}</span>
+          <span class="roster__group">${n.group || ''}</span>
+          <span class="roster__size">${n.players.length} PLAYERS</span>
+        </summary>
+        <div class="roster__body">${playerRows}</div>
+      </details>
+    `;
+  }).join('');
+
+  $('rostersGrid').innerHTML = html || '<div class="roster__empty">NO MATCH</div>';
 }
 
 // ============================================================
@@ -1549,6 +1628,14 @@ document.addEventListener('DOMContentLoaded', () => {
   $('copyBtn').addEventListener('click', copyToClipboard);
   const shareImgBtn = document.getElementById('shareImgBtn');
   if (shareImgBtn) shareImgBtn.addEventListener('click', shareXICardImage);
+  const rostersLink = document.getElementById('rostersLink');
+  if (rostersLink) rostersLink.addEventListener('click', (e) => { e.preventDefault(); openRostersModal(); });
+  const rostersClose = document.getElementById('rostersClose');
+  if (rostersClose) rostersClose.addEventListener('click', () => $('rostersModal').hidden = true);
+  const rostersBackdrop = document.getElementById('rostersBackdrop');
+  if (rostersBackdrop) rostersBackdrop.addEventListener('click', () => $('rostersModal').hidden = true);
+  const rostersSearch = document.getElementById('rostersSearch');
+  if (rostersSearch) rostersSearch.addEventListener('input', e => renderRosters(e.target.value));
   const submitBtn = document.getElementById('submitLineupBtn');
   if (submitBtn) submitBtn.addEventListener('click', submitLineupToLeaderboard);
   // HELP MODAL
