@@ -146,6 +146,21 @@ async function storeLineup(entry) {
   return result;
 }
 
+// Filter out entries with corrupted Unicode (replacement chars from a bad
+// encoding round-trip — happened to early test entries posted from PowerShell).
+function isEntryClean(e) {
+  if (!e) return false;
+  const fields = [e.by, e.lineup, e.mode];
+  for (const f of fields) {
+    if (typeof f !== 'string') continue;
+    // U+FFFD = replacement char ("�"). Some browsers also render lone ?  marks.
+    if (f.includes('�')) return false;
+    // Heuristic: 3+ "?" in a row in lineup = was probably non-ASCII before
+    if (/\?\s*[·\-]?\s*\?\s*[·\-]?\s*\?/.test(f)) return false;
+  }
+  return true;
+}
+
 async function renderLeaderboard() {
   const grid = document.getElementById('leaderboardGrid');
   if (!grid) return;
@@ -173,6 +188,7 @@ async function renderLeaderboard() {
   }
 
   const combined = rows
+    .filter(isEntryClean)                  // ★ skip corrupted-Unicode entries
     .sort((a, b) => b.ovr - a.ovr)
     .slice(0, 12)
     .map((row, i) => ({ ...row, rank: i + 1 }));
