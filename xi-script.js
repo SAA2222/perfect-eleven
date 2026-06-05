@@ -2054,10 +2054,12 @@ function unlockPremium() {
 function openPaywall() { $('paywallModal').hidden = false; }
 function closePaywall() { $('paywallModal').hidden = true; }
 
-// Auto-unlock when Stripe redirects back with ?premium=success.
+// Auto-unlock when Stripe redirects back with ?premium=success123.
+// Param is mildly obfuscated so randomly typing the obvious string doesn't work.
+// The corresponding Stripe Payment Link's success redirect URL must match.
 function handleStripeReturn() {
   const params = new URLSearchParams(window.location.search);
-  if (params.get('premium') === 'success') {
+  if (params.get('premium') === 'success123') {
     unlockPremium();
     // Clean the URL so refreshes don't keep showing the toast
     const cleanUrl = window.location.pathname + window.location.hash;
