@@ -2007,12 +2007,12 @@ function initSlots() {
 const PREMIUM_UNLOCK_KEY = 'pe_premium_unlocked';
 const PREMIUM_MODES = new Set(['top50', 'legends']);
 
-// Stripe Payment Link — set this to your real Stripe Payment Link URL.
-// Create one at https://dashboard.stripe.com/payment-links (one-time $4.99 product).
-// In Stripe link config, set the Confirmation page to:
-//   https://perfect-eleven.vercel.app/?premium=success
-// so the redirect back here triggers an automatic unlock.
-const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/REPLACE_ME_WITH_REAL_LINK';
+// Stripe Payment Link — live checkout URL. Currently TEST mode (sandbox).
+// Switch to live mode in Stripe Dashboard → toggle off sandbox → create new
+// live link → paste here when ready to take real money.
+// Confirmation redirect is set to /?premium=success in Stripe so the
+// handleStripeReturn() handler at boot auto-unlocks Premium.
+const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/test_eVqdR2aRGaEZ8f05rl9oc00';
 
 function isPremium() {
   return localStorage.getItem(PREMIUM_UNLOCK_KEY) === '1';
