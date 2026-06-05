@@ -992,37 +992,33 @@ function computeAwards() {
   const all = buildFullTournamentPool();
   if (!all.length) return null;
 
-  // AWARD_BIAS — proven clutch performers up, unproven young guns down.
+  // AWARD_BIAS — tuned to the desired Golden Boot tier:
+  //   Mbappe > Kane > Haaland = Yamal > Messi = Ronaldo > Salah/others
   // Only affects award odds, not the player's displayed rating.
   const AWARD_BIAS = {
-    'Cristiano Ronaldo': 7,   // sixth World Cup, career goalscorer, narrative gold
-    'Harry Kane': 4,          // proven golden boot hunter
-    'Lionel Messi': 3,        // defending champion + captain
-    'Erling Haaland': 2,      // record-breaking PL season, generational
-    'Mohamed Salah': 2,       // big-game player
-    'Jude Bellingham': 2,     // clutch finals man
-    'Vinícius Júnior': 1,
-    'Kylian Mbappé': 1,
-    // Young / unproven on World Cup stage — high rating, lower trophy odds
-    'Lamine Yamal': -4,
-    'Endrick': -2,
-    'Désiré Doué': -2,
-    'Rayan Cherki': -2,
-    'Maghnes Akliouche': -2,
-    'Arda Güler': -2,
-    'Kenan Yıldız': -2,
-    'Lennart Karl': -2,
-    'Gilberto Mora': -2,
+    // Effective = base rating + bias. Tier targets:
+    //   Mbappe ~100, Kane ~99, Haaland/Yamal ~97, Messi/Ronaldo ~96, Salah ~94
+    'Kylian Mbappé':     3,   // base 97 → 100 (tier 1)
+    'Harry Kane':        5,   // base 94 → 99 (tier 2, slightly below Mbappe)
+    'Erling Haaland':    1,   // base 96 → 97 (tier 3)
+    'Lamine Yamal':     -1,   // base 98 → 97 (tier 3, tied with Haaland)
+    'Lionel Messi':      1,   // base 95 → 96 (tier 4)
+    'Cristiano Ronaldo': 5,   // base 91 → 96 (tier 4, matched to Messi)
+    'Mohamed Salah':     0,   // base 94 → 94 (tier 5)
+    'Vinícius Júnior':  -1,   // base 95 → 94 (tier 5)
+    // Midfield-only narratives (only matter for Best Mid / Top Assister / Golden Ball)
+    'Jude Bellingham':   2,
   };
   const effRating = (p) => p.rating + (AWARD_BIAS[p.name] || 0);
 
-  // Weighted top-N: top-8 by adjusted rating, weighted exponentially.
+  // Weighted top-N: top-8 by adjusted rating. Exponent 1.8 gives more spread
+  // across the field so tier-3/4 contenders still win occasionally.
   const weightedTopPick = (arr, topN = 8) => {
     if (!arr.length) return null;
     const sorted = arr.slice().sort((a, b) => effRating(b) - effRating(a));
     const top = sorted.slice(0, Math.min(topN, sorted.length));
     const floor = effRating(top[top.length - 1]) - 1;
-    const weights = top.map(p => Math.pow(effRating(p) - floor, 2.5));
+    const weights = top.map(p => Math.pow(effRating(p) - floor, 1.8));
     const total = weights.reduce((a, b) => a + b, 0);
     let r = Math.random() * total;
     for (let i = 0; i < top.length; i++) {
@@ -1036,7 +1032,7 @@ function computeAwards() {
   const goldenBall = weightedTopPick(all, 10);
 
   const attackers = all.filter(p => ['ST','LW','RW'].includes(p.role));
-  const goldenBoot = attackers.length ? weightedTopPick(attackers) : null;
+  const goldenBoot = attackers.length ? weightedTopPick(attackers, 10) : null;
 
   // Top assister: best CAM / playmaker, exclude the Golden Boot winner
   const playmakers = all.filter(p => ['CAM','CM','LW','RW'].includes(p.role) && p.name !== goldenBoot?.name);
