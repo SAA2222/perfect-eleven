@@ -894,10 +894,13 @@ NATIONS.push(
 const LEGENDS = [
   { code:'BRA', iso:'br', name:'BRAZIL', flag:'🇧🇷', group:'LGD', players:[
     { name:'Pelé',           pos:'FWD', role:'ST',  club:'SANTOS',      rating:99 },
-    { name:'Ronaldo R9',     pos:'FWD', role:'ST',  club:'INTER MILAN', rating:97 },
+    { name:'Ronaldo R9',     pos:'FWD', role:'ST',  club:'INTER MILAN', rating:98 },
     { name:'Romário',        pos:'FWD', role:'ST',  club:'BARCELONA',   rating:95 },
     { name:'Ronaldinho',     pos:'MID', role:'CAM', club:'BARCELONA',   rating:96 },
     { name:'Zico',           pos:'MID', role:'CAM', club:'FLAMENGO',    rating:94 },
+    { name:'Sócrates',       pos:'MID', role:'CAM', club:'CORINTHIANS', rating:94 },
+    { name:'Rivellino',      pos:'MID', role:'CAM', club:'CORINTHIANS', rating:92 },
+    { name:'Tostão',         pos:'FWD', role:'ST',  club:'CRUZEIRO',    rating:91 },
     { name:'Kaká',           pos:'MID', role:'CAM', club:'AC MILAN',    rating:93 },
     { name:'Garrincha',      pos:'FWD', role:'RW',  club:'BOTAFOGO',    rating:95 },
     { name:'Rivaldo',        pos:'MID', role:'CAM', club:'BARCELONA',   rating:93 },
@@ -943,7 +946,7 @@ const LEGENDS = [
   ]},
   { code:'ENG', iso:'gb-eng', name:'ENGLAND', flag:'🏴', group:'LGD', players:[
     { name:'Bobby Charlton', pos:'MID', role:'CAM', club:'MAN UNITED',  rating:96 },
-    { name:'Bobby Moore',    pos:'DEF', role:'CB',  club:'WEST HAM',    rating:95 },
+    { name:'Bobby Moore',    pos:'DEF', role:'CB',  club:'WEST HAM',    rating:96 },
     { name:'Gary Lineker',   pos:'FWD', role:'ST',  club:'BARCELONA',   rating:93 },
     { name:'Geoff Hurst',    pos:'FWD', role:'ST',  club:'WEST HAM',    rating:91 },
     { name:'David Beckham',  pos:'FWD', role:'RW',  club:'MAN UNITED',  rating:92 },
@@ -1016,7 +1019,7 @@ const LEGENDS = [
     { name:'Van der Sar',    pos:'GK',  role:'GK',  club:'MAN UNITED',  rating:91 },
   ]},
   { code:'BEL', iso:'be', name:'BELGIUM', flag:'🇧🇪', group:'LGD', players:[
-    { name:'Eden Hazard',    pos:'FWD', role:'LW',  club:'REAL MADRID', rating:95 },
+    { name:'Eden Hazard',    pos:'FWD', role:'LW',  club:'REAL MADRID', rating:94 },
     { name:'K. De Bruyne (peak)',pos:'MID',role:'CM',club:'MAN CITY',   rating:95 },
     { name:'R. Lukaku (peak)',pos:'FWD',role:'ST', club:'INTER MILAN',  rating:90 },
     { name:'Dries Mertens',  pos:'FWD', role:'ST',  club:'NAPOLI',      rating:88 },
@@ -1037,7 +1040,7 @@ const LEGENDS = [
     { name:'Stipe Pletikosa',pos:'GK',  role:'GK',  club:'TOTTENHAM',   rating:84 },
   ]},
   { code:'MEX', iso:'mx', name:'MEXICO', flag:'🇲🇽', group:'LGD', players:[
-    { name:'Hugo Sánchez',   pos:'FWD', role:'ST',  club:'REAL MADRID', rating:95 },
+    { name:'Hugo Sánchez',   pos:'FWD', role:'ST',  club:'REAL MADRID', rating:93 },
     { name:'Rafael Márquez', pos:'DEF', role:'CB',  club:'BARCELONA',   rating:89 },
     { name:'C. Blanco',      pos:'MID', role:'CAM', club:'AMÉRICA',     rating:88 },
     { name:'Chicharito',     pos:'FWD', role:'ST',  club:'MAN UNITED',  rating:88 },
@@ -1071,7 +1074,7 @@ const LEGENDS = [
     { name:'M. Belhanda',    pos:'MID', role:'CAM', club:'MONTPELLIER', rating:82 },
     { name:'M. Chamakh',     pos:'FWD', role:'ST',  club:'ARSENAL',     rating:80 },
     { name:'Salaheddine Bassir',pos:'FWD',role:'LW',club:'AJAX',        rating:80 },
-    { name:'M. Hadji',       pos:'MID', role:'CAM', club:'CRYSTAL PALACE',rating:84 },
+    { name:'M. Hadji',       pos:'MID', role:'CAM', club:'COVENTRY CITY',rating:86 },
   ]},
   { code:'JPN', iso:'jp', name:'JAPAN', flag:'🇯🇵', group:'LGD', players:[
     { name:'Hidetoshi Nakata',pos:'MID',role:'CM',  club:'ROMA',        rating:88 },
