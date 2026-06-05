@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BUILD THE PERFECT ELEVEN — FORTY-EIGHT</title>
+<meta name="description" content="Spin a random World Cup nation. Pick one player. Build the perfect starting eleven." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css?v=20260605ab" />
+<link rel="stylesheet" href="build-xi.css?v=20260605ab" />
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar__inner">
+    <a href="index.html" class="brand">
+      <span class="brand__mark">11</span>
+      <span class="brand__name">PERFECT ELEVEN</span>
+      <span class="brand__sub">/ WORLD CUP 2026</span>
+    </a>
+    <nav class="nav">
+      <a href="#" class="nav__link" data-help-jump="how">How To Play</a>
+      <a href="#" class="nav__link" data-help-jump="faq">FAQ</a>
+      <a href="#" class="nav__link" data-help-jump="report">Report Bug</a>
+      <a href="#" class="nav__link" data-help-jump="data">Data Sources</a>
+      <a href="#leaderboard" class="nav__link">Leaderboard</a>
+      <a href="#" class="nav__link nav__link--help" id="helpLink">Help</a>
+    </nav>
+    <div class="topbar__right">
+      <span class="live-dot"></span>
+      <span class="topbar__live">T-MINUS</span>
+      <span class="topbar__date" id="topbarDate">—</span>
+    </div>
+  </div>
+</header>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker__track" id="tickerTrack"></div>
+</div>
+
+<!-- ======================== HERO ======================== -->
+<section class="xi-hero">
+  <div class="xi-hero__inner">
+    <span class="meta-tag">§ TOOL 01 — INTERACTIVE · WORLD CUP 2026</span>
+    <h1 class="xi-hero__title">
+      BUILD <em>A</em><br/>PERFECT <em>ELEVEN.</em>
+    </h1>
+    <p class="xi-hero__lede">
+      Spin one of forty-eight World Cup nations. Pick a single player from that side.
+      Repeat until your starting eleven is complete. No do-overs.
+    </p>
+
+    <div class="xi-modes">
+      <button class="xi-mode xi-mode--active" data-mode="classic">CLASSIC</button>
+      <button class="xi-mode xi-mode--locked" data-mode="top50" id="top50Tab">
+        <span class="xi-mode__lock">🔒</span> TOP 50
+      </button>
+      <button class="xi-mode xi-mode--locked" data-mode="legends" id="legendsTab">
+        <span class="xi-mode__lock">🔒</span> LEGENDS
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== GAME ======================== -->
+<section class="xi-game">
+
+  <!-- LEFT: Spinner + Controls -->
+  <aside class="xi-spinner-col">
+    <div class="xi-progress">
+      <span class="xi-progress__label">ROUND</span>
+      <span class="xi-progress__num"><span id="roundNum">0</span>/11</span>
+      <div class="xi-progress__bar"><span id="progressFill" style="width:0%"></span></div>
+    </div>
+
+    <div class="xi-resources">
+      <div class="xi-res">
+        <span class="xi-res__label">SKIPS</span>
+        <span class="xi-res__pips" id="skipPips">
+          <span class="xi-res__pip on"></span>
+          <span class="xi-res__pip on"></span>
+          <span class="xi-res__pip on"></span>
+          <span class="xi-res__pip on"></span>
+          <span class="xi-res__pip on"></span>
+        </span>
+      </div>
+      <div class="xi-res">
+        <span class="xi-res__label">SWAPS</span>
+        <span class="xi-res__pips" id="swapPips">
+          <span class="xi-res__pip on"></span>
+          <span class="xi-res__pip on"></span>
+          <span class="xi-res__pip on"></span>
+        </span>
+      </div>
+    </div>
+
+    <div class="xi-spinner" id="spinner">
+      <div class="xi-spinner__ring"></div>
+      <div class="xi-spinner__cards" id="spinnerCards"></div>
+      <div class="xi-spinner__pointer">▼</div>
+      <div class="xi-spinner__result" id="spinnerResult">
+        <span class="xi-spinner__flag" id="resultFlag">🌍</span>
+        <span class="xi-spinner__name" id="resultName">SPIN TO BEGIN</span>
+        <span class="xi-spinner__group" id="resultGroup">—</span>
+      </div>
+    </div>
+
+    <div class="xi-controls">
+      <button class="xi-btn xi-btn--primary" id="spinBtn">
+        <span>SPIN THE WORLD</span>
+        <span class="xi-btn__arrow">→</span>
+      </button>
+      <button class="xi-btn xi-btn--gold" id="swapBtnTop" disabled>
+        <span>SWAP OUT (<span class="swap-count-num">3</span> LEFT)</span>
+        <span class="xi-btn__arrow">⇆</span>
+      </button>
+      <button class="xi-btn xi-btn--ghost" id="resetBtn">
+        RESET ROSTER
+      </button>
+    </div>
+
+    <div class="xi-rules" id="how">
+      <h4>HOW IT WORKS</h4>
+      <ol>
+        <li>Hit SPIN to land on one of 48 nations.</li>
+        <li>Pick a single player from that nation's pool.</li>
+        <li>Player must fill an open position slot.</li>
+        <li>Eleven spins. Eleven picks. One starting team.</li>
+      </ol>
+    </div>
+  </aside>
+
+  <!-- RIGHT: Formation Pitch -->
+  <div class="xi-pitch-col">
+    <div class="xi-pitch-head">
+      <span class="xi-pitch-head__formation">FORMATION 4-3-3</span>
+      <span class="xi-pitch-head__overall" id="overallRating">— OVR</span>
+    </div>
+
+    <div class="xi-pitch" id="pitch">
+      <div class="pitch-line pitch-line--mid"></div>
+      <div class="pitch-circle"></div>
+      <div class="pitch-box pitch-box--top"></div>
+      <div class="pitch-box pitch-box--bottom"></div>
+      <div class="pitch-spot pitch-spot--top"></div>
+      <div class="pitch-spot pitch-spot--bottom"></div>
+
+      <div class="slot" data-pos="FWD" data-role="LW" data-slot="0" style="top:14%; left:20%"></div>
+      <div class="slot" data-pos="FWD" data-role="ST" data-slot="1" style="top:9%;  left:50%"></div>
+      <div class="slot" data-pos="FWD" data-role="RW" data-slot="2" style="top:14%; left:80%"></div>
+
+      <div class="slot" data-pos="MID" data-role="LCM" data-slot="3" style="top:32%; left:28%"></div>
+      <div class="slot" data-pos="MID" data-role="CDM" data-slot="4" style="top:46%; left:50%"></div>
+      <div class="slot" data-pos="MID" data-role="RCM" data-slot="5" style="top:32%; left:72%"></div>
+
+      <div class="slot" data-pos="DEF" data-role="LB" data-slot="6" style="top:74%; left:18%"></div>
+      <div class="slot" data-pos="DEF" data-role="LCB" data-slot="7" style="top:72%; left:39%"></div>
+      <div class="slot" data-pos="DEF" data-role="RCB" data-slot="8" style="top:72%; left:61%"></div>
+      <div class="slot" data-pos="DEF" data-role="RB" data-slot="9" style="top:74%; left:82%"></div>
+
+      <div class="slot slot--gk" data-pos="GK" data-role="GK" data-slot="10" style="top:91%; left:50%"></div>
+    </div>
+
+    <div class="xi-share">
+      <button class="xi-btn xi-btn--gold" id="swapBtn" disabled>
+        <span>SWAP (<span class="swap-count-num">3</span>)</span>
+        <span class="xi-btn__arrow">⇆</span>
+      </button>
+      <button class="xi-btn xi-btn--ghost" id="shareBtn" disabled>SHARE YOUR ELEVEN →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== LEADERBOARD ======================== -->
+<section class="leaderboard" id="leaderboard">
+  <div class="leaderboard__head">
+    <span class="section__kicker">§ 02 — THIS WEEK'S TOP LINEUPS</span>
+    <h2 class="section__title">THE <em>LEADERBOARD.</em></h2>
+    <p class="section__lede">The highest-rated teams built by readers this week. Beat the top score.</p>
+  </div>
+  <div class="leaderboard__grid" id="leaderboardGrid"></div>
+</section>
+
+<!-- ======================== ABOUT ======================== -->
+<section class="about" id="about">
+  <div class="about__inner">
+    <span class="section__kicker">§ 03 — ABOUT</span>
+    <h2 class="section__title">A GAME <em>FOR THE</em> NEUTRALS.</h2>
+    <div class="about__cols">
+      <div>
+        <h4>WHY</h4>
+        <p>
+          The 2026 World Cup is the largest ever. Forty-eight nations, sixteen cities, three host countries.
+          Most of us will pick a side eventually — but for one perfect lineup, you don't have to.
+        </p>
+      </div>
+      <div>
+        <h4>RULES</h4>
+        <p>
+          Every spin lands on a nation. You pick one player from that side, or pass.
+          A nation can only contribute one player. Eleven picks fills a 4-3-3.
+        </p>
+      </div>
+      <div>
+        <h4>MODES</h4>
+        <p>
+          <strong>Classic</strong> uses the 2026 World Cup squads.
+          <strong>Top 50</strong> opens the world's elite — qualified AND missed. <strong>Legends</strong> goes all-time.
+        </p>
+      </div>
+    </div>
+    <p style="margin-top: 24px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; color: var(--mute); border-top: 1px solid var(--rule); padding-top: 16px;">
+      NOTE — ALL 48 SQUADS NOW REFLECT THE OFFICIAL 26-MAN ROSTERS FROM ESPN'S 2026 WORLD CUP SQUAD ANNOUNCEMENT (JUNE 2026). RATINGS ARE EDITORIAL. SPOT AN ERROR? LET US KNOW.
+    </p>
+  </div>
+</section>
+
+<!-- ======================== PICK MODAL ======================== -->
+<div class="modal" id="pickModal" hidden>
+  <div class="modal__backdrop" id="modalBackdrop"></div>
+  <div class="modal__panel">
+    <header class="modal__head">
+      <div>
+        <span class="modal__kicker">PICK YOUR PLAYER</span>
+        <h2 class="modal__title" id="modalTitle">SELECT FROM TEAM</h2>
+      </div>
+      <button class="modal__close" id="modalClose">×</button>
+    </header>
+    <p class="modal__lede" id="modalLede">Choose one player to fill an open slot.</p>
+    <div class="modal__players" id="modalPlayers"></div>
+    <footer class="modal__foot modal__foot--pick">
+      <button class="xi-btn xi-btn--ghost" id="passBtn">PASS — RE-SPIN (<span id="passCount">5</span> LEFT)</button>
+      <button class="xi-btn xi-btn--gold" id="pickSwapBtn" disabled>
+        <span>SWAP IN (<span class="swap-count-num">3</span>)</span>
+        <span class="xi-btn__arrow">⇆</span>
+      </button>
+    </footer>
+  </div>
+</div>
+
+<!-- ======================== COMPLETE MODAL ======================== -->
+<div class="modal" id="completeModal" hidden>
+  <div class="modal__backdrop"></div>
+  <div class="modal__panel modal__panel--complete">
+    <span class="modal__kicker" style="color: var(--ink);">YOUR ELEVEN IS COMPLETE</span>
+    <h2 class="modal__title" style="color: var(--ink); font-size: clamp(36px, 6vw, 80px);">
+      THE <em>STARTING XI.</em>
+    </h2>
+    <p class="modal__lede" style="color: var(--mute-2);">
+      Final rating: <strong id="finalOvr" style="color: var(--ink);">—</strong> OVR.
+      <span id="finalBlurb"></span>
+    </p>
+    <div class="xi-stat-strip" id="xiStatStrip"></div>
+    <div id="xiInjuries"></div>
+    <div class="xi-awards" id="xiAwards"></div>
+    <div class="xi-summary" id="xiSummary"></div>
+
+    <div class="submit-row">
+      <label class="submit-row__label" for="lineupName">BUILT BY</label>
+      <input class="submit-row__input" id="lineupName" type="text" placeholder="YOUR NAME IN YOUR CITY" maxlength="40" autocomplete="off" />
+      <button class="xi-btn xi-btn--ink" id="submitLineupBtn">SUBMIT TO LEADERBOARD →</button>
+    </div>
+
+    <div class="modal__foot modal__foot--complete">
+      <div class="modal__foot-center">
+        <button class="xi-btn xi-btn--ink xi-btn--ghost-ink" id="playAgainBtn">PLAY AGAIN</button>
+        <button class="xi-btn xi-btn--ink xi-btn--ghost-ink" id="copyBtn">COPY LINEUP</button>
+      </div>
+      <button class="xi-btn xi-btn--gold" id="completeSwapBtn">
+        <span>SWAP OUT (<span class="swap-count-num">3</span>)</span>
+        <span class="xi-btn__arrow">⇆</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== HELP & SUGGESTIONS MODAL ======================== -->
+<div class="modal" id="helpModal" hidden>
+  <div class="modal__backdrop" id="helpBackdrop"></div>
+  <div class="modal__panel modal__panel--help">
+    <header class="modal__head">
+      <div>
+        <span class="modal__kicker">§ HELP · SUGGESTIONS · DATA</span>
+        <h2 class="modal__title">HOW <em>IT WORKS.</em></h2>
+      </div>
+      <button class="modal__close" id="helpClose">×</button>
+    </header>
+
+    <div class="help-tabs">
+      <button class="help-tab help-tab--active" data-help-tab="how">HOW TO PLAY</button>
+      <button class="help-tab" data-help-tab="faq">FAQ</button>
+      <button class="help-tab" data-help-tab="report">REPORT AN ERROR</button>
+      <button class="help-tab" data-help-tab="data">DATA &amp; SOURCES</button>
+    </div>
+
+    <!-- HOW TO PLAY -->
+    <div class="help-panel help-panel--active" data-help-panel="how">
+      <h3 class="help-h3">The game in 4 steps</h3>
+      <ol class="help-list">
+        <li><strong>SPIN</strong> the wheel of nations.</li>
+        <li><strong>PICK</strong> one player from that nation. ★ NATURAL = your role's open slot. ↺ OUT OF POS = the natural slot is taken; you'll fill a nearby one and take a −1 OVR penalty.</li>
+        <li><strong>REPEAT</strong> until your 4-3-3 is full.</li>
+        <li><strong>SUBMIT</strong> your eleven to the leaderboard.</li>
+      </ol>
+      <h3 class="help-h3">Resources</h3>
+      <ul class="help-list">
+        <li><strong>5 SKIPS</strong> — pass on a nation without filling a slot. Limited.</li>
+        <li><strong>3 SWAPS</strong> — remove a placed player, unlock that nation, re-spin to refill.</li>
+      </ul>
+      <h3 class="help-h3">Chemistry (FIFA-style)</h3>
+      <p class="help-p">Each player gets up to 3 chem dots based on how many XI teammates share their league. Every 6 total chem points = +1 OVR to your team rating.</p>
+    </div>
+
+    <!-- FAQ -->
+    <div class="help-panel" data-help-panel="faq">
+      <details class="help-q" open>
+        <summary>Why is Italy / Denmark / Nigeria not in CLASSIC?</summary>
+        <p>CLASSIC mode = the actual 48 teams that qualified for the 2026 World Cup. Those three didn't qualify. To play with them, switch to <strong>TOP 50</strong> (premium) which includes elite missed nations.</p>
+      </details>
+      <details class="help-q">
+        <summary>What's the difference between CLASSIC, TOP 50, and LEGENDS?</summary>
+        <p><strong>CLASSIC</strong>: 48 World Cup qualified squads, official 26-man rosters where available. <strong>TOP 50</strong> (premium): elite footballing nations — qualified and missed. <strong>LEGENDS</strong> (premium): all-time greats at peak career ratings (Pelé 99, Maradona 99, Cruyff 98).</p>
+      </details>
+      <details class="help-q">
+        <summary>How does the paywall work?</summary>
+        <p>A single <strong>$4.99 one-time</strong> payment unlocks both TOP 50 and LEGENDS, forever. No subscription. Future premium modes are included free.</p>
+      </details>
+      <details class="help-q">
+        <summary>What happens if my natural-position slot is filled?</summary>
+        <p>The player goes to another open slot in the same line (e.g., a CB into the RB slot) and takes a <strong>−1 OVR penalty</strong>. The slot border turns gold so you can see who's out of position.</p>
+      </details>
+      <details class="help-q">
+        <summary>Why does my XI take a −1 hit per OOP player?</summary>
+        <p>Real football logic — a winger forced to play fullback isn't as effective. The penalty rewards roster discipline.</p>
+      </details>
+      <details class="help-q">
+        <summary>Can I share my XI?</summary>
+        <p>Submit your eleven with your name. It appears on the public leaderboard. Share-as-image is coming soon.</p>
+      </details>
+    </div>
+
+    <!-- REPORT AN ERROR -->
+    <div class="help-panel" data-help-panel="report">
+      <p class="help-p">Spot a wrong club, wrong rating, missing player, or someone who isn't actually called up? Tell us — every report makes the next person's experience better.</p>
+      <form class="help-form" id="reportForm" onsubmit="return submitReport(event)">
+        <label class="help-label">PLAYER NAME
+          <input class="help-input" type="text" name="player" placeholder="e.g. Scott McTominay" required />
+        </label>
+        <label class="help-label">NATION
+          <input class="help-input" type="text" name="nation" placeholder="e.g. Scotland" required />
+        </label>
+        <label class="help-label">WHAT'S WRONG?
+          <select class="help-input help-select" name="issue" required>
+            <option value="">— select —</option>
+            <option>Wrong club</option>
+            <option>Wrong rating</option>
+            <option>Wrong position / role</option>
+            <option>Player isn't called up</option>
+            <option>Player missing from squad</option>
+            <option>Other</option>
+          </select>
+        </label>
+        <label class="help-label">DETAILS (optional)
+          <textarea class="help-input" name="details" rows="3" placeholder="e.g. McTominay should be 87 OVR, not 84. He won Serie A with Napoli."></textarea>
+        </label>
+        <label class="help-label">YOUR EMAIL (optional — only if you want a reply)
+          <input class="help-input" type="email" name="reporter" placeholder="you@example.com" />
+        </label>
+        <button class="xi-btn xi-btn--primary" type="submit">SEND REPORT →</button>
+        <p class="help-fineprint">Opens your email client with the report pre-filled. No tracking, no spam.</p>
+      </form>
+    </div>
+
+    <!-- DATA & SOURCES -->
+    <div class="help-panel" data-help-panel="data">
+      <h3 class="help-h3">How the squad data works</h3>
+      <p class="help-p">
+        Squad rosters, clubs, and ratings are approximations based on the best available information at the time of build.
+        We update them as transfers happen and as players are called up.
+      </p>
+      <h3 class="help-h3">Our roadmap to bullet-proof accuracy</h3>
+      <div class="help-options">
+        <article class="help-option">
+          <span class="help-option__num">01</span>
+          <h4>API-driven (best for accuracy)</h4>
+          <p>Pull live squads, clubs, and FIFA-style ratings from <strong>football-data.org</strong> at build time. Auto-regenerates the squad file when transfers happen.</p>
+          <span class="help-option__status">Roadmap — Q3 2026</span>
+        </article>
+        <article class="help-option help-option--current">
+          <span class="help-option__num">02</span>
+          <h4>Static JSON we maintain (best for control)</h4>
+          <p>A hand-curated squad file we edit when we spot errors. No code deploys needed. Quick to fix, slower to discover.</p>
+          <span class="help-option__status">Currently in use</span>
+        </article>
+        <article class="help-option help-option--active">
+          <span class="help-option__num">03</span>
+          <h4>Crowdsourced corrections (best post-launch)</h4>
+          <p>You — the "REPORT AN ERROR" tab on the left. Every reader fix compounds. Scales with the audience.</p>
+          <span class="help-option__status">Live now ↖</span>
+        </article>
+      </div>
+      <p class="help-p" style="margin-top: 20px;">
+        Squads will never be 100% perfect 100% of the time during a 50-day tournament with injuries and last-minute calls.
+        But with your reports and our updates, they'll get sharper every week. Thanks for catching what we miss.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== SPONSOR TICKER (DOCKED BOTTOM) ======================== -->
+<div class="sponsor-ticker sponsor-ticker--docked">
+  <span class="sponsor-ticker__label">UNOFFICIAL SPONSORS</span>
+  <div class="sponsor-ticker__track" id="sponsorTrack"></div>
+</div>
+
+<!-- ======================== PAYWALL MODAL ======================== -->
+<div class="modal" id="paywallModal" hidden>
+  <div class="modal__backdrop" id="paywallBackdrop"></div>
+  <div class="modal__panel modal__panel--paywall">
+    <header class="modal__head">
+      <div>
+        <span class="modal__kicker">PREMIUM · ONE-TIME UNLOCK</span>
+        <h2 class="modal__title">GO <em>PREMIUM.</em></h2>
+      </div>
+      <button class="modal__close" id="paywallClose">×</button>
+    </header>
+    <p class="modal__lede">
+      Two premium modes. One unlock. Build with the world's elite — qualified or not.
+      Build with the all-time greats at peak ratings.
+    </p>
+    <ul class="pw-features">
+      <li><span class="pw-features__bullet">✓</span> <strong>TOP 50</strong> — 54 elite nations (Italy, Nigeria, Denmark, Lewandowski, Osimhen, Vlahović…)</li>
+      <li><span class="pw-features__bullet">✓</span> <strong>LEGENDS</strong> — 33 all-time legend pools at peak ratings (Pelé 99, Maradona 99, Cruyff 98)</li>
+      <li><span class="pw-features__bullet">✓</span> Period-correct clubs and eras for legend rosters</li>
+      <li><span class="pw-features__bullet">✓</span> One-time payment, lifetime access</li>
+      <li><span class="pw-features__bullet">✓</span> Future premium modes included free</li>
+    </ul>
+    <div class="pw-price">
+      <span class="pw-price__amount">$4.99</span>
+      <span class="pw-price__sub">ONE-TIME · BOTH MODES · NO SUBSCRIPTION</span>
+    </div>
+    <button class="xi-btn xi-btn--primary pw-cta" id="paywallUnlock">UNLOCK NOW →</button>
+    <div class="pw-foot">
+      <a href="#" id="paywallRestore">Restore purchase</a>
+      <span>·</span>
+      <span>Powered by Stripe</span>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer__bottom">
+    <span>© 2026 PERFECT ELEVEN. NOT AFFILIATED WITH FIFA.</span>
+    <span>FORTY-EIGHT NATIONS · ONE LINEUP · v1.1</span>
+  </div>
+</footer>
+
+<script src="live-stats.js?v=20260605ab"></script>
+<script src="xi-data.js?v=20260605ab"></script>
+<script src="xi-script.js?v=20260605ab"></script>
+<script src="extras.js?v=20260605ab"></script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BUILD THE PERFECT XI — FORTY-EIGHT</title>
+<meta name="description" content="Spin a random nation. Pick one player. Build the perfect World Cup XI." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="build-xi.css" />
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar__inner">
+    <a href="index.html" class="brand">
+      <span class="brand__mark">48</span>
+      <span class="brand__name">FORTY-EIGHT</span>
+      <span class="brand__sub">/ THE 2026 ALMANAC</span>
+    </a>
+    <nav class="nav">
+      <a href="index.html#groups">The Draw</a>
+      <a href="index.html#schedule">Fixtures</a>
+      <a href="index.html#cities">Host Cities</a>
+      <a href="index.html#features">Features</a>
+      <a href="build-xi.html" style="color: var(--pitch);">Build XI</a>
+    </nav>
+    <div class="topbar__right">
+      <span class="live-dot"></span>
+      <span class="topbar__live">TOOL · ACTIVE</span>
+      <span class="topbar__date">v1.0</span>
+    </div>
+  </div>
+</header>
+
+<!-- ======================== HERO ======================== -->
+<section class="xi-hero">
+  <div class="xi-hero__inner">
+    <span class="meta-tag">§ TOOL 01 — INTERACTIVE</span>
+    <h1 class="xi-hero__title">
+      BUILD <em>THE</em><br/>PERFECT XI.
+    </h1>
+    <p class="xi-hero__lede">
+      Spin one of forty-eight World Cup nations. Pick a single player from that side.
+      Repeat until your starting eleven is complete. No do-overs.
+    </p>
+
+    <div class="xi-modes">
+      <button class="xi-mode xi-mode--active" data-mode="classic">CLASSIC</button>
+      <button class="xi-mode" data-mode="legends">LEGENDS</button>
+      <button class="xi-mode" data-mode="underdog">UNDERDOG</button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== GAME ======================== -->
+<section class="xi-game">
+
+  <!-- LEFT: Spinner + Controls -->
+  <aside class="xi-spinner-col">
+    <div class="xi-progress">
+      <span class="xi-progress__label">ROUND</span>
+      <span class="xi-progress__num"><span id="roundNum">0</span>/11</span>
+      <div class="xi-progress__bar"><span id="progressFill" style="width:0%"></span></div>
+    </div>
+
+    <div class="xi-spinner" id="spinner">
+      <div class="xi-spinner__ring"></div>
+      <div class="xi-spinner__cards" id="spinnerCards">
+        <!-- populated -->
+      </div>
+      <div class="xi-spinner__pointer">▼</div>
+      <div class="xi-spinner__result" id="spinnerResult">
+        <span class="xi-spinner__flag" id="resultFlag">🌍</span>
+        <span class="xi-spinner__name" id="resultName">SPIN TO BEGIN</span>
+        <span class="xi-spinner__group" id="resultGroup">—</span>
+      </div>
+    </div>
+
+    <div class="xi-controls">
+      <button class="xi-btn xi-btn--primary" id="spinBtn">
+        <span>SPIN THE WORLD</span>
+        <span class="xi-btn__arrow">→</span>
+      </button>
+      <button class="xi-btn xi-btn--ghost" id="resetBtn">
+        RESET ROSTER
+      </button>
+    </div>
+
+    <div class="xi-rules">
+      <h4>HOW IT WORKS</h4>
+      <ol>
+        <li>Hit SPIN to land on one of 48 nations.</li>
+        <li>Pick a single player from that nation's pool.</li>
+        <li>Player must fill an open position slot.</li>
+        <li>Eleven spins. Eleven picks. One XI.</li>
+      </ol>
+    </div>
+  </aside>
+
+  <!-- RIGHT: Formation Pitch -->
+  <div class="xi-pitch-col">
+    <div class="xi-pitch-head">
+      <span class="xi-pitch-head__formation">FORMATION 4-3-3</span>
+      <span class="xi-pitch-head__overall" id="overallRating">— OVR</span>
+    </div>
+
+    <div class="xi-pitch" id="pitch">
+      <!-- pitch markings -->
+      <div class="pitch-line pitch-line--mid"></div>
+      <div class="pitch-circle"></div>
+      <div class="pitch-box pitch-box--top"></div>
+      <div class="pitch-box pitch-box--bottom"></div>
+      <div class="pitch-spot pitch-spot--top"></div>
+      <div class="pitch-spot pitch-spot--bottom"></div>
+
+      <!-- slots: 4-3-3 -->
+      <div class="slot" data-pos="FWD" data-slot="0" style="top:14%; left:20%"></div>
+      <div class="slot" data-pos="FWD" data-slot="1" style="top:9%;  left:50%"></div>
+      <div class="slot" data-pos="FWD" data-slot="2" style="top:14%; left:80%"></div>
+
+      <div class="slot" data-pos="MID" data-slot="3" style="top:36%; left:28%"></div>
+      <div class="slot" data-pos="MID" data-slot="4" style="top:32%; left:50%"></div>
+      <div class="slot" data-pos="MID" data-slot="5" style="top:36%; left:72%"></div>
+
+      <div class="slot" data-pos="DEF" data-slot="6" style="top:60%; left:18%"></div>
+      <div class="slot" data-pos="DEF" data-slot="7" style="top:58%; left:39%"></div>
+      <div class="slot" data-pos="DEF" data-slot="8" style="top:58%; left:61%"></div>
+      <div class="slot" data-pos="DEF" data-slot="9" style="top:60%; left:82%"></div>
+
+      <div class="slot slot--gk" data-pos="GK" data-slot="10" style="top:84%; left:50%"></div>
+    </div>
+
+    <div class="xi-share">
+      <button class="xi-btn xi-btn--ghost" id="shareBtn" disabled>SHARE YOUR XI →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== PICK MODAL ======================== -->
+<div class="modal" id="pickModal" hidden>
+  <div class="modal__backdrop" id="modalBackdrop"></div>
+  <div class="modal__panel">
+    <header class="modal__head">
+      <div>
+        <span class="modal__kicker">PICK YOUR PLAYER</span>
+        <h2 class="modal__title" id="modalTitle">SELECT FROM TEAM</h2>
+      </div>
+      <button class="modal__close" id="modalClose">×</button>
+    </header>
+    <p class="modal__lede" id="modalLede">Choose one player to fill an open slot.</p>
+    <div class="modal__players" id="modalPlayers"></div>
+    <footer class="modal__foot">
+      <button class="xi-btn xi-btn--ghost" id="passBtn">PASS — RE-SPIN</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ======================== COMPLETE MODAL ======================== -->
+<div class="modal" id="completeModal" hidden>
+  <div class="modal__backdrop"></div>
+  <div class="modal__panel modal__panel--complete">
+    <span class="modal__kicker" style="color: var(--ink);">YOUR XI IS COMPLETE</span>
+    <h2 class="modal__title" style="color: var(--ink); font-size: clamp(36px, 6vw, 80px);">
+      THE <em>ELEVEN.</em>
+    </h2>
+    <p class="modal__lede" style="color: var(--mute-2);">
+      Final rating: <strong id="finalOvr" style="color: var(--ink);">—</strong> OVR.
+      <span id="finalBlurb"></span>
+    </p>
+    <div class="xi-summary" id="xiSummary"></div>
+    <div class="modal__foot" style="justify-content: center; gap: 12px;">
+      <button class="xi-btn xi-btn--primary" id="playAgainBtn">PLAY AGAIN →</button>
+      <button class="xi-btn xi-btn--ghost" id="copyBtn">COPY LINEUP</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer__bottom">
+    <span>© 2026 FORTY-EIGHT ALMANAC. NOT AFFILIATED WITH FIFA.</span>
+    <span>BUILD THE XI · v1.0</span>
+  </div>
+</footer>
+
+<script src="xi-data.js"></script>
+<script src="xi-script.js"></script>
+</body>
+</html>

@@ -1,0 +1,1383 @@
+/* ============================================================
+   BUILD THE PERFECT XI — game logic
+   Specific roles + league chemistry
+   ============================================================ */
+
+// slot index → { pos (group), role (specific) }
+const SLOT_DEF = {
+  0:  { pos: 'FWD', role: 'LW'  },
+  1:  { pos: 'FWD', role: 'ST'  },
+  2:  { pos: 'FWD', role: 'RW'  },
+  3:  { pos: 'MID', role: 'LCM' },
+  4:  { pos: 'MID', role: 'CDM' },
+  5:  { pos: 'MID', role: 'RCM' },
+  6:  { pos: 'DEF', role: 'LB'  },
+  7:  { pos: 'DEF', role: 'LCB' },
+  8:  { pos: 'DEF', role: 'RCB' },
+  9:  { pos: 'DEF', role: 'RB'  },
+  10: { pos: 'GK',  role: 'GK'  },
+};
+
+// player role → matching slot roles (in priority order)
+const ROLE_FIT = {
+  GK:  ['GK'],
+  CB:  ['LCB', 'RCB'],
+  LB:  ['LB'],
+  RB:  ['RB'],
+  CDM: ['CDM', 'LCM', 'RCM'],
+  CM:  ['LCM', 'RCM', 'CDM'],
+  CAM: ['LCM', 'RCM', 'CDM'],
+  LW:  ['LW'],
+  ST:  ['ST'],
+  RW:  ['RW'],
+};
+
+const POS_BLURB = {
+  high: 'A genuine super-team. Bookmark this lineup.',
+  mid:  'Mid-table magic. Some inspired picks; some courage.',
+  low:  'A cult classic. The neutrals\' team.'
+};
+
+const MAX_SKIPS = 5;
+const MAX_SWAPS = 3;
+
+let state = {
+  mode: 'classic',
+  roster: {},      // slotIdx → player
+  usedNations: new Set(),
+  isSpinning: false,
+  currentNation: null,
+  skipsLeft: MAX_SKIPS,
+  swapsLeft: MAX_SWAPS,
+  swapMode: false,
+  pickSwapMode: false, // user clicked SWAP from inside pick modal → next pick replaces
+};
+
+const $ = (id) => document.getElementById(id);
+
+// ============================================================
+// SPINNER
+// ============================================================
+function buildSpinnerCards() {
+  const pool = getNationPool(state.mode);
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  const long = [...shuffled, ...shuffled, ...shuffled, ...shuffled];
+  $('spinnerCards').innerHTML = long.map(n => `
+    <div class="xi-card" data-code="${n.code}">
+      <img class="xi-card__flag" src="${flagURL(n.iso, 80)}" srcset="${flagURL2x(n.iso, 80)} 2x" alt="${n.name}" />
+      <span class="xi-card__name">${n.name}</span>
+    </div>
+  `).join('');
+}
+
+function spin() {
+  if (state.isSpinning) return;
+  const available = getNationPool(state.mode).filter(n => !state.usedNations.has(n.code));
+  if (available.length === 0) return;
+
+  state.isSpinning = true;
+  $('spinBtn').disabled = true;
+  $('spinnerResult').classList.remove('show');
+
+  buildSpinnerCards();
+
+  const winner = available[Math.floor(Math.random() * available.length)];
+  state.currentNation = winner;
+
+  const cards = $('spinnerCards');
+  cards.classList.remove('spinning');
+  cards.style.transition = 'none';
+  cards.style.transform = 'translate(0, -50%)';
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const matches = [...cards.querySelectorAll(`.xi-card[data-code="${winner.code}"]`)];
+      const targetCard = matches[Math.min(matches.length - 1, Math.floor(matches.length * 0.7))];
+      const containerW = $('spinner').offsetWidth;
+      // use the actual rendered card width (90px on mobile, 110px on desktop)
+      const actualCardW = targetCard.offsetWidth;
+      const cardCenter = targetCard.offsetLeft + (actualCardW / 2);
+      const offset = (containerW / 2) - cardCenter;
+      cards.style.transition = '';
+      cards.classList.add('spinning');
+      cards.style.transform = `translate(${offset}px, -50%)`;
+    });
+  });
+
+  setTimeout(() => {
+    state.isSpinning = false;
+    showResult(winner);
+    setTimeout(openPickModal, 600);
+  }, 4300);
+}
+
+function showResult(nation) {
+  $('resultFlag').innerHTML = `<img src="${flagURL(nation.iso, 160)}" srcset="${flagURL2x(nation.iso, 160)} 2x" alt="${nation.name}" class="result-flag-img" />`;
+  $('resultName').textContent = nation.name;
+  $('resultGroup').textContent = nation.group;
+  $('spinnerResult').classList.add('show');
+}
+
+// ============================================================
+// SLOT MATCHING — exact role first, then group fallback
+// ============================================================
+function bestSlotForPlayer(player) {
+  // priority list of slot roles for this player's role
+  const fits = ROLE_FIT[player.role] || [];
+  for (const slotRole of fits) {
+    for (const [slotIdxStr, def] of Object.entries(SLOT_DEF)) {
+      if (def.role === slotRole && !state.roster[slotIdxStr]) {
+        return { slotIdx: slotIdxStr, exact: true };
+      }
+    }
+  }
+  // fallback — any open slot in same group
+  for (const [slotIdxStr, def] of Object.entries(SLOT_DEF)) {
+    if (def.pos === player.pos && !state.roster[slotIdxStr]) {
+      return { slotIdx: slotIdxStr, exact: false };
+    }
+  }
+  return null;
+}
+
+function canPlayerFit(player) {
+  return bestSlotForPlayer(player) !== null;
+}
+
+// ============================================================
+// PICK MODAL
+// ============================================================
+function openPickModal() {
+  const n = state.currentNation;
+  if (!n) return;
+
+  // figure which positions/roles are still open
+  highlightOpenSlots(n.players);
+
+  $('modalTitle').innerHTML = `<img src="${flagURL(n.iso, 80)}" srcset="${flagURL2x(n.iso, 80)} 2x" alt="${n.name}" class="modal-title-flag" /> ${n.name}`;
+  $('modalLede').textContent = `Pick one player from ${n.name}. Players in already-filled positions are locked.`;
+
+  const html = n.players.map((p, idx) => {
+    const fit = bestSlotForPlayer(p);
+    const canPick = fit !== null;
+    const league = clubToLeague(p.club);
+    const tag = canPick && fit.exact ? 'NATURAL' : (canPick ? 'OUT OF POS' : 'LOCKED');
+    return `
+      <button class="player" data-idx="${idx}" ${canPick ? '' : 'disabled'}>
+        <div class="player__top">
+          <span class="player__pos player__pos--${p.pos.toLowerCase()}">${p.role}</span>
+          <span class="player__rating">${p.rating}</span>
+        </div>
+        <div class="player__name">${p.name}</div>
+        <div class="player__meta">
+          <span class="player__club">${p.club}</span>
+          <span class="player__league player__league--${league.toLowerCase()}">${league}</span>
+        </div>
+        ${liveStatsBadge(p.name)}
+        <div class="player__fit player__fit--${canPick ? (fit.exact ? 'natural' : 'oop') : 'locked'}">${tag}</div>
+      </button>
+    `;
+  }).join('');
+
+  $('modalPlayers').innerHTML = html;
+  $('pickModal').hidden = false;
+
+  $('modalPlayers').querySelectorAll('.player').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx, 10);
+      pickPlayer(n.players[idx]);
+    });
+  });
+}
+
+function closePickModal() {
+  $('pickModal').hidden = true;
+  clearSlotHighlights();
+  $('spinBtn').disabled = false;
+}
+
+function pickPlayer(p) {
+  // If we're in pick-swap mode, divert to the swap-in flow
+  if (state.pickSwapMode) {
+    executePickSwap(p);
+    return;
+  }
+  const fit = bestSlotForPlayer(p);
+  if (!fit) return;
+  const slotIdx = fit.slotIdx;
+  state.roster[slotIdx] = {
+    ...p,
+    nation: state.currentNation.name,
+    flag: state.currentNation.flag,
+    code: state.currentNation.code,
+    iso: state.currentNation.iso,
+    league: clubToLeague(p.club),
+    naturalFit: fit.exact,
+  };
+  state.usedNations.add(state.currentNation.code);
+  state.currentNation = null;
+  fillSlot(slotIdx);
+  updateProgress();
+  closePickModal();
+  $('spinnerResult').classList.remove('show');
+  if (Object.keys(state.roster).length === 11) {
+    setTimeout(showCompleteModal, 400);
+  }
+}
+
+// ============================================================
+// PICK-SWAP MODE — pick a player from this nation to swap IN
+// for a filled slot of the same position
+// ============================================================
+function findFilledSlotForSwap(player) {
+  // Try exact role match first
+  const fits = ROLE_FIT[player.role] || [];
+  for (const slotRole of fits) {
+    for (const [slotIdxStr, def] of Object.entries(SLOT_DEF)) {
+      if (def.role === slotRole && state.roster[slotIdxStr]) {
+        return { slotIdx: slotIdxStr, exact: true };
+      }
+    }
+  }
+  // Fallback: same group
+  for (const [slotIdxStr, def] of Object.entries(SLOT_DEF)) {
+    if (def.pos === player.pos && state.roster[slotIdxStr]) {
+      return { slotIdx: slotIdxStr, exact: false };
+    }
+  }
+  return null;
+}
+
+function enterPickSwapMode() {
+  if (state.swapsLeft <= 0) { toast('NO SWAPS LEFT'); return; }
+  if (Object.keys(state.roster).length === 0) { toast('NOTHING TO SWAP — PICK A PLAYER FIRST'); return; }
+  state.pickSwapMode = true;
+  // re-render the player cards with swap-target labels
+  rerenderPickModalForSwapIn();
+  const btn = document.getElementById('pickSwapBtn');
+  if (btn) {
+    btn.innerHTML = '<span>CANCEL SWAP</span><span class="xi-btn__arrow">×</span>';
+    btn.onclick = exitPickSwapMode;
+  }
+  toast('PICK A PLAYER TO SWAP IN');
+}
+
+function exitPickSwapMode() {
+  state.pickSwapMode = false;
+  // re-render normal
+  openPickModal();
+  const btn = document.getElementById('pickSwapBtn');
+  if (btn) {
+    btn.innerHTML = `<span>SWAP IN (<span class="swap-count-num">${state.swapsLeft}</span>)</span><span class="xi-btn__arrow">⇆</span>`;
+    btn.onclick = enterPickSwapMode;
+  }
+}
+
+function rerenderPickModalForSwapIn() {
+  const n = state.currentNation;
+  if (!n) return;
+  $('modalLede').textContent = `Pick a player from ${n.name} to SWAP IN. They'll replace your current player in that position.`;
+
+  const html = n.players.map((p, idx) => {
+    const target = findFilledSlotForSwap(p);
+    const canSwap = target !== null;
+    const oldPlayer = canSwap ? state.roster[target.slotIdx] : null;
+    const league = clubToLeague(p.club);
+    const tag = canSwap
+      ? `↪ REPLACES ${oldPlayer.name.toUpperCase()}`
+      : '✕ NO SLOT TO SWAP';
+    return `
+      <button class="player ${canSwap ? 'player--swap-in' : ''}" data-idx="${idx}" ${canSwap ? '' : 'disabled'}>
+        <div class="player__top">
+          <span class="player__pos player__pos--${p.pos.toLowerCase()}">${p.role}</span>
+          <span class="player__rating">${p.rating}</span>
+        </div>
+        <div class="player__name">${p.name}</div>
+        <div class="player__meta">
+          <span class="player__club">${p.club}</span>
+          <span class="player__league player__league--${league.toLowerCase()}">${league}</span>
+        </div>
+        <div class="player__fit ${canSwap ? 'player__fit--swap' : 'player__fit--locked'}">${tag}</div>
+      </button>
+    `;
+  }).join('');
+
+  $('modalPlayers').innerHTML = html;
+  $('modalPlayers').querySelectorAll('.player').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx, 10);
+      pickPlayer(n.players[idx]);
+    });
+  });
+}
+
+function executePickSwap(p) {
+  const target = findFilledSlotForSwap(p);
+  if (!target) { toast('NO SLOT MATCHES THAT POSITION'); return; }
+  const slotIdx = target.slotIdx;
+  const oldPlayer = state.roster[slotIdx];
+
+  // Free up old player's nation (it's no longer locked)
+  state.usedNations.delete(oldPlayer.code);
+  // Lock the new player's nation
+  state.usedNations.add(state.currentNation.code);
+
+  // Replace roster entry
+  state.roster[slotIdx] = {
+    ...p,
+    nation: state.currentNation.name,
+    flag: state.currentNation.flag,
+    code: state.currentNation.code,
+    iso: state.currentNation.iso,
+    league: clubToLeague(p.club),
+    naturalFit: target.exact,
+  };
+
+  // Re-render the slot on the pitch
+  const el = document.querySelector(`.slot[data-slot="${slotIdx}"]`);
+  if (el) {
+    el.classList.remove('slot--oop');
+    if (!target.exact) el.classList.add('slot--oop');
+    el.classList.add('slot--filled');
+    el.innerHTML = `
+      <img class="slot__filled-flag" src="${flagURL(state.currentNation.iso, 80)}" srcset="${flagURL2x(state.currentNation.iso, 80)} 2x" alt="${state.currentNation.name}" />
+      <span class="slot__filled-name">${shortName(p.name)}</span>
+      <span class="slot__filled-rating">${p.rating}</span>
+      <span class="slot__filled-chem" data-slot-chem="${slotIdx}"></span>
+    `;
+  }
+
+  // Burn the swap
+  state.swapsLeft--;
+  state.pickSwapMode = false;
+
+  // Close pick modal + reset
+  $('pickModal').hidden = true;
+  clearSlotHighlights();
+  $('spinBtn').disabled = false;
+  state.currentNation = null;
+  $('spinnerResult').classList.remove('show');
+
+  updateProgress();
+  updateChemistryViz();
+
+  toast(`${p.name.toUpperCase()} REPLACED ${oldPlayer.name.toUpperCase()}`);
+
+  // Reset pick-swap button text for next time
+  const btn = document.getElementById('pickSwapBtn');
+  if (btn) {
+    btn.innerHTML = `<span>SWAP IN (<span class="swap-count-num">${state.swapsLeft}</span>)</span><span class="xi-btn__arrow">⇆</span>`;
+    btn.onclick = enterPickSwapMode;
+  }
+}
+
+function isUnlimitedSkipsMode() {
+  return state.mode === 'u25';
+}
+
+function passSpin() {
+  // U-25 mode: unlimited skips — the wonderkid pool is huge
+  if (isUnlimitedSkipsMode()) {
+    closePickModal();
+    state.currentNation = null;
+    $('spinnerResult').classList.remove('show');
+    toast('SPIN AGAIN — U-25 HAS UNLIMITED SKIPS');
+    return;
+  }
+  if (state.skipsLeft <= 0) {
+    toast('NO SKIPS LEFT — PICK A PLAYER');
+    return;
+  }
+  state.skipsLeft--;
+  updateResources();
+  closePickModal();
+  state.currentNation = null;
+  $('spinnerResult').classList.remove('show');
+  toast(`SKIP USED. ${state.skipsLeft} LEFT.`);
+}
+
+// ============================================================
+// SWAP MECHANIC
+// ============================================================
+function enterSwapMode() {
+  if (state.swapsLeft <= 0) {
+    toast('NO SWAPS LEFT');
+    return;
+  }
+  if (Object.keys(state.roster).length === 0) {
+    toast('NOTHING TO SWAP — PICK A PLAYER FIRST');
+    return;
+  }
+  state.swapMode = true;
+  document.body.classList.add('swap-mode');
+  document.querySelectorAll('.slot--filled').forEach(el => {
+    el.classList.add('slot--swappable');
+    el.addEventListener('click', onSwapSlotClick);
+  });
+  $('swapBtn').textContent = 'CANCEL SWAP';
+  $('swapBtn').onclick = exitSwapMode;
+  const swapTop = document.getElementById('swapBtnTop');
+  if (swapTop) {
+    swapTop.textContent = 'CANCEL SWAP';
+    swapTop.onclick = exitSwapMode;
+  }
+  // smooth scroll to pitch so user can see the swappable slots
+  document.getElementById('pitch')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  toast('TAP A FILLED SLOT TO REMOVE THAT PLAYER');
+}
+
+function exitSwapMode() {
+  state.swapMode = false;
+  document.body.classList.remove('swap-mode');
+  document.querySelectorAll('.slot--swappable').forEach(el => {
+    el.classList.remove('slot--swappable');
+    el.removeEventListener('click', onSwapSlotClick);
+  });
+  $('swapBtn').innerHTML = `<span>SWAP (<span class="swap-count-num">${state.swapsLeft}</span>)</span><span class="xi-btn__arrow">⇆</span>`;
+  $('swapBtn').onclick = enterSwapMode;
+  const swapTop = document.getElementById('swapBtnTop');
+  if (swapTop) {
+    swapTop.innerHTML = `<span>SWAP OUT (<span class="swap-count-num">${state.swapsLeft}</span> LEFT)</span><span class="xi-btn__arrow">⇆</span>`;
+    swapTop.onclick = enterSwapMode;
+  }
+  updateResources();
+}
+
+function onSwapSlotClick(e) {
+  const el = e.currentTarget;
+  const slotIdx = el.dataset.slot;
+  const p = state.roster[slotIdx];
+  if (!p) return;
+  // remove the player
+  delete state.roster[slotIdx];
+  state.usedNations.delete(p.code);
+  // reset the slot visually
+  el.classList.remove('slot--filled', 'slot--oop', 'slot--swappable');
+  el.innerHTML = '<span class="slot__open">OPEN</span>';
+  // burn the swap
+  state.swapsLeft--;
+  exitSwapMode();
+  updateProgress();
+  updateChemistryViz();
+  toast(`${p.name.toUpperCase()} REMOVED — ${p.nation} UNLOCKED`);
+}
+
+// ============================================================
+// RESOURCES UI (skips + swaps)
+// ============================================================
+function updateResources() {
+  const unlimited = isUnlimitedSkipsMode();
+  // skip pips — show all green-glowing when unlimited
+  document.querySelectorAll('#skipPips .xi-res__pip').forEach((p, i) => {
+    p.classList.toggle('on', unlimited || i < state.skipsLeft);
+    p.classList.toggle('xi-res__pip--inf', unlimited);
+  });
+  const pc = $('passCount');
+  if (pc) pc.textContent = unlimited ? '∞' : state.skipsLeft;
+  $('passBtn').disabled = !unlimited && state.skipsLeft <= 0;
+
+  // swap pips (now handles multiple)
+  document.querySelectorAll('#swapPips .xi-res__pip').forEach((p, i) => {
+    p.classList.toggle('on', i < state.swapsLeft);
+  });
+  const filledCount = Object.keys(state.roster).length;
+  const swapDisabled = state.swapsLeft <= 0 || filledCount === 0 || state.isSpinning;
+  $('swapBtn').disabled = swapDisabled;
+  const swapTop = document.getElementById('swapBtnTop');
+  if (swapTop) swapTop.disabled = swapDisabled;
+  const pickSwap = document.getElementById('pickSwapBtn');
+  if (pickSwap) pickSwap.disabled = swapDisabled;
+  // sync all swap counter spans
+  document.querySelectorAll('.swap-count-num').forEach(el => {
+    el.textContent = state.swapsLeft;
+  });
+}
+
+// ============================================================
+// SLOTS
+// ============================================================
+function highlightOpenSlots(playersOfCurrentNation) {
+  // highlight every slot a player from this nation could fill
+  const openRoles = new Set();
+  playersOfCurrentNation.forEach(p => {
+    const fit = bestSlotForPlayer(p);
+    if (fit) openRoles.add(fit.slotIdx);
+  });
+  document.querySelectorAll('.slot').forEach(el => {
+    if (openRoles.has(el.dataset.slot)) {
+      el.classList.add('slot--empty-target');
+    }
+  });
+}
+function clearSlotHighlights() {
+  document.querySelectorAll('.slot--empty-target').forEach(el => el.classList.remove('slot--empty-target'));
+}
+
+function fillSlot(slotIdx) {
+  const p = state.roster[slotIdx];
+  const el = document.querySelector(`.slot[data-slot="${slotIdx}"]`);
+  if (!el) return;
+  el.classList.add('slot--filled');
+  if (!p.naturalFit) el.classList.add('slot--oop');
+  el.classList.remove('slot--empty-target');
+  el.innerHTML = `
+    <img class="slot__filled-flag" src="${flagURL(p.iso, 80)}" srcset="${flagURL2x(p.iso, 80)} 2x" alt="${p.nation}" />
+    <span class="slot__filled-name">${shortName(p.name)}</span>
+    <span class="slot__filled-rating">${p.rating}</span>
+    <span class="slot__filled-chem" data-slot-chem="${slotIdx}"></span>
+  `;
+  updateChemistryViz();
+}
+
+function shortName(name) {
+  const cleaned = name.replace(/\s*\(peak\)\s*$/i, '').trim();
+  const parts = cleaned.split(' ');
+  if (parts.length === 1) return parts[0].toUpperCase();
+  const SUFFIX = /^(jr\.?|junior|júnior|sr\.?|senior|ii|iii|iv)$/i;
+  let idx = parts.length - 1;
+  while (idx > 0 && SUFFIX.test(parts[idx])) idx--;
+  const last = parts[idx].toUpperCase();
+  if (last.length > 9) return last.slice(0, 9);
+  return last;
+}
+
+// ============================================================
+// CHEMISTRY — FIFA-style same-league links
+// ============================================================
+function chemistryForPlayer(slotIdx) {
+  const p = state.roster[slotIdx];
+  if (!p) return 0;
+  let links = 0;
+  for (const [otherIdx, other] of Object.entries(state.roster)) {
+    if (otherIdx === slotIdx) continue;
+    if (other.league === p.league && p.league !== 'OTH') links++;
+  }
+  return Math.min(3, links);
+}
+
+function teamChemistry() {
+  let total = 0;
+  for (const slotIdx of Object.keys(state.roster)) {
+    total += chemistryForPlayer(slotIdx);
+  }
+  return total; // max = 11 * 3 = 33
+}
+
+function updateChemistryViz() {
+  for (const slotIdx of Object.keys(state.roster)) {
+    const chem = chemistryForPlayer(slotIdx);
+    const el = document.querySelector(`[data-slot-chem="${slotIdx}"]`);
+    if (el) {
+      el.innerHTML = `<span class="chem-dot ${chem >= 1 ? 'on' : ''}"></span><span class="chem-dot ${chem >= 2 ? 'on' : ''}"></span><span class="chem-dot ${chem >= 3 ? 'on' : ''}"></span>`;
+    }
+  }
+}
+
+// ============================================================
+// PROGRESS / RATINGS — applies -1 OOP penalty per out-of-position player
+// ============================================================
+function effectiveRating(p) {
+  return p.naturalFit ? p.rating : p.rating - 1;
+}
+
+function computeFinalOVR() {
+  const eff = Object.values(state.roster).map(effectiveRating);
+  if (!eff.length) return null;
+  const avg = Math.round(eff.reduce((a, b) => a + b, 0) / eff.length);
+  const chemBoost = Math.floor(teamChemistry() / 6);
+  return avg + chemBoost;
+}
+
+function countOOP() {
+  return Object.values(state.roster).filter(p => !p.naturalFit).length;
+}
+
+function updateProgress() {
+  const filled = Object.keys(state.roster).length;
+  $('roundNum').textContent = filled;
+  $('progressFill').style.width = `${(filled / 11) * 100}%`;
+  if (filled > 0) {
+    const final = computeFinalOVR();
+    const chem = teamChemistry();
+    const oop = countOOP();
+    const oopNote = oop > 0 ? ` · <span style="color:var(--gold);font-size:.55em;">${oop} OOP −${oop}</span>` : '';
+    $('overallRating').innerHTML = `${final} <span style="color:var(--mute);font-size:.6em;">OVR</span> · ${chem} <span style="color:var(--mute);font-size:.6em;">CHEM</span>${oopNote}`;
+  } else {
+    $('overallRating').innerHTML = `— <span style="color:var(--mute);font-size:.6em;">OVR</span>`;
+  }
+  $('shareBtn').disabled = filled < 11;
+  updateResources();
+}
+
+// ============================================================
+// COMPLETE
+// ============================================================
+// ============================================================
+// GRADE + PROJECTED FINISH (firstdown.studio-style)
+// ============================================================
+function gradeFromOVR(ovr, chem) {
+  const score = ovr + chem * 0.15;  // chem adds a small grade boost
+  if (score >= 95) return { letter: 'S',  color: 'var(--gold)',    blurb: 'Best in the world. Genuine title favorites.' };
+  if (score >= 91) return { letter: 'A+', color: 'var(--pitch)',   blurb: 'A genuine super-team. Bookmark this lineup.' };
+  if (score >= 88) return { letter: 'A',  color: 'var(--pitch)',   blurb: 'Elite talent in every line.' };
+  if (score >= 85) return { letter: 'B+', color: '#7ed957',        blurb: 'Top-tier squad. A dangerous outfit.' };
+  if (score >= 82) return { letter: 'B',  color: '#7ed957',        blurb: 'Solid mid-table magic. Inspired in places.' };
+  if (score >= 78) return { letter: 'C+', color: 'var(--gold)',    blurb: 'Mixed bag with flashes of quality.' };
+  if (score >= 74) return { letter: 'C',  color: 'var(--gold)',    blurb: 'A cult classic. The neutrals\' team.' };
+  return            { letter: 'D',  color: 'var(--crimson)', blurb: 'Hard to defend. Bring snacks.' };
+}
+
+// ============================================================
+// CONFETTI — pure canvas, fires when team wins the World Cup
+// ============================================================
+function fireConfetti(durationMs = 6000) {
+  const existing = document.getElementById('confettiCanvas');
+  if (existing) existing.remove();
+  const canvas = document.createElement('canvas');
+  canvas.id = 'confettiCanvas';
+  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:9999;';
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+
+  const resize = () => {
+    canvas.width = window.innerWidth * devicePixelRatio;
+    canvas.height = window.innerHeight * devicePixelRatio;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  };
+  resize();
+  const onResize = () => resize();
+  window.addEventListener('resize', onResize);
+
+  const colors = ['#00ff85', '#ffce00', '#ff2e4d', '#4d8aff', '#ffffff', '#ff8800'];
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const particles = [];
+
+  // Multiple burst points across the top for a fuller spread
+  const burstPoints = [W * 0.2, W * 0.5, W * 0.8];
+
+  function spawnBurst(originX, originY, count) {
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.random() - 0.5) * Math.PI * 0.8 - Math.PI / 2;
+      const speed = 6 + Math.random() * 10;
+      particles.push({
+        x: originX,
+        y: originY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        rotation: Math.random() * 360,
+        rotationSpeed: (Math.random() - 0.5) * 12,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        size: 8 + Math.random() * 6,
+        shape: Math.random() < 0.6 ? 'rect' : 'circle',
+        life: 1,
+      });
+    }
+  }
+
+  // Initial bursts
+  burstPoints.forEach(x => spawnBurst(x, H * 0.2, 80));
+  // Second wave after a beat
+  setTimeout(() => burstPoints.forEach(x => spawnBurst(x, H * 0.2, 60)), 400);
+  setTimeout(() => burstPoints.forEach(x => spawnBurst(x, H * 0.2, 60)), 900);
+
+  const startTime = performance.now();
+  function animate(now) {
+    const elapsed = now - startTime;
+    ctx.clearRect(0, 0, W, H);
+    let alive = 0;
+    particles.forEach(p => {
+      if (p.y > H + 50) return;
+      alive++;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.25;          // gravity
+      p.vx *= 0.99;          // air resistance
+      p.rotation += p.rotationSpeed;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate((p.rotation * Math.PI) / 180);
+      ctx.fillStyle = p.color;
+      if (p.shape === 'rect') {
+        ctx.fillRect(-p.size / 2, -p.size / 3, p.size, p.size * 0.55);
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+    if (alive === 0 && elapsed > durationMs) {
+      window.removeEventListener('resize', onResize);
+      canvas.remove();
+      return;
+    }
+    requestAnimationFrame(animate);
+  }
+  requestAnimationFrame(animate);
+}
+
+// ============================================================
+// BRACKET SIMULATION — each tier has an opponent + a result
+// score gap between your XI and the opp determines the margin
+// ============================================================
+// CHAMPIONS now requires elite OVR + chemistry. Glory is earned.
+const BRACKET = [
+  { tier:'CHAMPIONS',    label:'🏆 WORLD CUP CHAMPIONS',  threshold:100, opp:'BRAZIL',      oppRating:90, result:'WIN',  stage:'WON FINAL' },
+  { tier:'RUNNERS_UP',   label:'🥈 RUNNERS-UP',            threshold:96,  opp:'FRANCE',      oppRating:93, result:'LOSS', stage:'LOST FINAL' },
+  { tier:'THIRD',        label:'🥉 THIRD PLACE',            threshold:93,  opp:'NETHERLANDS', oppRating:87, result:'WIN',  stage:'WON 3RD-PLACE' },
+  { tier:'FOURTH',       label:'4TH PLACE',                 threshold:90,  opp:'GERMANY',     oppRating:87, result:'LOSS', stage:'LOST 3RD-PLACE' },
+  { tier:'QUARTERFINAL', label:'QUARTERFINAL',              threshold:86,  opp:'SPAIN',       oppRating:91, result:'LOSS', stage:'LOST QF' },
+  { tier:'R16',          label:'ROUND OF 16',               threshold:81,  opp:'PORTUGAL',    oppRating:88, result:'LOSS', stage:'LOST R16' },
+  { tier:'R32',          label:'ROUND OF 32',               threshold:76,  opp:'ENGLAND',     oppRating:89, result:'LOSS', stage:'LOST R32' },
+  { tier:'GROUP_OUT',    label:'GROUP STAGE EXIT',          threshold:0,   opp:null,          oppRating:0,  result:null,   stage:'GROUP STAGE OUT' },
+];
+
+// ============================================================
+// INJURY SYSTEM — random injuries during the tournament
+// ============================================================
+const INJURY_TYPES = [
+  { name:'HAMSTRING',     out:'GROUP STAGE',    ovrLoss:1 },
+  { name:'KNOCK',         out:'ONE MATCH',      ovrLoss:1 },
+  { name:'CALF STRAIN',   out:'R16',            ovrLoss:2 },
+  { name:'ANKLE SPRAIN',  out:'QF',             ovrLoss:2 },
+  { name:'CONCUSSION',    out:'KNOCKOUTS',      ovrLoss:2 },
+  { name:'KNEE LIGAMENT', out:'TOURNAMENT',     ovrLoss:3 },
+  { name:'ACL',           out:'TOURNAMENT',     ovrLoss:3 },
+  { name:'MUSCLE TEAR',   out:'TOURNAMENT',     ovrLoss:3 },
+];
+
+function rollInjuries(roster) {
+  const players = Object.entries(roster);
+  if (!players.length) return [];
+
+  // LIVE override: during the tournament, use real confirmed injuries instead of random rolls
+  if (isTournamentLive() && window.LIVE_STATS.injuries.length) {
+    const realInj = window.LIVE_STATS.injuries;
+    const injured = [];
+    Object.entries(roster).forEach(([slotIdx, p]) => {
+      const hit = realInj.find(i => i.name === p.name);
+      if (hit) injured.push({ slotIdx, player: p, name: hit.reason, out: hit.out, severity: 'CONFIRMED' });
+    });
+    return injured.slice(0, 3);
+  }
+
+  // Simulated (default): roughly 0-3 injuries per tournament — try each player at 10% base
+  const injured = [];
+  players.forEach(([slotIdx, p]) => {
+    if (Math.random() < 0.11) {
+      const injury = INJURY_TYPES[Math.floor(Math.random() * INJURY_TYPES.length)];
+      injured.push({
+        slotIdx,
+        player: p,
+        ...injury,
+      });
+    }
+  });
+  // Cap at 3 to keep things playable
+  return injured.slice(0, 3);
+}
+
+// ============================================================
+// LIVE TOURNAMENT STATS — read from window.LIVE_STATS (live-stats.js)
+// ============================================================
+function isTournamentLive() {
+  return window.LIVE_STATS && window.LIVE_STATS.status && window.LIVE_STATS.status !== 'PRE';
+}
+function liveStatsForPlayer(name) {
+  if (!window.LIVE_STATS || !window.LIVE_STATS.players) return null;
+  return window.LIVE_STATS.players[name] || null;
+}
+function liveStatsBadge(name) {
+  const s = liveStatsForPlayer(name);
+  if (!s) return '';
+  const bits = [];
+  if (s.G)  bits.push(`<span class="player__livestat">⚽ ${s.G}</span>`);
+  if (s.A)  bits.push(`<span class="player__livestat">🎯 ${s.A}</span>`);
+  if (s.redCards) bits.push(`<span class="player__livestat player__livestat--red">🟥</span>`);
+  if (!bits.length) return '';
+  return `<div class="player__livestrip">${bits.join('')}</div>`;
+}
+function initLiveBadge() {
+  if (!isTournamentLive()) return;
+  const target = document.querySelector('.topbar__inner') || document.querySelector('.topbar');
+  if (!target) return;
+  const phase = window.LIVE_STATS.status; // GROUP, RO32, RO16, QF, SF, FINAL, COMPLETE
+  const badge = document.createElement('span');
+  badge.className = 'topbar__livebadge';
+  badge.textContent = `LIVE · ${phase}`;
+  target.appendChild(badge);
+}
+// Replace simulated award winners with real tournament leaders once available
+function applyLiveAwards(awards) {
+  if (!isTournamentLive() || !awards) return awards;
+  const live = window.LIVE_STATS.awards || {};
+  const lookup = (target) => {
+    if (!target) return null;
+    for (const n of NATIONS) {
+      const p = n.players.find(p => p.name === target.name);
+      if (p) return { ...p, nation: n.name, flag: n.flag, iso: n.iso, code: n.code, liveValue: target.value };
+    }
+    return null;
+  };
+  return {
+    ...awards,
+    goldenBall:   lookup(live.goldenBall)   || awards.goldenBall,
+    goldenBoot:   lookup(live.goldenBoot)   || awards.goldenBoot,
+    topAssister:  lookup(live.topAssister)  || awards.topAssister,
+    goldenGlove:  lookup(live.goldenGlove)  || awards.goldenGlove,
+    youngPlayer:  lookup(live.youngPlayer)  || awards.youngPlayer,
+    bestDefender: lookup(live.bestDefender) || awards.bestDefender,
+    bestMid:      lookup(live.bestMidfielder) || awards.bestMid,
+  };
+}
+
+function predictMatchScore(yourRating, oppRating, result) {
+  const diff = yourRating - oppRating;
+  if (result === 'WIN') {
+    if (diff > 5)  return '3-0';
+    if (diff > 2)  return '2-0';
+    if (diff > -1) return '2-1';
+    return '1-0';                    // gritty upset
+  }
+  if (result === 'LOSS') {
+    if (diff < -5) return '0-3';
+    if (diff < -2) return '0-2';
+    if (diff < 1)  return '1-2';
+    return '0-1';                    // tight loss
+  }
+  return null;
+}
+
+function projectedFinish(ovr, chem, injuryLoss = 0) {
+  const effOvr = ovr - injuryLoss;
+  const score = effOvr + chem * 0.18;  // weight tightened — chem helps but doesn't dominate
+  for (const tier of BRACKET) {
+    if (score >= tier.threshold) {
+      if (!tier.opp) {
+        return { label: tier.label, stage: tier.stage, line: tier.label, won: false };
+      }
+      const matchScore = predictMatchScore(effOvr, tier.oppRating, tier.result);
+      return {
+        label: tier.label,
+        line: `${tier.stage} ${matchScore} vs ${tier.opp}`,
+        result: tier.result,
+        opp: tier.opp,
+        scoreLine: matchScore,
+      };
+    }
+  }
+  return { label: 'NO RESULT', line: '—' };
+}
+
+// ============================================================
+// TOURNAMENT AWARDS — pool = entire WC, Captain = your XI
+// each comes with a plausible stat (goals/assists/clean sheets)
+// ============================================================
+function buildFullTournamentPool() {
+  const all = [];
+  NATIONS.forEach(n => n.players.forEach(p => {
+    all.push({ ...p, nation: n.name, flag: n.flag, iso: n.iso, code: n.code });
+  }));
+  return all;
+}
+
+// Plausible tournament stat for an award type, scaled by rating
+function statFor(awardType, p) {
+  if (!p) return '';
+  const r = p.rating;
+  const tier = r >= 92 ? 3 : r >= 89 ? 2 : r >= 86 ? 1 : 0;
+  switch (awardType) {
+    case 'goldenBoot':  return ['5 GOALS', '6 GOALS', '7 GOALS', '8 GOALS'][tier];
+    case 'topAssister': return ['4 ASSISTS', '5 ASSISTS', '6 ASSISTS', '7 ASSISTS'][tier];
+    case 'goldenGlove': return ['3 CLEAN SHEETS · 18 SAVES','4 CLEAN SHEETS · 21 SAVES','5 CLEAN SHEETS · 24 SAVES','5 CLEAN SHEETS · 27 SAVES'][tier];
+    case 'goldenBall':  return ['3 G · 2 A', '4 G · 3 A', '5 G · 4 A', '6 G · 5 A'][tier];
+    case 'captain':     return `${r} OVR · ARMBAND`;
+    case 'youngPlayer': return ['2 G · 3 A', '3 G · 3 A', '4 G · 3 A', '5 G · 4 A'][tier];
+    case 'bestDefender':return ['3 CLEAN SHEETS', '4 CLEAN SHEETS', '5 CLEAN SHEETS', '5 CLEAN SHEETS · 32 TACKLES'][tier];
+    case 'bestMid':     return ['2 G · 3 A', '3 G · 4 A', '4 G · 5 A', '5 G · 5 A'][tier];
+    default: return `${r} OVR`;
+  }
+}
+
+function computeAwards() {
+  const all = buildFullTournamentPool();
+  if (!all.length) return null;
+
+  const max = (arr) => arr.reduce((m, p) => p.rating > m.rating ? p : m);
+
+  // From the FULL tournament pool
+  const goldenBall = max(all);
+
+  const attackers = all.filter(p => ['ST','LW','RW'].includes(p.role));
+  const goldenBoot = attackers.length ? max(attackers) : null;
+
+  // Top assister: best CAM / playmaker, exclude the Golden Boot winner
+  const playmakers = all.filter(p => ['CAM','CM','LW','RW'].includes(p.role) && p.name !== goldenBoot?.name);
+  const topAssister = playmakers.length ? max(playmakers) : null;
+
+  const keepers = all.filter(p => p.role === 'GK');
+  const goldenGlove = keepers.length ? max(keepers) : null;
+
+  const youngs = all.filter(p => typeof U25_PLAYERS !== 'undefined' && U25_PLAYERS.has(p.name));
+  const youngPlayer = youngs.length ? max(youngs) : null;
+
+  const defenders = all.filter(p => ['CB','LB','RB'].includes(p.role));
+  const bestDefender = defenders.length ? max(defenders) : null;
+
+  const mids = all.filter(p => ['CDM','CM','CAM'].includes(p.role));
+  const bestMid = mids.length ? max(mids) : null;
+
+  // CAPTAIN — from the user's XI (highest outfield rating)
+  const userPlayers = Object.values(state.roster);
+  const outfield = userPlayers.filter(p => p.role !== 'GK');
+  const captain = outfield.length ? max(outfield) : userPlayers[0];
+
+  return applyLiveAwards({ goldenBall, captain, goldenBoot, topAssister, goldenGlove, youngPlayer, bestDefender, bestMid });
+}
+
+function awardCardHTML(emoji, label, awardKey, player) {
+  if (!player) return '';
+  const stat = statFor(awardKey, player);
+  // Is this award winner in the user's XI?
+  const userNames = new Set(Object.values(state.roster).map(p => p.name));
+  const inXI = userNames.has(player.name);
+  const xiClass = inXI ? 'xi-award--in-xi' : '';
+  const xiBadge = inXI ? `<span class="xi-award__xi-badge">★ IN YOUR XI</span>` : '';
+  return `
+    <div class="xi-award ${xiClass}">
+      <span class="xi-award__icon">${emoji}</span>
+      <div class="xi-award__body">
+        <span class="xi-award__label">${label}${xiBadge}</span>
+        <span class="xi-award__player">${player.name}</span>
+        <span class="xi-award__stat">${stat}</span>
+        <span class="xi-award__meta">
+          <img src="${flagURL(player.iso, 40)}" alt="${player.nation}" class="xi-award__flag" />
+          ${player.nation} · ${player.rating} OVR
+        </span>
+      </div>
+    </div>
+  `;
+}
+
+function showCompleteModal() {
+  const baseFinal = computeFinalOVR();
+  const chem = teamChemistry();
+  const oop = countOOP();
+  // Roll injuries for this tournament run
+  const injuries = rollInjuries(state.roster);
+  const injuryLoss = injuries.reduce((sum, i) => sum + i.ovrLoss, 0);
+  const final = Math.max(60, baseFinal - injuryLoss);
+  const grade = gradeFromOVR(final, chem);
+  const finish = projectedFinish(baseFinal, chem, injuryLoss);
+
+  $('finalOvr').textContent = final;
+  const oopNote = oop > 0 ? ` ${oop} OOP (−${oop} OVR).` : '';
+  const injuryNote = injuryLoss > 0 ? ` 🚑 ${injuries.length} injuries (−${injuryLoss} OVR).` : '';
+  $('finalBlurb').textContent = ` ${chem} CHEM.${oopNote}${injuryNote} ${grade.blurb}`;
+
+  // Render injury report card (if any)
+  const injuryContainer = document.getElementById('xiInjuries');
+  if (injuryContainer) {
+    if (injuries.length) {
+      injuryContainer.innerHTML = `
+        <div class="xi-injuries">
+          <h3 class="xi-injuries__title">🚑 INJURY REPORT</h3>
+          <div class="xi-injuries__list">
+            ${injuries.map(i => `
+              <div class="xi-injury">
+                <span class="xi-injury__icon">🚑</span>
+                <span class="xi-injury__player">${i.player.name}</span>
+                <span class="xi-injury__detail">${i.name} · OUT ${i.out}</span>
+                <span class="xi-injury__loss">−${i.ovrLoss}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    } else {
+      injuryContainer.innerHTML = '';
+    }
+  }
+
+  // Compute and render tournament awards (pool = entire tournament, Captain = your XI)
+  const awards = computeAwards();
+  const awardsContainer = document.getElementById('xiAwards');
+  if (awardsContainer && awards) {
+    awardsContainer.innerHTML = `
+      <h3 class="xi-awards__title">TOURNAMENT AWARDS</h3>
+      <div class="xi-awards__grid">
+        ${awardCardHTML('🏆', 'GOLDEN BALL',     'goldenBall',   awards.goldenBall)}
+        ${awardCardHTML('Ⓒ',  'CAPTAIN (XI)',    'captain',      awards.captain)}
+        ${awardCardHTML('⚽', 'GOLDEN BOOT',     'goldenBoot',   awards.goldenBoot)}
+        ${awardCardHTML('🅰️', 'TOP ASSISTER',    'topAssister',  awards.topAssister)}
+        ${awardCardHTML('🧤', 'GOLDEN GLOVE',    'goldenGlove',  awards.goldenGlove)}
+        ${awardCardHTML('🌟', 'YOUNG PLAYER',    'youngPlayer',  awards.youngPlayer)}
+        ${awardCardHTML('🛡️', 'BEST DEFENDER',  'bestDefender', awards.bestDefender)}
+        ${awardCardHTML('⚙️', 'BEST MIDFIELDER','bestMid',      awards.bestMid)}
+      </div>
+    `;
+  }
+
+  // Inject the stat strip with PROJECTED FINISH + GRADE + OVERALL
+  const statStrip = document.getElementById('xiStatStrip');
+  if (statStrip) {
+    const resultClass = finish.result === 'WIN' ? 'xi-stat--win' : finish.result === 'LOSS' ? 'xi-stat--loss' : '';
+    const scoreLine = finish.opp
+      ? `<span class="xi-stat__match"><span class="xi-stat__matchscore">${finish.scoreLine}</span> <span class="xi-stat__matchopp">vs ${finish.opp}</span></span>`
+      : '';
+    statStrip.innerHTML = `
+      <div class="xi-stat xi-stat--finish ${resultClass}">
+        <span class="xi-stat__label">PROJECTED FINISH</span>
+        <span class="xi-stat__value xi-stat__finish">${finish.label}</span>
+        ${scoreLine}
+      </div>
+      <div class="xi-stat">
+        <span class="xi-stat__label">GRADE</span>
+        <span class="xi-stat__value xi-stat__grade" style="color:${grade.color};">${grade.letter}</span>
+      </div>
+      <div class="xi-stat">
+        <span class="xi-stat__label">OVERALL</span>
+        <span class="xi-stat__value">${final} <span class="xi-stat__sub">${chem} CHEM</span></span>
+      </div>
+    `;
+  }
+
+  // Render players on a mini pitch in their actual formation positions
+  const SLOT_POS = {
+    0:  { top: '14%', left: '20%' },
+    1:  { top: '9%',  left: '50%' },
+    2:  { top: '14%', left: '80%' },
+    3:  { top: '32%', left: '28%' },
+    4:  { top: '46%', left: '50%' },
+    5:  { top: '32%', left: '72%' },
+    6:  { top: '74%', left: '18%' },
+    7:  { top: '72%', left: '39%' },
+    8:  { top: '72%', left: '61%' },
+    9:  { top: '74%', left: '82%' },
+    10: { top: '91%', left: '50%' },
+  };
+
+  const injuredSlots = new Set(injuries.map(i => i.slotIdx));
+  const pitchHTML = `
+    <div class="xi-final-pitch">
+      <div class="pitch-line pitch-line--mid"></div>
+      <div class="pitch-circle"></div>
+      <div class="pitch-box pitch-box--top"></div>
+      <div class="pitch-box pitch-box--bottom"></div>
+      <div class="pitch-spot pitch-spot--top"></div>
+      <div class="pitch-spot pitch-spot--bottom"></div>
+      ${Object.keys(SLOT_POS).map(idx => {
+        const i = parseInt(idx, 10);
+        const p = state.roster[i];
+        if (!p) return '';
+        const def = SLOT_DEF[i];
+        const pos = SLOT_POS[i];
+        const pchem = chemistryForPlayer(String(i));
+        const isGK = i === 10;
+        const isInjured = injuredSlots.has(String(i));
+        const injuryBadge = isInjured ? `<span class="xi-final-slot__injury">🚑</span>` : '';
+        return `
+          <div class="xi-final-slot ${isGK ? 'xi-final-slot--gk' : ''} ${!p.naturalFit ? 'xi-final-slot--oop' : ''} ${isInjured ? 'xi-final-slot--injured' : ''}" style="top:${pos.top}; left:${pos.left}">
+            ${injuryBadge}
+            <span class="xi-final-slot__role">${def.role}</span>
+            <img class="xi-final-slot__flag" src="${flagURL(p.iso, 80)}" srcset="${flagURL2x(p.iso, 80)} 2x" alt="${p.nation}" />
+            <span class="xi-final-slot__name">${shortName(p.name)}</span>
+            <div class="xi-final-slot__row">
+              <span class="xi-final-slot__rating">${p.rating}</span>
+              <span class="xi-final-slot__league xi-final-slot__league--${p.league.toLowerCase()}">${p.league}</span>
+            </div>
+            <span class="xi-final-slot__chem">
+              <span class="chem-dot ${pchem >= 1 ? 'on' : ''}"></span><span class="chem-dot ${pchem >= 2 ? 'on' : ''}"></span><span class="chem-dot ${pchem >= 3 ? 'on' : ''}"></span>
+            </span>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  $('xiSummary').innerHTML = pitchHTML;
+  // sync the swap-in-complete button state
+  const compSwap = document.getElementById('completeSwapBtn');
+  if (compSwap) compSwap.disabled = state.swapsLeft <= 0;
+  $('completeModal').hidden = false;
+  // 🎉 fire confetti when you win the World Cup
+  if (finish.label && finish.label.includes('CHAMPIONS')) {
+    setTimeout(fireConfetti, 250);
+  }
+}
+
+function rosterAsText() {
+  const labels = SLOT_DEF;
+  const ordered = [10, 6, 7, 8, 9, 3, 4, 5, 0, 1, 2];
+  const ratings = Object.values(state.roster).map(p => p.rating);
+  const avg = Math.round(ratings.reduce((a, b) => a + b, 0) / ratings.length);
+  const chem = teamChemistry();
+  const final = avg + Math.floor(chem / 6);
+  let txt = `MY PERFECT XI — ${final} OVR · ${chem} CHEM\n\n`;
+  ordered.forEach(i => {
+    const p = state.roster[i];
+    txt += `${labels[i].role.padEnd(4)} ${p.name.padEnd(22)} ${p.nation.padEnd(12)} · ${p.league} · ${p.rating}\n`;
+  });
+  txt += '\nBuilt at perfect-eleven.almanac';
+  return txt;
+}
+
+function copyToClipboard() {
+  const txt = rosterAsText();
+  navigator.clipboard.writeText(txt).then(() => {
+    toast('LINEUP COPIED TO CLIPBOARD');
+  }).catch(() => {
+    toast('COPY FAILED — TRY MANUALLY');
+  });
+}
+
+// ============================================================
+// SUBMIT TO LEADERBOARD
+// ============================================================
+function submitLineupToLeaderboard() {
+  if (Object.keys(state.roster).length !== 11) {
+    toast('FINISH THE XI FIRST');
+    return;
+  }
+  const rawName = ($('lineupName')?.value || '').trim();
+  const name = (rawName || 'ANONYMOUS').toUpperCase().slice(0, 32);
+  const final = computeFinalOVR();
+  const chem = teamChemistry();
+
+  const ordered = [10, 6, 7, 8, 9, 3, 4, 5, 0, 1, 2];
+  const lineup = ordered.map(i => {
+    const p = state.roster[i];
+    return shortName(p.name);
+  }).join(' · ');
+
+  const entry = {
+    by: `BUILT BY ${name}`,
+    ovr: final,
+    chem,
+    mode: state.mode.toUpperCase().replace('U25', 'U-25'),
+    lineup,
+    user: true,
+  };
+
+  storeLineup(entry);
+  renderLeaderboard();
+  $('completeModal').hidden = true;
+  resetRoster();
+  document.getElementById('leaderboard')?.scrollIntoView({ behavior: 'smooth' });
+  toast(`SUBMITTED · ${final} OVR · LEADERBOARD UPDATED`);
+}
+
+// ============================================================
+// REPORT-AN-ERROR FORM (submits via mailto:)
+// ============================================================
+function submitReport(e) {
+  e.preventDefault();
+  const form = e.target;
+  const player = form.player.value.trim();
+  const nation = form.nation.value.trim();
+  const issue = form.issue.value;
+  const details = form.details.value.trim();
+  const reporter = form.reporter.value.trim();
+
+  const subject = `[Perfect XI] ${issue} — ${player} (${nation})`;
+  const body = [
+    `Player: ${player}`,
+    `Nation: ${nation}`,
+    `Issue: ${issue}`,
+    '',
+    'Details:',
+    details || '(none provided)',
+    '',
+    '---',
+    reporter ? `Reported by: ${reporter}` : 'Anonymous report',
+    `Submitted: ${new Date().toISOString()}`,
+  ].join('\n');
+
+  const mailto = `mailto:hello@perfecteleven.app?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailto;
+
+  // Reset + toast
+  form.reset();
+  toast('THANKS — REPORT QUEUED IN YOUR EMAIL APP');
+  return false;
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2900);
+}
+
+// ============================================================
+// RESET
+// ============================================================
+function resetRoster() {
+  state.roster = {};
+  state.usedNations = new Set();
+  state.currentNation = null;
+  state.skipsLeft = MAX_SKIPS;
+  state.swapsLeft = MAX_SWAPS;
+  state.swapMode = false;
+  document.body.classList.remove('swap-mode');
+  $('roundNum').textContent = '0';
+  $('progressFill').style.width = '0%';
+  $('overallRating').textContent = '— OVR';
+  $('shareBtn').disabled = true;
+  $('spinnerResult').classList.remove('show');
+  $('swapBtn').innerHTML = `<span>SWAP (<span class="swap-count-num">${state.swapsLeft}</span>)</span><span class="xi-btn__arrow">⇆</span>`;
+  $('swapBtn').onclick = enterSwapMode;
+  const swapTopReset = document.getElementById('swapBtnTop');
+  if (swapTopReset) {
+    swapTopReset.innerHTML = `<span>SWAP OUT (<span class="swap-count-num">${state.swapsLeft}</span> LEFT)</span><span class="xi-btn__arrow">⇆</span>`;
+    swapTopReset.onclick = enterSwapMode;
+  }
+  document.querySelectorAll('.slot').forEach(el => {
+    el.classList.remove('slot--filled', 'slot--oop', 'slot--swappable');
+    el.innerHTML = '<span class="slot__open">OPEN</span>';
+  });
+  updateResources();
+  toast('ROSTER RESET');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function initSlots() {
+  document.querySelectorAll('.slot').forEach(el => {
+    el.innerHTML = '<span class="slot__open">OPEN</span>';
+  });
+}
+
+// ============================================================
+// PREMIUM PAYWALL (unlocks TOP 50 + LEGENDS together)
+// ============================================================
+const PREMIUM_UNLOCK_KEY = 'pe_premium_unlocked';
+const PREMIUM_MODES = new Set(['top50', 'legends']);
+
+function isPremium() {
+  return localStorage.getItem(PREMIUM_UNLOCK_KEY) === '1';
+}
+function unlockPremium() {
+  localStorage.setItem(PREMIUM_UNLOCK_KEY, '1');
+  ['top50Tab', 'legendsTab'].forEach(id => {
+    const tab = document.getElementById(id);
+    if (!tab) return;
+    tab.classList.remove('xi-mode--locked');
+    tab.querySelector('.xi-mode__lock')?.remove();
+  });
+}
+function openPaywall() { $('paywallModal').hidden = false; }
+function closePaywall() { $('paywallModal').hidden = true; }
+
+function initModes() {
+  // sync lock state at boot
+  if (isPremium()) {
+    ['top50Tab', 'legendsTab'].forEach(id => {
+      const tab = document.getElementById(id);
+      if (!tab) return;
+      tab.classList.remove('xi-mode--locked');
+      tab.querySelector('.xi-mode__lock')?.remove();
+    });
+  }
+
+  document.querySelectorAll('.xi-mode').forEach(btn => {
+    btn.addEventListener('click', () => {
+      // PAYWALL: intercept any premium mode if not unlocked
+      if (PREMIUM_MODES.has(btn.dataset.mode) && !isPremium()) {
+        openPaywall();
+        return;
+      }
+      if (state.mode === btn.dataset.mode) return;
+      document.querySelectorAll('.xi-mode').forEach(b => b.classList.remove('xi-mode--active'));
+      btn.classList.add('xi-mode--active');
+      state.mode = btn.dataset.mode;
+      resetRoster();
+      buildSpinnerCards();
+      const label = state.mode === 'u25' ? 'U-25' : state.mode === 'top50' ? 'TOP 50' : state.mode.toUpperCase();
+      toast(`MODE: ${label}`);
+    });
+  });
+
+  // paywall wiring
+  $('paywallClose')?.addEventListener('click', closePaywall);
+  $('paywallBackdrop')?.addEventListener('click', closePaywall);
+  $('paywallUnlock')?.addEventListener('click', () => {
+    // DEMO — production: window.location.href = 'https://checkout.stripe.com/c/pay/cs_...';
+    unlockPremium();
+    closePaywall();
+    toast('PREMIUM UNLOCKED · TOP 50 + LEGENDS LIVE');
+  });
+  $('paywallRestore')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    unlockPremium();
+    closePaywall();
+    toast('PURCHASE RESTORED');
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initSlots();
+  initModes();
+  buildSpinnerCards();
+  initLiveBadge();
+
+  $('spinBtn').addEventListener('click', spin);
+  $('resetBtn').addEventListener('click', resetRoster);
+  const swapTopInit = document.getElementById('swapBtnTop');
+  if (swapTopInit) swapTopInit.onclick = enterSwapMode;
+  // SWAP from inside the pick modal — enters pick-swap mode (pick the player to swap in)
+  const pickSwapInit = document.getElementById('pickSwapBtn');
+  if (pickSwapInit) pickSwapInit.onclick = enterPickSwapMode;
+  $('modalClose').addEventListener('click', passSpin);
+  $('modalBackdrop').addEventListener('click', passSpin);
+  $('passBtn').addEventListener('click', passSpin);
+  $('shareBtn').addEventListener('click', showCompleteModal);
+  $('swapBtn').onclick = enterSwapMode;
+  $('playAgainBtn').addEventListener('click', () => {
+    $('completeModal').hidden = true;
+    resetRoster();
+  });
+  $('copyBtn').addEventListener('click', copyToClipboard);
+  const submitBtn = document.getElementById('submitLineupBtn');
+  if (submitBtn) submitBtn.addEventListener('click', submitLineupToLeaderboard);
+  // HELP MODAL
+  const openHelp = (tab) => {
+    $('helpModal').hidden = false;
+    if (tab) showHelpTab(tab);
+  };
+  const closeHelp = () => { $('helpModal').hidden = true; };
+  const showHelpTab = (target) => {
+    document.querySelectorAll('.help-tab').forEach(b => b.classList.toggle('help-tab--active', b.dataset.helpTab === target));
+    document.querySelectorAll('.help-panel').forEach(p => p.classList.toggle('help-panel--active', p.dataset.helpPanel === target));
+  };
+  $('helpLink')?.addEventListener('click', (e) => { e.preventDefault(); openHelp('how'); });
+  $('helpClose')?.addEventListener('click', closeHelp);
+  $('helpBackdrop')?.addEventListener('click', closeHelp);
+  document.querySelectorAll('.help-tab').forEach(btn => {
+    btn.addEventListener('click', () => showHelpTab(btn.dataset.helpTab));
+  });
+  // Topbar nav ribbon → jump directly to a help tab
+  document.querySelectorAll('[data-help-jump]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      openHelp(link.dataset.helpJump);
+    });
+  });
+
+  // SWAP from the complete modal
+  document.getElementById('completeSwapBtn')?.addEventListener('click', () => {
+    if (state.swapsLeft <= 0) { toast('NO SWAPS LEFT'); return; }
+    $('completeModal').hidden = true;
+    document.getElementById('pitch')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(enterSwapMode, 250);
+  });
+  updateResources();
+});
