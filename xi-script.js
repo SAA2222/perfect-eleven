@@ -1508,18 +1508,33 @@ function renderPolymarketCTA() {
   if (!container) return;
   const players = Object.values(state.roster || {});
   if (!players.length) { container.innerHTML = ''; return; }
-  // Find the nation contributing the most rating to the XI
+  // Aggregate per-nation contributions
   const nationContributions = {};
   players.forEach(p => {
     if (!p.code) return;
-    nationContributions[p.code] = (nationContributions[p.code] || { rating: 0, name: p.nation, iso: p.iso, count: 0 });
+    nationContributions[p.code] = (nationContributions[p.code] || { rating: 0, name: p.nation, iso: p.iso, count: 0, topPlayer: null });
     nationContributions[p.code].rating += p.rating;
     nationContributions[p.code].count++;
+    const cur = nationContributions[p.code].topPlayer;
+    if (!cur || p.rating > cur.rating) nationContributions[p.code].topPlayer = p;
   });
-  const top = Object.entries(nationContributions).sort((a, b) => b[1].rating - a[1].rating)[0];
-  if (!top) { container.innerHTML = ''; return; }
-  const [code, info] = top;
+  const entries = Object.entries(nationContributions);
+  if (!entries.length) { container.innerHTML = ''; return; }
+  // Pick smartly: nation with most players in user's XI ranked first;
+  // tiebreak by total rating. This avoids '1 of your players is from X' fallback.
+  entries.sort((a, b) => (b[1].count - a[1].count) || (b[1].rating - a[1].rating));
+  const [code, info] = entries[0];
   const url = `https://polymarket.com/event/fifa-world-cup-winner-2026?utm_source=${POLYMARKET_PARTNER_ID}&utm_medium=xi-builder&utm_campaign=complete-modal&xi_nation=${code}`;
+  // Pick the right copy based on how many you have from this nation
+  let copy;
+  if (info.count >= 3) {
+    copy = `<strong>${info.count}</strong> of your players come from <strong>${info.name}</strong> — back them to lift the trophy`;
+  } else if (info.count === 2) {
+    copy = `Two of your stars play for <strong>${info.name}</strong> — back them to lift the trophy`;
+  } else {
+    // count === 1: lean on the top player by name instead of "1 of your players are from..."
+    copy = `Your top pick <strong>${info.topPlayer.name}</strong> reps <strong>${info.name}</strong> — back them to lift the trophy`;
+  }
   container.innerHTML = `
     <a class="xi-polymarket" href="${url}" target="_blank" rel="noopener nofollow sponsored">
       <span class="xi-polymarket__pill">SPONSORED</span>
@@ -1527,7 +1542,7 @@ function renderPolymarketCTA() {
         <span class="xi-polymarket__title">BACK YOUR XI ON POLYMARKET</span>
         <span class="xi-polymarket__sub">
           <img class="xi-polymarket__flag" src="${flagURL(info.iso, 40)}" alt="${info.name}" />
-          ${info.count} of your players are from <strong>${info.name}</strong> — bet on them to lift the trophy
+          ${copy}
         </span>
       </div>
       <span class="xi-polymarket__cta">PLACE BET →</span>
