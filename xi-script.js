@@ -1047,10 +1047,11 @@ function projectedFinish(ovr, chem, injuryLoss = 0) {
   for (const tier of BRACKET) {
     if (score >= tier.threshold) {
       if (!tier.opp) {
-        return { label: tier.label, stage: tier.stage, line: tier.label, won: false };
+        return { tier: tier.tier, label: tier.label, stage: tier.stage, line: tier.label, won: false };
       }
       const matchScore = predictMatchScore(effOvr, tier.oppRating, tier.result);
       return {
+        tier: tier.tier,
         label: tier.label,
         line: `${tier.stage} ${matchScore} vs ${tier.opp}`,
         result: tier.result,
@@ -1059,7 +1060,7 @@ function projectedFinish(ovr, chem, injuryLoss = 0) {
       };
     }
   }
-  return { label: 'NO RESULT', line: '—' };
+  return { tier: 'NONE', label: 'NO RESULT', line: '—' };
 }
 
 // ============================================================
@@ -1604,6 +1605,60 @@ function loadImage(src) {
   });
 }
 
+// Canvas can't resolve CSS variables (var(--gold) etc), so look them up from
+// the live document once and substitute the literal value before fillStyle.
+function resolveCssVarsForCanvas(cssColor) {
+  if (typeof cssColor !== 'string') return '#fff';
+  if (!cssColor.includes('var(')) return cssColor;
+  const root = getComputedStyle(document.documentElement);
+  return cssColor.replace(/var\((--[\w-]+)\)/g, (_, name) => {
+    const v = root.getPropertyValue(name).trim();
+    return v || '#fff';
+  });
+}
+
+// Draw a stylized trophy on canvas — used for the projected-finish panel.
+// Color carries the tier: gold (champions) / silver (runners-up) / bronze (third).
+// Canvas can't render color emoji reliably across platforms, so we draw paths.
+function drawTrophyIcon(ctx, cx, cy, size, color) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+
+  // Cup body — trapezoid, wider at top
+  const cupTopW = size * 0.62;
+  const cupBotW = size * 0.42;
+  const cupTopY = cy - size * 0.42;
+  const cupBotY = cupTopY + size * 0.48;
+  ctx.beginPath();
+  ctx.moveTo(cx - cupTopW/2, cupTopY);
+  ctx.lineTo(cx + cupTopW/2, cupTopY);
+  ctx.lineTo(cx + cupBotW/2, cupBotY);
+  ctx.lineTo(cx - cupBotW/2, cupBotY);
+  ctx.closePath();
+  ctx.fill();
+
+  // Handles — stroked half-circles flanking the cup
+  ctx.lineWidth = size * 0.07;
+  ctx.beginPath();
+  ctx.arc(cx - cupTopW/2 - size*0.02, cupTopY + size*0.14, size*0.13, -Math.PI*0.45, Math.PI*0.45);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx + cupTopW/2 + size*0.02, cupTopY + size*0.14, size*0.13, Math.PI*0.55, Math.PI*1.45);
+  ctx.stroke();
+
+  // Stem
+  const stemW = size * 0.12;
+  ctx.fillRect(cx - stemW/2, cupBotY, stemW, size * 0.16);
+
+  // Base
+  const baseW = size * 0.52;
+  const baseH = size * 0.08;
+  ctx.fillRect(cx - baseW/2, cupBotY + size * 0.16, baseW, baseH);
+
+  ctx.restore();
+}
+
 async function shareXICardImage() {
   if (Object.keys(state.roster).length !== 11) {
     toast('FINISH THE XI FIRST');
@@ -1625,7 +1680,7 @@ async function shareXICardImage() {
     ? projectedFinish(ovr, chem, 0)
     : { label: '', opponent: null, score: null, result: null };
   const grade = (typeof gradeFromOVR === 'function')
-    ? gradeFromOVR(ovr)
+    ? gradeFromOVR(ovr, chem)
     : { letter: '?', color: '#fff', blurb: '' };
   const awards = (typeof computeAwards === 'function') ? computeAwards() : null;
 
@@ -1741,7 +1796,7 @@ async function shareXICardImage() {
   ctx.fillText('SLOTS', 440, 1175);
 
   // Grade pill (right side of stat strip)
-  ctx.fillStyle = grade.color || '#fff';
+  ctx.fillStyle = resolveCssVarsForCanvas(grade.color || '#fff');
   ctx.font = 'bold 96px Impact, "Arial Black", sans-serif';
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
   ctx.fillText(grade.letter || '?', W - 80, 1130);
@@ -1762,12 +1817,37 @@ async function shareXICardImage() {
   ctx.fillText('PROJECTED TOURNAMENT FINISH', W/2, FY + 24);
 
   // Big bracket label (CHAMPIONS / RUNNERS-UP / ROUND OF 16 / etc.)
-  const finishLabel = (finish.label || 'GROUP STAGE EXIT').replace(/[🏆🥈🥉]/g, '').trim();
-  const finishEmoji = (finish.label || '').match(/[🏆🥈🥉]/)?.[0] || '';
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 64px Impact, "Arial Black", sans-serif';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(`${finishEmoji} ${finishLabel}`.trim(), W/2, FY + 110);
+  // Strip emojis from the label since canvas can't reliably render them.
+  // Use the tier field to draw a proper trophy/medal icon instead.
+  const finishLabel = (finish.label || 'GROUP STAGE EXIT')
+    .replace(/[\u{1F3C6}\u{1F948}\u{1F949}]/gu, '')
+    .trim();
+  const tierColors = {
+    CHAMPIONS:  '#ffce00',  // gold
+    RUNNERS_UP: '#c0c0c0',  // silver
+    THIRD:      '#cd7f32',  // bronze
+  };
+  const iconColor = tierColors[finish.tier];
+
+  if (iconColor) {
+    // Measure the label so we can pin the icon to its left edge
+    ctx.font = 'bold 64px Impact, "Arial Black", sans-serif';
+    const labelW = ctx.measureText(finishLabel).width;
+    const ICON_SIZE = 72;
+    const GAP = 24;
+    const groupW = ICON_SIZE + GAP + labelW;
+    const iconCx = W/2 - groupW/2 + ICON_SIZE/2;
+    const iconCy = FY + 110;
+    drawTrophyIcon(ctx, iconCx, iconCy, ICON_SIZE, iconColor);
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(finishLabel, iconCx + ICON_SIZE/2 + GAP, iconCy);
+  } else {
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 64px Impact, "Arial Black", sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(finishLabel, W/2, FY + 110);
+  }
 
   // Score line: "Beat BRAZIL 2-1" or "Lost to FRANCE 1-2"
   if (finish.opp && finish.score) {
