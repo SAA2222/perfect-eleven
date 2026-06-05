@@ -1007,13 +1007,13 @@ function computeAwards() {
   };
 
   // TOP_ASSISTER_BIAS — specifically for assister award:
-  //   Yamal > Rashford > Saka > Dembele > Doue
+  //   Yamal 29% > Dembele 23% > Rashford 15% > Saka 12% > Doue 11%
   const TOP_ASSISTER_BIAS = {
-    'Lamine Yamal':      4,   // base 98 → 102 (top)
-    'Marcus Rashford':  16,   // base 84 → 100 (#2)
-    'Bukayo Saka':       5,   // base 93 → 98 (#3)
-    'Ousmane Dembélé':   4,   // base 93 → 97 (#4)
-    'Désiré Doué':       6,   // base 89 → 95 (#5)
+    'Lamine Yamal':      4,   // base 98 → 102 (#1)
+    'Ousmane Dembélé':   7,   // base 93 → 100 (#2)
+    'Marcus Rashford':  15,   // base 84 → 99 (#3)
+    'Bukayo Saka':       5,   // base 93 → 98 (#4)
+    'Désiré Doué':       8,   // base 89 → 97 (#5)
     // Pull striker-types out of the assister race
     'Kylian Mbappé':    -4,
     'Harry Kane':       -6,
