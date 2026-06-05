@@ -1586,10 +1586,23 @@ async function shareXICardImage() {
   }
   toast('RENDERING CARD…');
 
-  const W = 1080, H = 1080;
+  // === Story-format canvas: 9:16 — perfect for IG Stories / TikTok / X mobile ===
+  const W = 1080, H = 1920;
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
+
+  // Compute everything we'll need
+  const ovr = computeFinalOVR();
+  const chem = teamChemistry();
+  const filled = Object.keys(state.roster).length;
+  const finish = (typeof projectedFinish === 'function')
+    ? projectedFinish(ovr, chem, 0)
+    : { label: '', opponent: null, score: null, result: null };
+  const grade = (typeof gradeFromOVR === 'function')
+    ? gradeFromOVR(ovr)
+    : { letter: '?', color: '#fff', blurb: '' };
+  const awards = (typeof computeAwards === 'function') ? computeAwards() : null;
 
   // === Background ===
   const bg = ctx.createLinearGradient(0, 0, 0, H);
@@ -1597,44 +1610,40 @@ async function shareXICardImage() {
   bg.addColorStop(1, '#06090a');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
-  // === Header ===
+  // === Header (y: 0–160) ===
   ctx.fillStyle = '#00c853';
-  ctx.fillRect(64, 64, 56, 56);
+  ctx.fillRect(60, 60, 70, 70);
   ctx.fillStyle = '#0c1410';
-  ctx.font = 'bold 36px Impact, "Arial Black", sans-serif';
+  ctx.font = 'bold 44px Impact, "Arial Black", sans-serif';
   ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-  ctx.fillText('11', 92, 92);
+  ctx.fillText('11', 95, 95);
 
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 38px Impact, "Arial Black", sans-serif';
+  ctx.font = 'bold 46px Impact, "Arial Black", sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText('PERFECT ELEVEN', 140, 92);
+  ctx.fillText('PERFECT ELEVEN', 150, 88);
   ctx.fillStyle = '#7a8590';
-  ctx.font = 'bold 18px ui-monospace, "JetBrains Mono", monospace';
-  ctx.fillText('/ 2026 WORLD CUP', 460, 96);
+  ctx.font = 'bold 20px ui-monospace, "JetBrains Mono", monospace';
+  ctx.fillText('/ 2026 WORLD CUP', 150, 122);
 
-  // === Pitch area ===
-  const PITCH_X = 60, PITCH_Y = 160, PITCH_W = W - 120, PITCH_H = 760;
+  // === Pitch (y: 160–1080) ===
+  const PITCH_X = 60, PITCH_Y = 160, PITCH_W = W - 120, PITCH_H = 920;
   ctx.fillStyle = '#0d1f15';
   ctx.fillRect(PITCH_X, PITCH_Y, PITCH_W, PITCH_H);
   ctx.strokeStyle = 'rgba(255,255,255,0.08)';
   ctx.lineWidth = 2;
-  // halfway line
   ctx.beginPath();
   ctx.moveTo(PITCH_X, PITCH_Y + PITCH_H/2);
   ctx.lineTo(PITCH_X + PITCH_W, PITCH_Y + PITCH_H/2);
   ctx.stroke();
-  // center circle
   ctx.beginPath();
-  ctx.arc(PITCH_X + PITCH_W/2, PITCH_Y + PITCH_H/2, 90, 0, Math.PI*2);
+  ctx.arc(PITCH_X + PITCH_W/2, PITCH_Y + PITCH_H/2, 100, 0, Math.PI*2);
   ctx.stroke();
-  // outer border
   ctx.strokeRect(PITCH_X, PITCH_Y, PITCH_W, PITCH_H);
-  // penalty boxes
-  ctx.strokeRect(PITCH_X + PITCH_W*0.22, PITCH_Y, PITCH_W*0.56, 100);
-  ctx.strokeRect(PITCH_X + PITCH_W*0.22, PITCH_Y + PITCH_H - 100, PITCH_W*0.56, 100);
+  ctx.strokeRect(PITCH_X + PITCH_W*0.22, PITCH_Y, PITCH_W*0.56, 110);
+  ctx.strokeRect(PITCH_X + PITCH_W*0.22, PITCH_Y + PITCH_H - 110, PITCH_W*0.56, 110);
 
-  // === Preload all flag images first ===
+  // Preload flag images
   const flagImgs = {};
   await Promise.all(Object.values(state.roster).map(async p => {
     const code = p.iso || (NATIONS.find(n => n.code === p.code)?.iso);
@@ -1642,8 +1651,8 @@ async function shareXICardImage() {
     try { flagImgs[code] = await loadImage(`https://flagcdn.com/w160/${code}.png`); } catch (e) {}
   }));
 
-  // === Draw player cards ===
-  const CARD_W = 160, CARD_H = 110;
+  // Draw player cards
+  const CARD_W = 168, CARD_H = 120;
   for (let i = 0; i < 11; i++) {
     const p = state.roster[i];
     const pos = XI_CARD_SLOT_POS[i];
@@ -1651,81 +1660,183 @@ async function shareXICardImage() {
     const cy = PITCH_Y + PITCH_H * pos.y;
     const x = cx - CARD_W/2, y = cy - CARD_H/2;
 
-    // card background
     ctx.fillStyle = '#101a14';
     ctx.fillRect(x, y, CARD_W, CARD_H);
     ctx.strokeStyle = '#00c853';
     ctx.lineWidth = 2;
     ctx.strokeRect(x, y, CARD_W, CARD_H);
 
-    // position label
     ctx.fillStyle = '#7a8590';
-    ctx.font = 'bold 12px ui-monospace, "JetBrains Mono", monospace';
+    ctx.font = 'bold 13px ui-monospace, "JetBrains Mono", monospace';
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    ctx.fillText(pos.label, x + 8, y + 6);
+    ctx.fillText(pos.label, x + 8, y + 7);
 
     if (!p) {
       ctx.fillStyle = '#3a4b40';
-      ctx.font = 'bold 22px Impact, "Arial Black", sans-serif';
+      ctx.font = 'bold 24px Impact, "Arial Black", sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('OPEN', cx, cy + 8);
       continue;
     }
 
-    // flag
     const code = p.iso || NATIONS.find(n => n.code === p.code)?.iso;
-    if (code && flagImgs[code]) {
-      ctx.drawImage(flagImgs[code], cx - 22, y + 24, 44, 30);
-    }
+    if (code && flagImgs[code]) ctx.drawImage(flagImgs[code], cx - 22, y + 26, 44, 30);
 
-    // name (cleaned)
-    const cleaned = shortName(p.name);
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 18px Impact, "Arial Black", sans-serif';
+    ctx.font = 'bold 19px Impact, "Arial Black", sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    ctx.fillText(cleaned, cx, y + 60);
+    ctx.fillText(shortName(p.name), cx, y + 64);
 
-    // rating
     ctx.fillStyle = '#00c853';
-    ctx.font = 'bold 26px Impact, "Arial Black", sans-serif';
-    ctx.fillText(String(p.rating), cx, y + 80);
+    ctx.font = 'bold 28px Impact, "Arial Black", sans-serif';
+    ctx.fillText(String(p.rating), cx, y + 86);
   }
 
-  // === Footer stats ===
-  const ovr = computeFinalOVR();
-  const chem = teamChemistry();
-  const filled = Object.keys(state.roster).length;
-
+  // === Stat strip (y: 1100–1180) — OVR / CHEM / SLOTS / GRADE ===
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 56px Impact, "Arial Black", sans-serif';
+  ctx.font = 'bold 64px Impact, "Arial Black", sans-serif';
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillText(String(ovr), 80, 990);
-  ctx.fillStyle = '#7a8590';
-  ctx.font = 'bold 14px ui-monospace, "JetBrains Mono", monospace';
-  ctx.fillText('OVR', 80, 1028);
-
-  ctx.fillStyle = '#ffc400';
-  ctx.font = 'bold 56px Impact, "Arial Black", sans-serif';
-  ctx.fillText(String(chem), 240, 990);
-  ctx.fillStyle = '#7a8590';
-  ctx.font = 'bold 14px ui-monospace, "JetBrains Mono", monospace';
-  ctx.fillText('CHEM', 240, 1028);
-
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 56px Impact, "Arial Black", sans-serif';
-  ctx.fillText(`${filled}/11`, 400, 990);
-  ctx.fillStyle = '#7a8590';
-  ctx.font = 'bold 14px ui-monospace, "JetBrains Mono", monospace';
-  ctx.fillText('SLOTS', 400, 1028);
-
-  // tagline
+  ctx.fillText(String(ovr), 80, 1130);
   ctx.fillStyle = '#7a8590';
   ctx.font = 'bold 16px ui-monospace, "JetBrains Mono", monospace';
-  ctx.textAlign = 'right';
-  ctx.fillText('PERFECT-ELEVEN.VERCEL.APP', W - 80, 990);
+  ctx.fillText('OVR', 80, 1175);
+
+  ctx.fillStyle = '#ffc400';
+  ctx.font = 'bold 64px Impact, "Arial Black", sans-serif';
+  ctx.fillText(String(chem), 260, 1130);
+  ctx.fillStyle = '#7a8590';
+  ctx.font = 'bold 16px ui-monospace, "JetBrains Mono", monospace';
+  ctx.fillText('CHEM', 260, 1175);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 64px Impact, "Arial Black", sans-serif';
+  ctx.fillText(`${filled}/11`, 440, 1130);
+  ctx.fillStyle = '#7a8590';
+  ctx.font = 'bold 16px ui-monospace, "JetBrains Mono", monospace';
+  ctx.fillText('SLOTS', 440, 1175);
+
+  // Grade pill (right side of stat strip)
+  ctx.fillStyle = grade.color || '#fff';
+  ctx.font = 'bold 96px Impact, "Arial Black", sans-serif';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  ctx.fillText(grade.letter || '?', W - 80, 1130);
+  ctx.fillStyle = '#7a8590';
+  ctx.font = 'bold 14px ui-monospace, "JetBrains Mono", monospace';
+  ctx.fillText('GRADE', W - 80, 1188);
+
+  // === Projected Finish panel (y: 1220–1480) ===
+  const FY = 1220;
+  ctx.fillStyle = '#101a14';
+  ctx.fillRect(60, FY, W - 120, 260);
+  ctx.strokeStyle = '#00c853'; ctx.lineWidth = 2;
+  ctx.strokeRect(60, FY, W - 120, 260);
+
+  ctx.fillStyle = '#7a8590';
+  ctx.font = 'bold 16px ui-monospace, "JetBrains Mono", monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('PROJECTED TOURNAMENT FINISH', W/2, FY + 24);
+
+  // Big bracket label (CHAMPIONS / RUNNERS-UP / ROUND OF 16 / etc.)
+  const finishLabel = (finish.label || 'GROUP STAGE EXIT').replace(/[🏆🥈🥉]/g, '').trim();
+  const finishEmoji = (finish.label || '').match(/[🏆🥈🥉]/)?.[0] || '';
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 64px Impact, "Arial Black", sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(`${finishEmoji} ${finishLabel}`.trim(), W/2, FY + 110);
+
+  // Score line: "Beat BRAZIL 2-1" or "Lost to FRANCE 1-2"
+  if (finish.opp && finish.score) {
+    const verb = finish.result === 'WIN' ? 'BEAT' : finish.result === 'LOSS' ? 'LOST TO' : 'PLAYED';
+    const scoreLine = `${verb} ${finish.opp} ${finish.score}`;
+    ctx.fillStyle = finish.result === 'WIN' ? '#00c853' : '#ff6b7a';
+    ctx.font = 'bold 32px Impact, "Arial Black", sans-serif';
+    ctx.fillText(scoreLine, W/2, FY + 175);
+  }
+
+  // Blurb line from grade
+  if (grade.blurb) {
+    ctx.fillStyle = '#7a8590';
+    ctx.font = 'bold 14px ui-monospace, "JetBrains Mono", monospace';
+    ctx.fillText(grade.blurb.toUpperCase().slice(0, 60), W/2, FY + 222);
+  }
+
+  // === Awards grid (y: 1510–1820) — 4 award cards in 2×2 grid ===
+  const AY = 1510;
+  ctx.fillStyle = '#7a8590';
+  ctx.font = 'bold 16px ui-monospace, "JetBrains Mono", monospace';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('TOURNAMENT AWARDS', W/2, AY);
+
+  const awardList = awards ? [
+    { emoji: '🏆', label: 'GOLDEN BALL',  player: awards.goldenBall,   stat: statFor('goldenBall',   awards.goldenBall) },
+    { emoji: '⚽', label: 'GOLDEN BOOT',  player: awards.goldenBoot,   stat: statFor('goldenBoot',   awards.goldenBoot) },
+    { emoji: '🅰️', label: 'TOP ASSISTER', player: awards.topAssister,  stat: statFor('topAssister',  awards.topAssister) },
+    { emoji: '🧤', label: 'GOLDEN GLOVE', player: awards.goldenGlove,  stat: statFor('goldenGlove',  awards.goldenGlove) },
+  ].filter(a => a.player && !a.player.__tbd) : [];
+
+  // Preload flags for award winners
+  await Promise.all(awardList.map(async a => {
+    const code = a.player?.iso;
+    if (!code || flagImgs[code]) return;
+    try { flagImgs[code] = await loadImage(`https://flagcdn.com/w80/${code}.png`); } catch (e) {}
+  }));
+
+  // user XI names — to mark which winners are IN YOUR XI
+  const userNames = new Set(Object.values(state.roster).map(p => p.name));
+  // 2×2 grid
+  const AW = (W - 180) / 2, AH = 140, GAP = 20;
+  awardList.slice(0, 4).forEach((a, i) => {
+    const col = i % 2, row = Math.floor(i / 2);
+    const ax = 60 + col * (AW + GAP), ay = AY + 36 + row * (AH + GAP);
+    const inXI = userNames.has(a.player.name);
+    // card bg + border
+    ctx.fillStyle = inXI ? 'rgba(0, 200, 83, 0.10)' : '#101a14';
+    ctx.fillRect(ax, ay, AW, AH);
+    ctx.strokeStyle = inXI ? '#00c853' : 'rgba(0,200,83,0.35)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(ax, ay, AW, AH);
+    // label + IN YOUR XI badge
+    ctx.fillStyle = inXI ? '#00c853' : '#ffc400';
+    ctx.font = 'bold 14px ui-monospace, "JetBrains Mono", monospace';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(a.label, ax + 60, ay + 14);
+    if (inXI) {
+      ctx.fillStyle = '#00c853';
+      ctx.font = 'bold 11px ui-monospace, "JetBrains Mono", monospace';
+      ctx.fillText('★ IN YOUR XI', ax + AW - 105, ay + 14);
+    }
+    // emoji (left)
+    ctx.font = 'bold 36px serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(a.emoji, ax + 14, ay + 60);
+    // player name
+    ctx.font = 'bold 24px Impact, "Arial Black", sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.textBaseline = 'top';
+    ctx.fillText(a.player.name.slice(0, 22), ax + 60, ay + 38);
+    // stat line
+    ctx.font = 'bold 18px Impact, "Arial Black", sans-serif';
+    ctx.fillStyle = inXI ? '#00c853' : '#ffc400';
+    ctx.fillText(a.stat || '', ax + 60, ay + 68);
+    // flag + nation
+    if (a.player.iso && flagImgs[a.player.iso]) {
+      ctx.drawImage(flagImgs[a.player.iso], ax + 60, ay + 95, 28, 18);
+    }
+    ctx.font = 'bold 14px ui-monospace, "JetBrains Mono", monospace';
+    ctx.fillStyle = '#7a8590';
+    ctx.fillText(`${a.player.nation} · ${a.player.rating} OVR`, ax + 96, ay + 100);
+  });
+
+  // === Footer (y: 1820–1920) ===
+  ctx.fillStyle = '#7a8590';
+  ctx.font = 'bold 22px ui-monospace, "JetBrains Mono", monospace';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('PERFECT-ELEVEN.VERCEL.APP', 60, 1870);
   const nameInput = document.getElementById('lineupName');
   const builtBy = (nameInput && nameInput.value) ? nameInput.value.toUpperCase() : 'ANONYMOUS';
-  ctx.fillText(`BUILT BY ${builtBy}`, W - 80, 1024);
+  ctx.textAlign = 'right';
+  ctx.fillText(`BUILT BY ${builtBy}`, W - 60, 1870);
 
   // === Export ===
   const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
