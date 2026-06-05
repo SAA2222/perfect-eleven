@@ -959,6 +959,208 @@ body.swap-mode .xi-pitch::after {
   .roster__club { display: none; }
 }
 
+/* ============================================================
+   MONETIZATION — rewarded ad modal, Polymarket CTA, AdSense slot
+   ============================================================ */
+/* Rewarded video modal */
+.rewarded-ad {
+  position: fixed; inset: 0;
+  z-index: 12000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.rewarded-ad__backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.78);
+}
+.rewarded-ad__panel {
+  position: relative;
+  background: var(--ink-2, #16191e);
+  border: 1px solid var(--gold, #ffc400);
+  border-radius: 10px;
+  max-width: 400px;
+  width: 100%;
+  padding: 22px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+.rewarded-ad__head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px;
+}
+.rewarded-ad__pill {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--ink);
+  background: var(--gold, #ffc400);
+  padding: 4px 10px;
+  border-radius: 3px;
+}
+.rewarded-ad__close {
+  background: none; border: none;
+  color: var(--mute);
+  font-size: 22px;
+  cursor: pointer;
+  width: 28px; height: 28px;
+  line-height: 1;
+}
+.rewarded-ad__close:hover { color: var(--paper); }
+.rewarded-ad__title {
+  font-family: var(--font-display, Impact);
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  color: var(--paper);
+  margin: 0 0 8px;
+}
+.rewarded-ad__body {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--mute);
+  margin: 0 0 18px;
+}
+.rewarded-ad__body strong { color: var(--gold, #ffc400); }
+.rewarded-ad__watch {
+  width: 100%;
+  margin-bottom: 10px;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+}
+.rewarded-ad__premium {
+  width: 100%;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+.rewarded-ad__small {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--mute-2, #555);
+  margin: 14px 0 0;
+}
+/* Ad stub — shows during the simulated countdown */
+.rewarded-ad__ad-stub {
+  background: var(--ink, #0e0f12);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 40px 20px;
+  text-align: center;
+}
+.rewarded-ad__ad-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--mute);
+  margin-bottom: 12px;
+}
+.rewarded-ad__ad-content {
+  font-family: var(--font-display, Impact);
+  font-size: 32px;
+  color: var(--gold, #ffc400);
+  margin-bottom: 20px;
+  letter-spacing: 0.04em;
+}
+.rewarded-ad__ad-timer {
+  font-family: var(--font-display, Impact);
+  font-size: 64px;
+  color: var(--paper);
+  line-height: 1;
+}
+.rewarded-ad__ad-note {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--mute-2, #555);
+  letter-spacing: 0.1em;
+  margin-top: 14px;
+}
+
+/* Polymarket affiliate CTA in complete modal */
+.xi-polymarket {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  margin: 16px 0;
+  background: linear-gradient(135deg, rgba(0, 102, 204, 0.10), rgba(0, 200, 83, 0.06));
+  border: 1px solid rgba(0, 102, 204, 0.35);
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--paper);
+  position: relative;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.xi-polymarket:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0, 102, 204, 0.7);
+}
+.xi-polymarket__pill {
+  position: absolute;
+  top: -7px; left: 14px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--mute);
+  background: var(--ink-2, #16191e);
+  padding: 2px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+.xi-polymarket__body { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.xi-polymarket__title {
+  font-family: var(--font-display, Impact);
+  font-size: 17px;
+  letter-spacing: 0.04em;
+  color: var(--paper);
+}
+.xi-polymarket__sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--mute);
+}
+.xi-polymarket__sub strong { color: var(--pitch); font-weight: 700; }
+.xi-polymarket__flag {
+  width: 22px; height: 15px;
+  object-fit: cover;
+  border-radius: 2px;
+}
+.xi-polymarket__cta {
+  font-family: var(--font-display, Impact);
+  font-size: 14px;
+  color: var(--gold, #ffc400);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+/* AdSense slot */
+.ad-slot {
+  position: relative;
+  margin: 32px auto 8px;
+  max-width: 728px;
+  width: 100%;
+  min-height: 90px;
+  background: rgba(255,255,255,0.02);
+  border: 1px dashed var(--rule);
+  border-radius: 4px;
+  padding: 18px;
+}
+.ad-slot__label {
+  position: absolute;
+  top: 4px; left: 8px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  color: var(--mute-2, #555);
+}
+
+@media (max-width: 600px) {
+  .xi-polymarket { flex-direction: column; gap: 8px; text-align: center; }
+  .xi-polymarket__sub { justify-content: center; }
+}
+
 /* Swap target picker — choose which roster player to replace */
 .swap-picker {
   position: fixed; inset: 0;

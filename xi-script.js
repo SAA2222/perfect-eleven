@@ -471,7 +471,8 @@ function passSpin() {
     return;
   }
   if (state.skipsLeft <= 0) {
-    toast('NO SKIPS LEFT — PICK A PLAYER');
+    // Offer rewarded ad instead of just blocking
+    offerRewardedSkip();
     return;
   }
   state.skipsLeft--;
@@ -480,6 +481,85 @@ function passSpin() {
   state.currentNation = null;
   $('spinnerResult').classList.remove('show');
   toast(`SKIP USED. ${state.skipsLeft} LEFT.`);
+}
+
+// ============================================================
+// REWARDED VIDEO AD — gives +1 skip when out (mocked SDK)
+// Real swap: replace `runRewardedAd()` body with AdMob H5 / AdSense H5 SDK
+// docs: https://developers.google.com/admob/web
+// ============================================================
+function offerRewardedSkip() {
+  // Hard cap per session to prevent abuse
+  if ((state.rewardedSkipsThisSession || 0) >= 5) {
+    toast('NO SKIPS LEFT — PICK A PLAYER OR UNLOCK PREMIUM');
+    return;
+  }
+  // Build the rewarded-ad modal on demand
+  const existing = document.getElementById('rewardedAdModal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'rewardedAdModal';
+  modal.className = 'rewarded-ad';
+  modal.innerHTML = `
+    <div class="rewarded-ad__backdrop"></div>
+    <div class="rewarded-ad__panel">
+      <div class="rewarded-ad__head">
+        <span class="rewarded-ad__pill">⚡ EXTRA SKIP</span>
+        <button class="rewarded-ad__close" aria-label="Close">×</button>
+      </div>
+      <h3 class="rewarded-ad__title">OUT OF SKIPS?</h3>
+      <p class="rewarded-ad__body">Watch a short ad to earn <strong>+1 SKIP</strong>. Or unlock <strong>PREMIUM</strong> for unlimited modes.</p>
+      <button class="rewarded-ad__watch xi-btn xi-btn--gold">▶ WATCH AD (30s)</button>
+      <button class="rewarded-ad__premium xi-btn xi-btn--ghost">UNLOCK PREMIUM $4.99</button>
+      <p class="rewarded-ad__small">ADS HELP KEEP PERFECT ELEVEN FREE · ${(state.rewardedSkipsThisSession || 0)}/5 USED</p>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  const close = () => modal.remove();
+  modal.querySelector('.rewarded-ad__backdrop').onclick = close;
+  modal.querySelector('.rewarded-ad__close').onclick = close;
+  modal.querySelector('.rewarded-ad__premium').onclick = () => {
+    close();
+    if (typeof showPaywall === 'function') showPaywall(); else $('paywallModal').hidden = false;
+  };
+  modal.querySelector('.rewarded-ad__watch').onclick = () => {
+    runRewardedAd(modal, () => {
+      state.skipsLeft++;
+      state.rewardedSkipsThisSession = (state.rewardedSkipsThisSession || 0) + 1;
+      updateResources();
+      close();
+      toast(`+1 SKIP EARNED. ${state.skipsLeft} TOTAL.`);
+    });
+  };
+}
+
+function runRewardedAd(modal, onComplete) {
+  // === SDK PLACEHOLDER ===
+  // TODO: swap with real AdMob H5 / AdSense H5 / Funding Choices rewarded ad SDK
+  // Real shape:
+  //   const ad = await adSdk.loadRewarded('UNIT-ID');
+  //   ad.on('reward', onComplete);
+  //   ad.show();
+  // For now: 5-second simulated countdown so the UX is fully wired up.
+  const panel = modal.querySelector('.rewarded-ad__panel');
+  panel.innerHTML = `
+    <div class="rewarded-ad__ad-stub">
+      <div class="rewarded-ad__ad-label">▶ AD</div>
+      <div class="rewarded-ad__ad-content">YOUR AD HERE</div>
+      <div class="rewarded-ad__ad-timer" id="rewardedTimer">5</div>
+      <div class="rewarded-ad__ad-note">REWARDED AD STUB — REAL SDK GOES HERE</div>
+    </div>
+  `;
+  let t = 5;
+  const timer = setInterval(() => {
+    t--;
+    const el = document.getElementById('rewardedTimer');
+    if (el) el.textContent = t;
+    if (t <= 0) {
+      clearInterval(timer);
+      onComplete();
+    }
+  }, 1000);
 }
 
 // ============================================================
@@ -1291,6 +1371,8 @@ function showCompleteModal() {
   // sync the swap-in-complete button state
   const compSwap = document.getElementById('completeSwapBtn');
   if (compSwap) compSwap.disabled = state.swapsLeft <= 0;
+  // Render the Polymarket affiliate CTA based on user's top nation
+  renderPolymarketCTA();
   $('completeModal').hidden = false;
   // 🎉 fire confetti when you win the World Cup
   if (finish.label && finish.label.includes('CHAMPIONS')) {
@@ -1370,6 +1452,43 @@ function renderRosters(query) {
   }).join('');
 
   $('rostersGrid').innerHTML = html || '<div class="roster__empty">NO MATCH</div>';
+}
+
+// ============================================================
+// POLYMARKET AFFILIATE CTA — picks the top-rated nation in user's XI
+// Replace POLYMARKET_PARTNER_ID with real partner code when approved
+// ============================================================
+const POLYMARKET_PARTNER_ID = 'perfect-eleven'; // utm_source
+function renderPolymarketCTA() {
+  const container = document.getElementById('xiPolymarket');
+  if (!container) return;
+  const players = Object.values(state.roster || {});
+  if (!players.length) { container.innerHTML = ''; return; }
+  // Find the nation contributing the most rating to the XI
+  const nationContributions = {};
+  players.forEach(p => {
+    if (!p.code) return;
+    nationContributions[p.code] = (nationContributions[p.code] || { rating: 0, name: p.nation, iso: p.iso, count: 0 });
+    nationContributions[p.code].rating += p.rating;
+    nationContributions[p.code].count++;
+  });
+  const top = Object.entries(nationContributions).sort((a, b) => b[1].rating - a[1].rating)[0];
+  if (!top) { container.innerHTML = ''; return; }
+  const [code, info] = top;
+  const url = `https://polymarket.com/event/fifa-world-cup-winner-2026?utm_source=${POLYMARKET_PARTNER_ID}&utm_medium=xi-builder&utm_campaign=complete-modal&xi_nation=${code}`;
+  container.innerHTML = `
+    <a class="xi-polymarket" href="${url}" target="_blank" rel="noopener nofollow sponsored">
+      <span class="xi-polymarket__pill">SPONSORED</span>
+      <div class="xi-polymarket__body">
+        <span class="xi-polymarket__title">BACK YOUR XI ON POLYMARKET</span>
+        <span class="xi-polymarket__sub">
+          <img class="xi-polymarket__flag" src="${flagURL(info.iso, 40)}" alt="${info.name}" />
+          ${info.count} of your players are from <strong>${info.name}</strong> — bet on them to lift the trophy
+        </span>
+      </div>
+      <span class="xi-polymarket__cta">PLACE BET →</span>
+    </a>
+  `;
 }
 
 // ============================================================
