@@ -992,33 +992,49 @@ function computeAwards() {
   const all = buildFullTournamentPool();
   if (!all.length) return null;
 
-  // AWARD_BIAS — tuned to the desired Golden Boot tier:
+  // AWARD_BIAS — Golden Boot tier:
   //   Mbappe > Kane > Haaland = Yamal > Messi = Ronaldo > Salah/others
-  // Only affects award odds, not the player's displayed rating.
   const AWARD_BIAS = {
-    // Effective = base rating + bias. Tier targets:
-    //   Mbappe ~100, Kane ~99, Haaland/Yamal ~97, Messi/Ronaldo ~96, Salah ~94
     'Kylian Mbappé':     3,   // base 97 → 100 (tier 1)
-    'Harry Kane':        5,   // base 94 → 99 (tier 2, slightly below Mbappe)
+    'Harry Kane':        5,   // base 94 → 99 (tier 2)
     'Erling Haaland':    1,   // base 96 → 97 (tier 3)
-    'Lamine Yamal':     -1,   // base 98 → 97 (tier 3, tied with Haaland)
-    'Lionel Messi':      1,   // base 95 → 96 (tier 4)
-    'Cristiano Ronaldo': 5,   // base 91 → 96 (tier 4, matched to Messi)
-    'Mohamed Salah':     0,   // base 94 → 94 (tier 5)
-    'Vinícius Júnior':  -1,   // base 95 → 94 (tier 5)
-    // Midfield-only narratives (only matter for Best Mid / Top Assister / Golden Ball)
+    'Lamine Yamal':     -1,   // base 98 → 97 (tier 3)
+    'Lionel Messi':      5,   // base 91 → 96 (tier 4)
+    'Cristiano Ronaldo': 4,   // base 92 → 96 (tier 4) — tied with Messi
+    'Mohamed Salah':     0,
+    'Vinícius Júnior':  -1,
     'Jude Bellingham':   2,
   };
-  const effRating = (p) => p.rating + (AWARD_BIAS[p.name] || 0);
 
-  // Weighted top-N: top-8 by adjusted rating. Exponent 1.8 gives more spread
-  // across the field so tier-3/4 contenders still win occasionally.
-  const weightedTopPick = (arr, topN = 8) => {
+  // TOP_ASSISTER_BIAS — specifically for assister award:
+  //   Yamal > Rashford > Saka > Dembele > Doue
+  const TOP_ASSISTER_BIAS = {
+    'Lamine Yamal':      4,   // base 98 → 102 (top)
+    'Marcus Rashford':  16,   // base 84 → 100 (#2)
+    'Bukayo Saka':       5,   // base 93 → 98 (#3)
+    'Ousmane Dembélé':   4,   // base 93 → 97 (#4)
+    'Désiré Doué':       6,   // base 89 → 95 (#5)
+    // Pull striker-types out of the assister race
+    'Kylian Mbappé':    -4,
+    'Harry Kane':       -6,
+    'Cristiano Ronaldo':-5,
+    'Erling Haaland':   -4,
+    // Modest dampers so the user's 5 stay on top
+    'Jude Bellingham':  -2,
+    'Bruno Fernandes':  -2,
+    'Mohamed Salah':    -3,
+    'Vinícius Júnior':  -3,
+    'Jamal Musiala':    -2,
+  };
+
+  // Bias-aware weighted top-N. Pass a bias map to override the default AWARD_BIAS.
+  const weightedTopPick = (arr, topN = 8, bias = AWARD_BIAS) => {
     if (!arr.length) return null;
-    const sorted = arr.slice().sort((a, b) => effRating(b) - effRating(a));
+    const eff = p => p.rating + (bias[p.name] || 0);
+    const sorted = arr.slice().sort((a, b) => eff(b) - eff(a));
     const top = sorted.slice(0, Math.min(topN, sorted.length));
-    const floor = effRating(top[top.length - 1]) - 1;
-    const weights = top.map(p => Math.pow(effRating(p) - floor, 1.8));
+    const floor = eff(top[top.length - 1]) - 1;
+    const weights = top.map(p => Math.pow(eff(p) - floor, 1.8));
     const total = weights.reduce((a, b) => a + b, 0);
     let r = Math.random() * total;
     for (let i = 0; i < top.length; i++) {
@@ -1034,9 +1050,9 @@ function computeAwards() {
   const attackers = all.filter(p => ['ST','LW','RW'].includes(p.role));
   const goldenBoot = attackers.length ? weightedTopPick(attackers, 10) : null;
 
-  // Top assister: best CAM / playmaker, exclude the Golden Boot winner
+  // Top assister: playmakers, exclude the Golden Boot winner, use creator-focused bias
   const playmakers = all.filter(p => ['CAM','CM','LW','RW'].includes(p.role) && p.name !== goldenBoot?.name);
-  const topAssister = playmakers.length ? weightedTopPick(playmakers) : null;
+  const topAssister = playmakers.length ? weightedTopPick(playmakers, 12, TOP_ASSISTER_BIAS) : null;
 
   const keepers = all.filter(p => p.role === 'GK');
   const goldenGlove = keepers.length ? weightedTopPick(keepers, 5) : null;

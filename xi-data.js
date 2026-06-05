@@ -3449,6 +3449,20 @@ function applyTeamFinish(player) {
 NATIONS.forEach(n => n.players.forEach(p => { p.rating = applyTeamFinish(p); }));
 MISSED_NATIONS.forEach(n => n.players.forEach(p => { p.rating = applyTeamFinish(p); }));
 
+// Manual rating overrides — set after formula runs. Use sparingly for editorial corrections.
+const RATING_OVERRIDES = {
+  'Bruno Fernandes':   95,
+  'Vitinha':           93,
+  'João Neves':        93,
+  'Nuno Mendes':       94,
+  'João Félix':        93,
+  'Cristiano Ronaldo': 92,
+  'Lionel Messi':      91,
+};
+NATIONS.forEach(n => n.players.forEach(p => {
+  if (RATING_OVERRIDES[p.name] !== undefined) p.rating = RATING_OVERRIDES[p.name];
+}));
+
 function getNationPool(mode) {
   if (mode === 'legends') return LEGENDS;
   if (mode === 'u25') {
