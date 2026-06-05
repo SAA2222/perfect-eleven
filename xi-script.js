@@ -1074,20 +1074,52 @@ function buildFullTournamentPool() {
 }
 
 // Plausible tournament stat for an award type, scaled by rating
+// Canonical per-player tournament stats. Same player → same numbers across
+// every award card they appear in. Deterministic seed from name for variety.
+// Tuned to real WC tournament ranges: top scorers 5-8 G, top assisters 3-6 A.
+function playerCanonicalStats(p) {
+  if (!p) return null;
+  const r = p.rating;
+  // Deterministic per-player offset (0–6).
+  const seed = (p.name || '').split('').reduce((s, c) => (s + c.charCodeAt(0)) % 7, 0);
+  // Tier-based baseline (modest — role bias does the heavy lifting)
+  let baseG, baseA, baseCS, baseSv, baseT;
+  if (r >= 96)      { baseG = 4; baseA = 3; baseCS = 5; baseSv = 26; baseT = 28; }
+  else if (r >= 93) { baseG = 3; baseA = 3; baseCS = 4; baseSv = 23; baseT = 26; }
+  else if (r >= 90) { baseG = 2; baseA = 2; baseCS = 3; baseSv = 21; baseT = 24; }
+  else if (r >= 87) { baseG = 2; baseA = 2; baseCS = 2; baseSv = 19; baseT = 22; }
+  else              { baseG = 1; baseA = 1; baseCS = 1; baseSv = 17; baseT = 20; }
+  // Role-specific weighting — keeps numbers realistic per position
+  const isGK   = p.role === 'GK';
+  const isFwd  = ['ST','LW','RW'].includes(p.role);
+  const isMid  = ['CAM','CM','CDM','LCM','RCM'].includes(p.role);
+  const isDef  = ['CB','LB','RB','LCB','RCB'].includes(p.role);
+  const goalsBias  = isGK ? -10 : isFwd ? 3 : isMid ? 0 : isDef ? -2 : 0;
+  const assistsBias = isGK ? -10 : isMid ? 1 : isFwd ? 0 : isDef ? -1 : 0;
+  const seedG = seed % 2;        // 0 or 1
+  const seedA = (seed * 2) % 2;  // 0 or 1
+  return {
+    G:  Math.max(0, baseG + seedG + goalsBias),
+    A:  Math.max(0, baseA + seedA + assistsBias),
+    CS: baseCS + (seed % 2),
+    Sv: baseSv + (seed % 4),
+    T:  baseT + ((seed * 3) % 5),
+  };
+}
+
 function statFor(awardType, p) {
   if (!p) return '';
-  const r = p.rating;
-  const tier = r >= 92 ? 3 : r >= 89 ? 2 : r >= 86 ? 1 : 0;
+  const s = playerCanonicalStats(p);
   switch (awardType) {
-    case 'goldenBoot':  return ['5 GOALS', '6 GOALS', '7 GOALS', '8 GOALS'][tier];
-    case 'topAssister': return ['4 ASSISTS', '5 ASSISTS', '6 ASSISTS', '7 ASSISTS'][tier];
-    case 'goldenGlove': return ['3 CLEAN SHEETS · 18 SAVES','4 CLEAN SHEETS · 21 SAVES','5 CLEAN SHEETS · 24 SAVES','5 CLEAN SHEETS · 27 SAVES'][tier];
-    case 'goldenBall':  return ['3 G · 2 A', '4 G · 3 A', '5 G · 4 A', '6 G · 5 A'][tier];
-    case 'captain':     return `${r} OVR · ARMBAND`;
-    case 'youngPlayer': return ['2 G · 3 A', '3 G · 3 A', '4 G · 3 A', '5 G · 4 A'][tier];
-    case 'bestDefender':return ['3 CLEAN SHEETS', '4 CLEAN SHEETS', '5 CLEAN SHEETS', '5 CLEAN SHEETS · 32 TACKLES'][tier];
-    case 'bestMid':     return ['2 G · 3 A', '3 G · 4 A', '4 G · 5 A', '5 G · 5 A'][tier];
-    default: return `${r} OVR`;
+    case 'goldenBoot':  return `${s.G} GOALS`;
+    case 'topAssister': return `${s.A} ASSISTS`;
+    case 'goldenGlove': return `${s.CS} CLEAN SHEETS · ${s.Sv} SAVES`;
+    case 'goldenBall':  return `${s.G} G · ${s.A} A`;
+    case 'captain':     return `${p.rating} OVR · ARMBAND`;
+    case 'youngPlayer': return `${s.G} G · ${s.A} A`;
+    case 'bestDefender':return `${s.CS} CLEAN SHEETS · ${s.T} TACKLES`;
+    case 'bestMid':     return `${s.G} G · ${s.A} A`;
+    default: return `${p.rating} OVR`;
   }
 }
 
