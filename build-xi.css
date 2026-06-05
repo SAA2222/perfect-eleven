@@ -959,6 +959,118 @@ body.swap-mode .xi-pitch::after {
   .roster__club { display: none; }
 }
 
+/* Swap target picker — choose which roster player to replace */
+.swap-picker {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.72);
+  z-index: 10000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.swap-picker__panel {
+  background: var(--ink-2, #16191e);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.swap-picker__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.swap-picker__title {
+  font-family: var(--font-display, Impact);
+  font-size: 16px;
+  color: var(--gold, #ffc400);
+  letter-spacing: 0.06em;
+}
+.swap-picker__cancel {
+  background: none;
+  border: 1px solid var(--rule);
+  color: var(--mute);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.swap-picker__cancel:hover { color: var(--paper); border-color: var(--paper); }
+.swap-picker__sub {
+  padding: 12px 20px 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--mute);
+  letter-spacing: 0.14em;
+  font-weight: 700;
+}
+.swap-picker__rows {
+  padding: 8px 12px 16px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.swap-picker__row {
+  display: grid;
+  grid-template-columns: 56px 36px 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  background: var(--ink, #0e0f12);
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--paper);
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+.swap-picker__row:hover {
+  border-color: var(--gold, #ffc400);
+  background: rgba(255, 196, 0, 0.05);
+}
+.swap-picker__slot {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--mute);
+  text-align: center;
+}
+.swap-picker__flag {
+  width: 32px; height: 22px;
+  object-fit: cover;
+  border-radius: 2px;
+}
+.swap-picker__name {
+  font-family: var(--font-display, Impact);
+  font-size: 16px;
+  letter-spacing: 0.04em;
+}
+.swap-picker__rating {
+  font-family: var(--font-display, Impact);
+  font-size: 22px;
+  color: var(--pitch);
+  font-weight: 800;
+}
+.swap-picker__fit {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  padding: 3px 8px;
+  border-radius: 3px;
+}
+.swap-picker__fit--nat { color: var(--pitch); background: rgba(0,200,83,0.1); }
+.swap-picker__fit--oop { color: var(--gold); background: rgba(255,196,0,0.1); }
+@media (max-width: 600px) {
+  .swap-picker__row { grid-template-columns: 44px 32px 1fr auto; }
+  .swap-picker__fit { display: none; }
+}
+
 /* LIVE topbar pulse indicator (tournament in progress) */
 .topbar__livebadge {
   display: inline-flex;

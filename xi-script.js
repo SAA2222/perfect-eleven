@@ -260,22 +260,31 @@ function pickPlayer(p) {
 // for a filled slot of the same position
 // ============================================================
 function findFilledSlotForSwap(player) {
-  // Try exact role match first
+  const all = findAllFilledSlotsForSwap(player);
+  return all[0] || null;
+}
+
+function findAllFilledSlotsForSwap(player) {
+  const matches = [];
+  const seen = new Set();
+  // Exact role matches first
   const fits = ROLE_FIT[player.role] || [];
   for (const slotRole of fits) {
     for (const [slotIdxStr, def] of Object.entries(SLOT_DEF)) {
-      if (def.role === slotRole && state.roster[slotIdxStr]) {
-        return { slotIdx: slotIdxStr, exact: true };
+      if (def.role === slotRole && state.roster[slotIdxStr] && !seen.has(slotIdxStr)) {
+        matches.push({ slotIdx: slotIdxStr, exact: true });
+        seen.add(slotIdxStr);
       }
     }
   }
-  // Fallback: same group
+  // Same pos group fallback
   for (const [slotIdxStr, def] of Object.entries(SLOT_DEF)) {
-    if (def.pos === player.pos && state.roster[slotIdxStr]) {
-      return { slotIdx: slotIdxStr, exact: false };
+    if (def.pos === player.pos && state.roster[slotIdxStr] && !seen.has(slotIdxStr)) {
+      matches.push({ slotIdx: slotIdxStr, exact: false });
+      seen.add(slotIdxStr);
     }
   }
-  return null;
+  return matches;
 }
 
 function enterPickSwapMode() {
@@ -342,8 +351,55 @@ function rerenderPickModalForSwapIn() {
 }
 
 function executePickSwap(p) {
-  const target = findFilledSlotForSwap(p);
-  if (!target) { toast('NO SLOT MATCHES THAT POSITION'); return; }
+  const matches = findAllFilledSlotsForSwap(p);
+  if (!matches.length) { toast('NO SLOT MATCHES THAT POSITION'); return; }
+  if (matches.length > 1) {
+    showSwapTargetPicker(p, matches);
+    return;
+  }
+  doPickSwap(p, matches[0]);
+}
+
+function showSwapTargetPicker(p, matches) {
+  const overlay = document.createElement('div');
+  overlay.id = 'swapTargetPicker';
+  overlay.className = 'swap-picker';
+  const incoming = `${p.name} (${p.role} · ${p.rating})`;
+  const rows = matches.map((m, i) => {
+    const cur = state.roster[m.slotIdx];
+    const slotLabel = SLOT_DEF[m.slotIdx]?.role || '?';
+    const fitTag = m.exact ? 'NATURAL' : 'OUT OF POS';
+    return `
+      <button class="swap-picker__row" data-pick-idx="${i}">
+        <span class="swap-picker__slot">${slotLabel}</span>
+        <img class="swap-picker__flag" src="${flagURL(cur.iso, 80)}" srcset="${flagURL2x(cur.iso, 80)} 2x" alt="${cur.nation}" />
+        <span class="swap-picker__name">${cur.name}</span>
+        <span class="swap-picker__rating">${cur.rating}</span>
+        <span class="swap-picker__fit swap-picker__fit--${m.exact ? 'nat' : 'oop'}">${fitTag}</span>
+      </button>
+    `;
+  }).join('');
+  overlay.innerHTML = `
+    <div class="swap-picker__panel">
+      <div class="swap-picker__head">
+        <span class="swap-picker__title">SWAP IN ${p.name.toUpperCase()}</span>
+        <button class="swap-picker__cancel" id="swapPickerCancel">CANCEL</button>
+      </div>
+      <div class="swap-picker__sub">REPLACE WHICH PLAYER?</div>
+      <div class="swap-picker__rows">${rows}</div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelectorAll('.swap-picker__row').forEach((btn, i) => {
+    btn.addEventListener('click', () => {
+      overlay.remove();
+      doPickSwap(p, matches[i]);
+    });
+  });
+  document.getElementById('swapPickerCancel').addEventListener('click', () => overlay.remove());
+}
+
+function doPickSwap(p, target) {
   const slotIdx = target.slotIdx;
   const oldPlayer = state.roster[slotIdx];
 
@@ -936,29 +992,44 @@ function computeAwards() {
   const all = buildFullTournamentPool();
   if (!all.length) return null;
 
-  const max = (arr) => arr.reduce((m, p) => p.rating > m.rating ? p : m);
+  // Weighted top-N: top-8 by rating, weighted exponentially.
+  // Top player wins ~35% of the time; bottom of top-8 wins ~3-5%. Stops Mbappé-always.
+  const weightedTopPick = (arr, topN = 8) => {
+    if (!arr.length) return null;
+    const sorted = arr.slice().sort((a, b) => b.rating - a.rating);
+    const top = sorted.slice(0, Math.min(topN, sorted.length));
+    const floor = top[top.length - 1].rating - 1;
+    const weights = top.map(p => Math.pow(p.rating - floor, 2.5));
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total;
+    for (let i = 0; i < top.length; i++) {
+      r -= weights[i];
+      if (r <= 0) return top[i];
+    }
+    return top[0];
+  };
 
   // From the FULL tournament pool
-  const goldenBall = max(all);
+  const goldenBall = weightedTopPick(all, 10);
 
   const attackers = all.filter(p => ['ST','LW','RW'].includes(p.role));
-  const goldenBoot = attackers.length ? max(attackers) : null;
+  const goldenBoot = attackers.length ? weightedTopPick(attackers) : null;
 
   // Top assister: best CAM / playmaker, exclude the Golden Boot winner
   const playmakers = all.filter(p => ['CAM','CM','LW','RW'].includes(p.role) && p.name !== goldenBoot?.name);
-  const topAssister = playmakers.length ? max(playmakers) : null;
+  const topAssister = playmakers.length ? weightedTopPick(playmakers) : null;
 
   const keepers = all.filter(p => p.role === 'GK');
-  const goldenGlove = keepers.length ? max(keepers) : null;
+  const goldenGlove = keepers.length ? weightedTopPick(keepers, 5) : null;
 
   const youngs = all.filter(p => typeof U25_PLAYERS !== 'undefined' && U25_PLAYERS.has(p.name));
-  const youngPlayer = youngs.length ? max(youngs) : null;
+  const youngPlayer = youngs.length ? weightedTopPick(youngs) : null;
 
   const defenders = all.filter(p => ['CB','LB','RB'].includes(p.role));
-  const bestDefender = defenders.length ? max(defenders) : null;
+  const bestDefender = defenders.length ? weightedTopPick(defenders) : null;
 
   const mids = all.filter(p => ['CDM','CM','CAM'].includes(p.role));
-  const bestMid = mids.length ? max(mids) : null;
+  const bestMid = mids.length ? weightedTopPick(mids) : null;
 
   // CAPTAIN — from the user's XI (highest outfield rating)
   const userPlayers = Object.values(state.roster);

@@ -2869,7 +2869,7 @@ const OFFICIAL_SQUADS_2026 = {
     { name:'Gilson Benchimol',  pos:'FWD', role:'ST',  club:'AKRON TOLYATTI',      rating:72 },
     { name:'Helio Varela',      pos:'FWD', role:'ST',  club:'MACCABI TEL AVIV',    rating:73 },
   ],
-  SAU: [
+  KSA: [
     { name:'Mohammed Al Owais',      pos:'GK',  role:'GK',  club:'AL ULA',         rating:75 },
     { name:'Nawaf Al Aqidi',         pos:'GK',  role:'GK',  club:'AL-NASSR',       rating:74 },
     { name:'Ahmed Al Kassar',        pos:'GK',  role:'GK',  club:'AL-QADSIAH',     rating:72 },
@@ -2897,7 +2897,7 @@ const OFFICIAL_SQUADS_2026 = {
     { name:'Saleh Al Shehri',        pos:'FWD', role:'ST',  club:'AL-ITTIHAD',     rating:77 },
     { name:'Abdullah Al Hamdan',     pos:'FWD', role:'ST',  club:'AL-NASSR',       rating:75 },
   ],
-  URY: [
+  URU: [
     { name:'Fernando Muslera',          pos:'GK',  role:'GK',  club:'ESTUDIANTES',          rating:79 },
     { name:'Sergio Rochet',             pos:'GK',  role:'GK',  club:'INTERNACIONAL',        rating:76 },
     { name:'Santiago Mele',             pos:'GK',  role:'GK',  club:'MONTERREY',            rating:73 },
