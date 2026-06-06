@@ -2169,7 +2169,7 @@ function submitReport(e) {
     `Submitted: ${new Date().toISOString()}`,
   ].join('\n');
 
-  const mailto = `mailto:saarim1745@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const mailto = `mailto:sportsmarketllc@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.location.href = mailto;
 
   // Reset + toast
@@ -2321,7 +2321,7 @@ function initModes() {
     // to email a receipt so we can manually unlock.
     const subject = encodeURIComponent('Perfect Eleven — restore premium');
     const body = encodeURIComponent('Hi — I purchased Perfect Eleven premium and need it restored on a new device. My Stripe receipt email / last-4: ');
-    window.location.href = `mailto:saarim1745@gmail.com?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:sportsmarketllc@gmail.com?subject=${subject}&body=${body}`;
   });
 }
 
