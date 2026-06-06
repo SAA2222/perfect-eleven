@@ -192,8 +192,14 @@ function openPickModal() {
     const canPick = fit !== null;
     const league = clubToLeague(p.club);
     const tag = canPick && fit.exact ? 'NATURAL' : (canPick ? 'OUT OF POS' : 'LOCKED');
-    const chemDelta = previewChemDelta({ ...p, club: p.club });
-    const chemTier = chemDelta >= 3 ? 'great' : chemDelta >= 1 ? 'good' : 'neutral';
+    // Only preview chem on pickable cards — a LOCKED player (position already
+    // filled) can't be added, so advertising "+N CHEM" on it is misleading.
+    let chemBadge = '';
+    if (canPick) {
+      const d = previewChemDelta(p);
+      const tier = d >= 3 ? 'great' : d >= 1 ? 'good' : 'neutral';
+      chemBadge = `<span class="player__chem player__chem--${tier}">+${d} CHEM</span>`;
+    }
     return `
       <button class="player" data-idx="${idx}" ${canPick ? '' : 'disabled'}>
         <div class="player__top">
@@ -204,7 +210,7 @@ function openPickModal() {
         <div class="player__meta">
           <span class="player__club">${p.club}</span>
           <span class="player__league player__league--${league.toLowerCase()}">${league}</span>
-          <span class="player__chem player__chem--${chemTier}">+${chemDelta} CHEM</span>
+          ${chemBadge}
         </div>
         ${liveStatsBadge(p.name)}
         <div class="player__fit player__fit--${canPick ? (fit.exact ? 'natural' : 'oop') : 'locked'}">${tag}</div>
@@ -749,16 +755,26 @@ function previewChemDelta(candidate, replaceSlotIdx = null) {
   const candidateLeague = clubToLeague(candidate.club);
   // Snapshot, apply hypothetical change, score, restore. Chemistry only
   // depends on roster membership + league, not on which slot — so we use
-  // a sentinel slot key for the "preview" placement.
-  const before = teamChemistry();
+  // a sentinel slot key for the "preview" placement. try/finally guarantees
+  // the snapshot is restored even if scoring throws — otherwise a leftover
+  // __preview__ entry (no rating) would NaN-poison computeFinalOVR and the
+  // share card.
   const saved = { ...state.roster };
-  if (replaceSlotIdx !== null && replaceSlotIdx !== undefined) {
-    delete state.roster[replaceSlotIdx];
+  try {
+    const before = teamChemistry();
+    if (replaceSlotIdx !== null && replaceSlotIdx !== undefined) {
+      delete state.roster[replaceSlotIdx];
+    }
+    state.roster['__preview__'] = { league: candidateLeague };
+    const after = teamChemistry();
+    return after - before;
+  } catch (e) {
+    // Never let a chem-preview failure blank the whole pick modal — degrade
+    // to a neutral +0 badge instead.
+    return 0;
+  } finally {
+    state.roster = saved;
   }
-  state.roster['__preview__'] = { league: candidateLeague };
-  const after = teamChemistry();
-  state.roster = saved;
-  return after - before;
 }
 
 function teamChemistry() {
@@ -823,7 +839,7 @@ function updateProgress() {
 // ============================================================
 function gradeFromOVR(ovr, chem) {
   const score = ovr + chem * 0.3;   // chem matters — max chem (33) = +9.9 grade swing
-  if (score >= 95) return { letter: 'S',  color: 'var(--gold)',    blurb: 'Best in the world. Genuine title favorites.' };
+  if (score >= 95) return { letter: 'S',  color: 'var(--gold)',    blurb: 'Elite in every line. A squad built to win.' };
   if (score >= 91) return { letter: 'A+', color: 'var(--pitch)',   blurb: 'A genuine super-team. Bookmark this lineup.' };
   if (score >= 88) return { letter: 'A',  color: 'var(--pitch)',   blurb: 'Elite talent in every line.' };
   if (score >= 85) return { letter: 'B+', color: '#7ed957',        blurb: 'Top-tier squad. A dangerous outfit.' };
