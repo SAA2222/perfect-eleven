@@ -228,16 +228,20 @@ function paintLeaderboard() {
     const cutoff = Date.now() - WEEK_MS;
     rows = rows.filter(r => r.createdAt && r.createdAt >= cutoff);
   }
-  // Show EVERYONE — no top-N cap. (Capped only by what the API returns / local cache.)
-  const combined = rows
-    .sort((a, b) => b.ovr - a.ovr)
+  // Mode tabs (CLASSIC/TACTICAL/TOP50/LEGENDS) show TOP 10. The ALL tab shows
+  // everyone — no cap.
+  const sorted = rows.sort((a, b) => b.ovr - a.ovr);
+  const isAll = _lbFilter === 'ALL';
+  const combined = (isAll ? sorted : sorted.slice(0, LB_TOP_N))
     .map((row, i) => ({ ...row, rank: i + 1 }));
 
   const scope = _leaderboardIsGlobal
     ? `<span class="lb-meta--global">🌍 GLOBAL</span>`
     : `<span class="lb-meta--local">📱 LOCAL · OFFLINE</span>`;
   const periodLabel = _lbPeriod === 'WEEK' ? 'THIS WEEK' : 'ALL TIME';
-  const countLabel = `${combined.length} ${combined.length === 1 ? 'PLAYER' : 'PLAYERS'}`;
+  const countLabel = isAll
+    ? `${combined.length} ${combined.length === 1 ? 'PLAYER' : 'PLAYERS'}`
+    : (sorted.length > LB_TOP_N ? `TOP ${LB_TOP_N}` : `${combined.length} ${combined.length === 1 ? 'PLAYER' : 'PLAYERS'}`);
   const badge = `<div class="lb-meta">${scope} · ${LB_FILTER_LABELS[_lbFilter] || _lbFilter} · ${periodLabel} · ${countLabel}</div>`;
 
   if (!combined.length) {
