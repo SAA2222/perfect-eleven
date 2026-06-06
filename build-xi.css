@@ -812,6 +812,53 @@ body.swap-mode .xi-pitch::after {
   border-radius: 3px;
 }
 .player__livestat--red { color: var(--crimson, #ff2e4d); background: rgba(255, 46, 77, 0.15); }
+
+/* ============================================================
+   PICK MODAL — dock-right on desktop so the pitch stays visible
+   while picking. (Steven's group-chat feedback: "any way to view
+   the team while creating it?" — on desktop the full-screen modal
+   used to cover the pitch.) Mobile keeps the centered overlay.
+   ============================================================ */
+@media (min-width: 1024px) {
+  /* Only the pick modal gets the dock-right treatment — leave the
+     complete / rosters / help / paywall modals centered. */
+  #pickModal {
+    place-items: stretch end;
+    padding: 16px;
+    pointer-events: none;  /* let clicks pass through to the pitch */
+  }
+  /* Re-enable clicks on the panel only — backdrop stays click-through
+     so the player can scroll/inspect the pitch beneath. The modal close
+     button still dismisses; outside-click-to-close is sacrificed but the
+     panel scrolls independently of the pitch. */
+  #pickModal .modal__panel { pointer-events: auto; }
+  #pickModal .modal__backdrop { pointer-events: none; }
+  /* Lighten the backdrop so the pitch is fully visible behind it.
+     A subtle vignette on the right keeps the panel readable. */
+  #pickModal .modal__backdrop {
+    background: linear-gradient(
+      to right,
+      rgba(0,0,0,0)   0%,
+      rgba(0,0,0,0)   50%,
+      rgba(0,0,0,0.35) 100%
+    );
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  #pickModal .modal__panel {
+    width: 460px;
+    max-width: 460px;
+    max-height: calc(100vh - 32px);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+  }
+  /* Tighten the player grid so 2 columns fit comfortably in the
+     narrower dock-right panel. */
+  #pickModal .modal__players {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+
 /* ============================================================
    ROSTERS MODAL — browse all 48 squads
    ============================================================ */

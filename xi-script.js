@@ -1953,13 +1953,16 @@ async function shareXICardImage() {
   if (!blob) { toast('IMAGE EXPORT FAILED'); return; }
 
   const file = new File([blob], 'perfect-eleven.png', { type: 'image/png' });
-  // Prefer Web Share API on mobile (lets user post directly to IG/TikTok/X)
+  // Prefer Web Share API on mobile (lets user post directly to IG/TikTok/X).
+  // Include https:// so iMessage / WhatsApp / X auto-linkify the URL. Pass
+  // `url` separately too — some apps surface it as a "Visit" action button.
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({
         files: [file],
         title: 'My Perfect Eleven',
-        text: `${ovr} OVR · ${chem} CHEM — build yours at perfect-eleven.vercel.app`,
+        text: `${ovr} OVR · ${chem} CHEM — build yours at https://perfect-eleven.vercel.app`,
+        url: 'https://perfect-eleven.vercel.app',
       });
       return;
     } catch (e) { /* user cancelled — fall through to download */ }
