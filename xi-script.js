@@ -259,7 +259,7 @@ function minimizePickModal() {
   const bar = $('pickResumeBar');
   const nm  = $('pickResumeNation');
   if (nm) {
-    nm.innerHTML = `<img class="pick-resume__flag" src="${flagURL(state.currentNation.iso, 40)}" alt="" /> ${state.currentNation.name}`;
+    nm.innerHTML = `<img class="pick-resume__flag" src="${flagURL(state.currentNation.iso, 40)}" alt="" /> ${state.currentNation.code}`;
   }
   if (bar) bar.hidden = false;
   // Bring the pitch into view so the open (highlighted) slots are visible.
