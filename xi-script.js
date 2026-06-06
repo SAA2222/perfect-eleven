@@ -331,6 +331,13 @@ function openTacticalPickModal() {
     `;
   }).join('');
 
+  // The in-modal "SWAP IN" button is a CLASSIC mechanic (replace a slot from
+  // the current nation's pool). Tactical has no current nation and the spun
+  // position is always an OPEN slot, so it doesn't apply — hide it. Swapping in
+  // Tactical is done via the main SWAP button (remove a placed player).
+  const pickSwapBtn = document.getElementById('pickSwapBtn');
+  if (pickSwapBtn) pickSwapBtn.style.display = 'none';
+
   hidePickResumeBar();
   $('pickModal').hidden = false;
   $('modalPlayers').querySelectorAll('.player').forEach(btn => {
@@ -385,6 +392,10 @@ function openPickModal() {
   if (state.mode === 'tactical') return openTacticalPickModal();
   const n = state.currentNation;
   if (!n) return;
+
+  // Restore the in-modal SWAP IN button (Tactical hides it).
+  const pickSwapBtn = document.getElementById('pickSwapBtn');
+  if (pickSwapBtn) pickSwapBtn.style.display = '';
 
   // figure which positions/roles are still open
   highlightOpenSlots(n.players);
@@ -485,12 +496,14 @@ function hidePickResumeBar() {
 }
 
 function pickPlayer(p) {
+  // Tactical never uses the classic pick-swap flow — route it first so a stray
+  // pickSwapMode flag can't divert a tactical pick into the nation-based swap.
+  if (state.mode === 'tactical') return pickTacticalPlayer(p);
   // If we're in pick-swap mode, divert to the swap-in flow
   if (state.pickSwapMode) {
     executePickSwap(p);
     return;
   }
-  if (state.mode === 'tactical') return pickTacticalPlayer(p);
   const fit = bestSlotForPlayer(p);
   if (!fit) return;
   const slotIdx = fit.slotIdx;
