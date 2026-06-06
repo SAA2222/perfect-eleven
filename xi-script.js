@@ -60,9 +60,29 @@ let state = {
   swapsLeft: MAX_SWAPS,
   swapMode: false,
   pickSwapMode: false, // user clicked SWAP from inside pick modal → next pick replaces
+  blind: false,        // EXPERT mode — ratings hidden during the draft (38-0-style)
+  revealed: false,     // flips true on the complete screen → the big reveal
 };
 
 const $ = (id) => document.getElementById(id);
+
+// EXPERT / BLIND draft: hide every rating + chem number until the final reveal.
+// Pure display gate — game logic (OVR/chem/finish) is unchanged. One predicate
+// threaded through every render so nothing leaks.
+function ratingsHidden() { return state.blind && !state.revealed; }
+function maskRating(r) { return ratingsHidden() ? '?' : r; }
+
+// The expert toggle is committed once the draft starts — no flipping mid-build
+// to peek at ratings. Re-enabled on reset (empty roster).
+function updateBlindToggleLock() {
+  const toggle = document.getElementById('expertToggle');
+  const wrap = document.getElementById('expertToggleWrap');
+  if (!toggle) return;
+  const started = Object.keys(state.roster).length > 0;
+  toggle.disabled = started;
+  toggle.checked = state.blind;
+  if (wrap) wrap.classList.toggle('xi-expert--locked', started);
+}
 
 // ============================================================
 // SPINNER
@@ -203,8 +223,9 @@ function openPickModal() {
     const tag = canPick && fit.exact ? 'NATURAL' : (canPick ? 'OUT OF POS' : 'LOCKED');
     // Only preview chem on pickable cards — a LOCKED player (position already
     // filled) can't be added, so advertising "+N CHEM" on it is misleading.
+    // In EXPERT mode chem is a number, so it's hidden too.
     let chemBadge = '';
-    if (canPick) {
+    if (canPick && !ratingsHidden()) {
       const d = previewChemDelta(p);
       const tier = d >= 3 ? 'great' : d >= 1 ? 'good' : 'neutral';
       chemBadge = `<span class="player__chem player__chem--${tier}">+${d} CHEM</span>`;
@@ -213,7 +234,7 @@ function openPickModal() {
       <button class="player" data-idx="${idx}" ${canPick ? '' : 'disabled'}>
         <div class="player__top">
           <span class="player__pos player__pos--${p.pos.toLowerCase()}">${p.role}</span>
-          <span class="player__rating">${p.rating}</span>
+          <span class="player__rating">${maskRating(p.rating)}</span>
         </div>
         <div class="player__name">${p.name}</div>
         <div class="player__meta">
@@ -221,7 +242,7 @@ function openPickModal() {
           <span class="player__league player__league--${league.toLowerCase()}">${league}</span>
           ${chemBadge}
         </div>
-        ${liveStatsBadge(p.name)}
+        ${ratingsHidden() ? '' : liveStatsBadge(p.name)}
         <div class="player__fit player__fit--${canPick ? (fit.exact ? 'natural' : 'oop') : 'locked'}">${tag}</div>
       </button>
     `;
@@ -390,8 +411,9 @@ function rerenderPickModalForSwapIn() {
     }
     // Chem preview only when the swap target is unambiguous — otherwise the
     // delta depends on which slot the user picks in the next overlay.
+    // Hidden in EXPERT mode (it's a number).
     let chemBadge = '';
-    if (canSwap && matches.length === 1) {
+    if (canSwap && matches.length === 1 && !ratingsHidden()) {
       const d = previewChemDelta(p, matches[0].slotIdx);
       const sign = d >= 0 ? '+' : '';
       const tier = d >= 3 ? 'great' : d >= 1 ? 'good' : d >= 0 ? 'neutral' : 'bad';
@@ -401,7 +423,7 @@ function rerenderPickModalForSwapIn() {
       <button class="player ${canSwap ? 'player--swap-in' : ''}" data-idx="${idx}" ${canSwap ? '' : 'disabled'}>
         <div class="player__top">
           <span class="player__pos player__pos--${p.pos.toLowerCase()}">${p.role}</span>
-          <span class="player__rating">${p.rating}</span>
+          <span class="player__rating">${maskRating(p.rating)}</span>
         </div>
         <div class="player__name">${p.name}</div>
         <div class="player__meta">
@@ -437,7 +459,7 @@ function showSwapTargetPicker(p, matches) {
   const overlay = document.createElement('div');
   overlay.id = 'swapTargetPicker';
   overlay.className = 'swap-picker';
-  const incoming = `${p.name} (${p.role} · ${p.rating})`;
+  const incoming = ratingsHidden() ? `${p.name} (${p.role})` : `${p.name} (${p.role} · ${p.rating})`;
   const rows = matches.map((m, i) => {
     const cur = state.roster[m.slotIdx];
     const slotLabel = SLOT_DEF[m.slotIdx]?.role || '?';
@@ -447,7 +469,7 @@ function showSwapTargetPicker(p, matches) {
         <span class="swap-picker__slot">${slotLabel}</span>
         <img class="swap-picker__flag" src="${flagURL(cur.iso, 80)}" srcset="${flagURL2x(cur.iso, 80)} 2x" alt="${cur.nation}" />
         <span class="swap-picker__name">${cur.name}</span>
-        <span class="swap-picker__rating">${cur.rating}</span>
+        <span class="swap-picker__rating">${maskRating(cur.rating)}</span>
         <span class="swap-picker__fit swap-picker__fit--${m.exact ? 'nat' : 'oop'}">${fitTag}</span>
       </button>
     `;
@@ -501,7 +523,7 @@ function doPickSwap(p, target) {
     el.innerHTML = `
       <img class="slot__filled-flag" src="${flagURL(state.currentNation.iso, 80)}" srcset="${flagURL2x(state.currentNation.iso, 80)} 2x" alt="${state.currentNation.name}" />
       <span class="slot__filled-name">${shortName(p.name)}</span>
-      <span class="slot__filled-rating">${p.rating}</span>
+      <span class="slot__filled-rating">${maskRating(p.rating)}</span>
       <span class="slot__filled-chem" data-slot-chem="${slotIdx}"></span>
     `;
   }
@@ -762,7 +784,7 @@ function fillSlot(slotIdx) {
   el.innerHTML = `
     <img class="slot__filled-flag" src="${flagURL(p.iso, 80)}" srcset="${flagURL2x(p.iso, 80)} 2x" alt="${p.nation}" />
     <span class="slot__filled-name">${shortName(p.name)}</span>
-    <span class="slot__filled-rating">${p.rating}</span>
+    <span class="slot__filled-rating">${maskRating(p.rating)}</span>
     <span class="slot__filled-chem" data-slot-chem="${slotIdx}"></span>
   `;
   updateChemistryViz();
@@ -834,12 +856,17 @@ function teamChemistry() {
 }
 
 function updateChemistryViz() {
+  const hide = ratingsHidden();
   for (const slotIdx of Object.keys(state.roster)) {
-    const chem = chemistryForPlayer(slotIdx);
     const el = document.querySelector(`[data-slot-chem="${slotIdx}"]`);
-    if (el) {
-      el.innerHTML = `<span class="chem-dot ${chem >= 1 ? 'on' : ''}"></span><span class="chem-dot ${chem >= 2 ? 'on' : ''}"></span><span class="chem-dot ${chem >= 3 ? 'on' : ''}"></span>`;
+    if (!el) continue;
+    if (hide) {
+      // EXPERT mode — chem is info, keep the dots neutral (all off) until reveal
+      el.innerHTML = `<span class="chem-dot"></span><span class="chem-dot"></span><span class="chem-dot"></span>`;
+      continue;
     }
+    const chem = chemistryForPlayer(slotIdx);
+    el.innerHTML = `<span class="chem-dot ${chem >= 1 ? 'on' : ''}"></span><span class="chem-dot ${chem >= 2 ? 'on' : ''}"></span><span class="chem-dot ${chem >= 3 ? 'on' : ''}"></span>`;
   }
 }
 
@@ -866,7 +893,10 @@ function updateProgress() {
   const filled = Object.keys(state.roster).length;
   $('roundNum').textContent = filled;
   $('progressFill').style.width = `${(filled / 11) * 100}%`;
-  if (filled > 0) {
+  if (filled > 0 && ratingsHidden()) {
+    // EXPERT mode — hide the running total; show how many are still blind-drafted
+    $('overallRating').innerHTML = `<span style="letter-spacing:.06em;">?? <span style="color:var(--mute);font-size:.6em;">OVR</span> · <span style="color:var(--pitch);font-size:.55em;">BLIND DRAFT</span></span>`;
+  } else if (filled > 0) {
     const final = computeFinalOVR();
     const chem = teamChemistry();
     const oop = countOOP();
@@ -876,6 +906,7 @@ function updateProgress() {
     $('overallRating').innerHTML = `— <span style="color:var(--mute);font-size:.6em;">OVR</span>`;
   }
   $('shareBtn').disabled = filled < 11;
+  updateBlindToggleLock();   // lock the expert toggle once the draft is underway
   updateResources();
 }
 
@@ -1400,6 +1431,16 @@ function awardCardHTML(emoji, label, awardKey, player) {
 }
 
 function showCompleteModal() {
+  // 🎭 THE REVEAL — if this was an EXPERT/blind draft, flip everything visible
+  // now and re-paint the pitch behind the modal so the numbers appear.
+  const wasBlind = state.blind && !state.revealed;
+  state.revealed = true;
+  if (wasBlind) {
+    Object.keys(state.roster).forEach(fillSlot);
+    updateChemistryViz();
+    updateProgress();
+  }
+
   const baseFinal = computeFinalOVR();
   const chem = teamChemistry();
   const oop = countOOP();
@@ -1409,6 +1450,9 @@ function showCompleteModal() {
   const final = Math.max(60, baseFinal - injuryLoss);
   const grade = gradeFromOVR(final, chem);
   const finish = projectedFinish(baseFinal, chem, injuryLoss);
+
+  const kicker = document.getElementById('completeKicker');
+  if (kicker) kicker.textContent = wasBlind ? '🎭 THE BIG REVEAL — YOU DRAFTED BLIND' : 'YOUR ELEVEN IS COMPLETE';
 
   $('finalOvr').textContent = final;
   const oopNote = oop > 0 ? ` ${oop} OOP (−${oop} OVR).` : '';
@@ -2129,6 +2173,8 @@ function resetRoster() {
   state.skipsLeft = MAX_SKIPS;
   state.swapsLeft = MAX_SWAPS;
   state.swapMode = false;
+  state.revealed = false;          // new draft → numbers hidden again if blind is on
+  updateBlindToggleLock();         // empty roster → re-enable the expert toggle
   document.body.classList.remove('swap-mode');
   $('roundNum').textContent = '0';
   $('progressFill').style.width = '0%';
@@ -2262,6 +2308,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('spinBtn').addEventListener('click', spin);
   $('resetBtn').addEventListener('click', resetRoster);
+
+  // EXPERT (blind draft) toggle — committed once the draft starts
+  const expertToggle = document.getElementById('expertToggle');
+  if (expertToggle) {
+    expertToggle.checked = state.blind;
+    expertToggle.addEventListener('change', () => {
+      // Locked mid-draft — snap back to the committed value
+      if (Object.keys(state.roster).length > 0) { expertToggle.checked = state.blind; return; }
+      state.blind = expertToggle.checked;
+      state.revealed = false;
+      updateProgress();
+      toast(state.blind ? '👁️ EXPERT MODE ON · RATINGS HIDDEN TILL THE REVEAL' : 'EXPERT MODE OFF · RATINGS VISIBLE');
+    });
+  }
   const swapTopInit = document.getElementById('swapBtnTop');
   if (swapTopInit) swapTopInit.onclick = enterSwapMode;
   // SWAP from inside the pick modal — enters pick-swap mode (pick the player to swap in)

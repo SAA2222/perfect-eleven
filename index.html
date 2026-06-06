@@ -137,8 +137,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="preconnect" href="https://flagcdn.com" />
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=20260605co" />
-<link rel="stylesheet" href="build-xi.css?v=20260605co" />
+<link rel="stylesheet" href="styles.css?v=20260605cp" />
+<link rel="stylesheet" href="build-xi.css?v=20260605cp" />
 <!-- Google AdSense verification + loader -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9372890411087994"
         crossorigin="anonymous"></script>
@@ -231,6 +231,15 @@
         <span class="xi-mode__lock">🔒</span> LEGENDS
       </button>
     </div>
+
+    <label class="xi-expert" id="expertToggleWrap" title="Hide all ratings until the final reveal">
+      <input type="checkbox" id="expertToggle" />
+      <span class="xi-expert__track"><span class="xi-expert__thumb"></span></span>
+      <span class="xi-expert__text">
+        <span class="xi-expert__title">👁️ EXPERT MODE — DRAFT BLIND</span>
+        <span class="xi-expert__sub">Ratings hidden. Pick on pure football knowledge. Revealed at the end.</span>
+      </span>
+    </label>
   </div>
 </section>
 
@@ -478,7 +487,7 @@
 <div class="modal" id="completeModal" hidden>
   <div class="modal__backdrop"></div>
   <div class="modal__panel modal__panel--complete">
-    <span class="modal__kicker" style="color: var(--ink);">YOUR ELEVEN IS COMPLETE</span>
+    <span class="modal__kicker" style="color: var(--ink);" id="completeKicker">YOUR ELEVEN IS COMPLETE</span>
     <h2 class="modal__title" style="color: var(--ink); font-size: clamp(36px, 6vw, 80px);">
       THE <em>STARTING XI.</em>
     </h2>
@@ -724,9 +733,9 @@
   </div>
 </footer>
 
-<script src="live-stats.js?v=20260605co"></script>
-<script src="xi-data.js?v=20260605co"></script>
-<script src="xi-script.js?v=20260605co"></script>
-<script src="extras.js?v=20260605co"></script>
+<script src="live-stats.js?v=20260605cp"></script>
+<script src="xi-data.js?v=20260605cp"></script>
+<script src="xi-script.js?v=20260605cp"></script>
+<script src="extras.js?v=20260605cp"></script>
 </body>
 </html>
