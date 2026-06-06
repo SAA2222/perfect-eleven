@@ -2525,6 +2525,14 @@ body { padding-bottom: 56px; }
   gap: 10px;
   align-items: stretch;
 }
+/* Two-box variant: NAME + CITY + button */
+.submit-row--hero .submit-row__inputrow--split {
+  grid-template-columns: 1.3fr 1fr auto;
+}
+.submit-row--hero .submit-row__input--city {
+  /* slightly dimmer placeholder since it's optional */
+  opacity: 0.96;
+}
 .submit-row--hero .submit-row__input {
   font-size: 15px;
   font-weight: 600;
@@ -2554,7 +2562,8 @@ body { padding-bottom: 56px; }
   border-color: #00e573;
 }
 @media (max-width: 600px) {
-  .submit-row--hero .submit-row__inputrow { grid-template-columns: 1fr; }
+  .submit-row--hero .submit-row__inputrow,
+  .submit-row--hero .submit-row__inputrow--split { grid-template-columns: 1fr; }
 }
 
 /* CTA banner above the leaderboard table — invites new visitors */
@@ -2868,7 +2877,7 @@ body { padding-bottom: 56px; }
 .about {
   max-width: var(--max);
   margin: 0 auto;
-  padding: 80px var(--pad) 100px;
+  padding: 80px var(--pad) 32px;
   border-top: 1px solid var(--rule);
 }
 .about__inner { max-width: 1100px; }

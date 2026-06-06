@@ -2241,8 +2241,7 @@ async function shareXICardImage() {
   ctx.font = 'bold 22px ui-monospace, "JetBrains Mono", monospace';
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillText('PERFECT-ELEVEN.VERCEL.APP', 60, 1870);
-  const nameInput = document.getElementById('lineupName');
-  const builtBy = (nameInput && nameInput.value) ? nameInput.value.toUpperCase() : 'ANONYMOUS';
+  const builtBy = (typeof getBuiltByName === 'function') ? getBuiltByName() : 'ANONYMOUS';
   ctx.textAlign = 'right';
   ctx.fillText(`BUILT BY ${builtBy}`, W - 60, 1870);
 
@@ -2277,13 +2276,22 @@ async function shareXICardImage() {
 // ============================================================
 // SUBMIT TO LEADERBOARD
 // ============================================================
+// Combine the NAME + CITY boxes into one display string ("NAME · CITY"),
+// shared by the leaderboard submit and the share-card footer.
+function getBuiltByName() {
+  const name = ($('lineupName')?.value || '').trim();
+  const city = ($('lineupCity')?.value || '').trim();
+  if (!name) return 'ANONYMOUS';
+  const combined = city ? `${name} · ${city}` : name;
+  return combined.toUpperCase().slice(0, 38);
+}
+
 async function submitLineupToLeaderboard() {
   if (Object.keys(state.roster).length !== 11) {
     toast('FINISH THE XI FIRST');
     return;
   }
-  const rawName = ($('lineupName')?.value || '').trim();
-  const name = (rawName || 'ANONYMOUS').toUpperCase().slice(0, 32);
+  const name = getBuiltByName();
   const final = computeFinalOVR();
   const chem = teamChemistry();
 
