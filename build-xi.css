@@ -1061,7 +1061,7 @@ body.swap-mode .xi-pitch::after {
 }
 
 /* ============================================================
-   MONETIZATION — rewarded ad modal, Polymarket CTA, AdSense slot
+   MONETIZATION — rewarded ad modal, AdSense slot
    ============================================================ */
 /* Rewarded video modal */
 .rewarded-ad {
@@ -1176,66 +1176,6 @@ body.swap-mode .xi-pitch::after {
   margin-top: 14px;
 }
 
-/* Polymarket affiliate CTA in complete modal */
-.xi-polymarket {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 18px;
-  margin: 16px 0;
-  background: linear-gradient(135deg, rgba(0, 102, 204, 0.10), rgba(0, 200, 83, 0.06));
-  border: 1px solid rgba(0, 102, 204, 0.35);
-  border-radius: 8px;
-  text-decoration: none;
-  color: var(--paper);
-  position: relative;
-  transition: transform 0.15s, border-color 0.15s;
-}
-.xi-polymarket:hover {
-  transform: translateY(-1px);
-  border-color: rgba(0, 102, 204, 0.7);
-}
-.xi-polymarket__pill {
-  position: absolute;
-  top: -7px; left: 14px;
-  font-family: var(--font-mono);
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  color: var(--mute);
-  background: var(--ink-2, #16191e);
-  padding: 2px 8px;
-  border: 1px solid var(--rule);
-  border-radius: 2px;
-}
-.xi-polymarket__body { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-.xi-polymarket__title {
-  font-family: var(--font-display, Impact);
-  font-size: 17px;
-  letter-spacing: 0.04em;
-  color: var(--paper);
-}
-.xi-polymarket__sub {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--mute);
-}
-.xi-polymarket__sub strong { color: var(--paper, #fff); font-weight: 800; text-shadow: 0 0 6px rgba(0,0,0,0.4); }
-.xi-polymarket__flag {
-  width: 22px; height: 15px;
-  object-fit: cover;
-  border-radius: 2px;
-}
-.xi-polymarket__cta {
-  font-family: var(--font-display, Impact);
-  font-size: 14px;
-  color: var(--gold, #ffc400);
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-}
-
 /* AdSense slot */
 .ad-slot {
   position: relative;
@@ -1290,11 +1230,6 @@ body.swap-mode .xi-pitch::after {
   font-size: 10px;
   letter-spacing: 0.12em;
   color: var(--mute);
-}
-
-@media (max-width: 600px) {
-  .xi-polymarket { flex-direction: column; gap: 8px; text-align: center; }
-  .xi-polymarket__sub { justify-content: center; }
 }
 
 /* Swap target picker — choose which roster player to replace */

@@ -57,9 +57,7 @@ const SPONSORS = [
   { name: 'HYUNDAI',       tagline: 'NEW THINKING · NEW POSSIBILITIES',    accent: '#002C5F' },
   { name: 'QATAR AIRWAYS', tagline: 'GOING PLACES TOGETHER',               accent: '#5C0F23' },
   { name: 'HUBLOT',        tagline: 'FUSION OF INNOVATION',                accent: '#C9A24A' },
-  { name: 'DRAFTKINGS',    tagline: 'BET THE BIGGEST GAMES',               accent: '#53D337' },
   { name: 'YOUR BRAND',    tagline: 'AVAILABLE FOR SPONSORSHIP · CONTACT', accent: '#00ff85' },
-  { name: 'POLYMARKET',    tagline: 'PREDICT THE WORLD CUP',               accent: '#1652F0' },
   { name: '@CASUALZFC',    tagline: 'NOW ON TIKTOK',                       accent: '#69C9D0' },
   { name: '@EATOGRAPHY',   tagline: 'PLATES WORTH CHASING · NOW ON TIKTOK',accent: '#FF6B35' },
 ];
