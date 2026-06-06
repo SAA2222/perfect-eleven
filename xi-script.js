@@ -2241,7 +2241,7 @@ async function shareXICardImage() {
   ctx.font = 'bold 22px ui-monospace, "JetBrains Mono", monospace';
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillText('PERFECT-ELEVEN.VERCEL.APP', 60, 1870);
-  const builtBy = (typeof getBuiltByName === 'function') ? getBuiltByName() : 'ANONYMOUS';
+  const builtBy = (typeof getBuiltByName === 'function') ? getBuiltByName() : 'EARTH';
   ctx.textAlign = 'right';
   ctx.fillText(`BUILT BY ${builtBy}`, W - 60, 1870);
 
@@ -2281,7 +2281,7 @@ async function shareXICardImage() {
 function getBuiltByName() {
   const name = ($('lineupName')?.value || '').trim();
   const city = ($('lineupCity')?.value || '').trim();
-  if (!name) return 'ANONYMOUS';
+  if (!name) return city ? city.toUpperCase().slice(0, 38) : 'EARTH';
   const combined = city ? `${name} · ${city}` : name;
   return combined.toUpperCase().slice(0, 38);
 }
@@ -2443,7 +2443,7 @@ function isPremium() {
 }
 function unlockPremium() {
   localStorage.setItem(PREMIUM_UNLOCK_KEY, '1');
-  ['top50Tab', 'legendsTab'].forEach(id => {
+  ['tacticalTab', 'top50Tab', 'legendsTab'].forEach(id => {
     const tab = document.getElementById(id);
     if (!tab) return;
     tab.classList.remove('xi-mode--locked');
@@ -2463,7 +2463,7 @@ function handleStripeReturn() {
     unlockPremium();
     const cleanUrl = window.location.pathname + window.location.hash;
     window.history.replaceState({}, document.title, cleanUrl);
-    setTimeout(() => toast('🎉 PREMIUM UNLOCKED · TOP 50 + LEGENDS LIVE'), 600);
+    setTimeout(() => toast('🎉 PREMIUM UNLOCKED · TACTICAL + TOP 50 + LEGENDS LIVE'), 600);
   }
 }
 

@@ -90,7 +90,7 @@ export default async function handler(req, res) {
       const { by, ovr, chem, mode, lineup } = body || {};
 
       const entry = {
-        by:     sanitize(by, 40) || 'ANONYMOUS',
+        by:     sanitize(by, 40) || 'EARTH',
         ovr:    Math.max(0, Math.min(100, parseInt(ovr) || 0)),
         chem:   Math.max(0, Math.min(99, parseInt(chem) || 0)),
         mode:   sanitize(mode, 16).toUpperCase() || 'CLASSIC',
