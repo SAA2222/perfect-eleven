@@ -787,6 +787,44 @@ body.swap-mode .xi-pitch::after {
 .player__league--mex { background: #006847; color: #CE1126; }
 .player__league--oth { background: var(--ink-3); color: var(--mute); }
 
+/* CHEM-PREVIEW BADGE — shows how many chem points the team gains if you
+   pick this player. Lifts the strategic decision into the moment of
+   choice, especially important now that chem dominates the tournament
+   bracket math. */
+.player__chem {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 2px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.player__chem--great {
+  background: rgba(0, 255, 133, 0.18);
+  color: var(--pitch, #00ff85);
+  border-color: rgba(0, 255, 133, 0.55);
+  text-shadow: 0 0 6px rgba(0, 255, 133, 0.45);
+}
+.player__chem--good {
+  background: rgba(0, 255, 133, 0.10);
+  color: var(--pitch, #00ff85);
+  border-color: rgba(0, 255, 133, 0.30);
+}
+.player__chem--neutral {
+  background: var(--ink-3, #1a1f1c);
+  color: var(--mute, #7a8590);
+}
+.player__chem--bad {
+  background: rgba(255, 46, 77, 0.12);
+  color: var(--crimson, #ff2e4d);
+  border-color: rgba(255, 46, 77, 0.35);
+}
+/* When chem badge is present, let the meta row wrap so nothing gets
+   clipped on narrow cards (mobile / dock-right modal). */
+.player__meta { flex-wrap: wrap; row-gap: 4px; }
+
 .player__fit {
   font-family: var(--font-mono);
   font-size: 9px;

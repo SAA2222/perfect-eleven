@@ -192,6 +192,8 @@ function openPickModal() {
     const canPick = fit !== null;
     const league = clubToLeague(p.club);
     const tag = canPick && fit.exact ? 'NATURAL' : (canPick ? 'OUT OF POS' : 'LOCKED');
+    const chemDelta = previewChemDelta({ ...p, club: p.club });
+    const chemTier = chemDelta >= 3 ? 'great' : chemDelta >= 1 ? 'good' : 'neutral';
     return `
       <button class="player" data-idx="${idx}" ${canPick ? '' : 'disabled'}>
         <div class="player__top">
@@ -202,6 +204,7 @@ function openPickModal() {
         <div class="player__meta">
           <span class="player__club">${p.club}</span>
           <span class="player__league player__league--${league.toLowerCase()}">${league}</span>
+          <span class="player__chem player__chem--${chemTier}">+${chemDelta} CHEM</span>
         </div>
         ${liveStatsBadge(p.name)}
         <div class="player__fit player__fit--${canPick ? (fit.exact ? 'natural' : 'oop') : 'locked'}">${tag}</div>
@@ -331,6 +334,15 @@ function rerenderPickModalForSwapIn() {
       const roles = matches.map(m => SLOT_DEF[m.slotIdx]?.role).filter(Boolean).join(' / ');
       tag = `↪ CHOOSE: ${roles}`;
     }
+    // Chem preview only when the swap target is unambiguous — otherwise the
+    // delta depends on which slot the user picks in the next overlay.
+    let chemBadge = '';
+    if (canSwap && matches.length === 1) {
+      const d = previewChemDelta(p, matches[0].slotIdx);
+      const sign = d >= 0 ? '+' : '';
+      const tier = d >= 3 ? 'great' : d >= 1 ? 'good' : d >= 0 ? 'neutral' : 'bad';
+      chemBadge = `<span class="player__chem player__chem--${tier}">${sign}${d} CHEM</span>`;
+    }
     return `
       <button class="player ${canSwap ? 'player--swap-in' : ''}" data-idx="${idx}" ${canSwap ? '' : 'disabled'}>
         <div class="player__top">
@@ -341,6 +353,7 @@ function rerenderPickModalForSwapIn() {
         <div class="player__meta">
           <span class="player__club">${p.club}</span>
           <span class="player__league player__league--${league.toLowerCase()}">${league}</span>
+          ${chemBadge}
         </div>
         <div class="player__fit ${canSwap ? 'player__fit--swap' : 'player__fit--locked'}">${tag}</div>
       </button>
@@ -725,6 +738,27 @@ function chemistryForPlayer(slotIdx) {
     if (other.league === p.league && p.league !== 'OTH') links++;
   }
   return Math.min(3, links);
+}
+
+// How much would picking this candidate change total team chemistry?
+// Used to show "+N CHEM" badges on the pick modal so players actually
+// see which choice helps their lineup cohere. Pass `replaceSlotIdx`
+// when previewing a swap so the outgoing player is properly removed
+// before scoring.
+function previewChemDelta(candidate, replaceSlotIdx = null) {
+  const candidateLeague = clubToLeague(candidate.club);
+  // Snapshot, apply hypothetical change, score, restore. Chemistry only
+  // depends on roster membership + league, not on which slot — so we use
+  // a sentinel slot key for the "preview" placement.
+  const before = teamChemistry();
+  const saved = { ...state.roster };
+  if (replaceSlotIdx !== null && replaceSlotIdx !== undefined) {
+    delete state.roster[replaceSlotIdx];
+  }
+  state.roster['__preview__'] = { league: candidateLeague };
+  const after = teamChemistry();
+  state.roster = saved;
+  return after - before;
 }
 
 function teamChemistry() {
