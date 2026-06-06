@@ -939,6 +939,61 @@ button, input { font: inherit; color: inherit; }
   transition: color 0.2s;
 }
 .footer__col a:hover { color: var(--pitch); }
+/* SportsMarket cross-promo — "from the makers of" badge */
+.footer__crosspromo {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 36px var(--pad) 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+.footer__crosspromo-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--mute);
+}
+.footer__crosspromo-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 20px 12px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+}
+.footer__crosspromo-logo {
+  width: 54px;
+  height: 54px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+.footer__crosspromo-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+}
+.footer__crosspromo-name {
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 0.02em;
+  color: var(--bone);
+  line-height: 1;
+}
+.footer__crosspromo-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--pitch);
+}
+
 .footer__bottom {
   max-width: var(--max);
   margin: 0 auto;
