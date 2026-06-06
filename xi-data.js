@@ -894,7 +894,7 @@ NATIONS.push(
 // ============================================================
 const LEGENDS = [
   { code:'BRA', iso:'br', name:'BRAZIL', flag:'🇧🇷', group:'LGD', players:[
-    { name:'Pelé',           pos:'FWD', role:'ST',  club:'SANTOS',      rating:99 },
+    { name:'Pelé',           pos:'FWD', role:'ST',  club:'SANTOS',      rating:98 },
     { name:'Ronaldo R9',     pos:'FWD', role:'ST',  club:'INTER MILAN', rating:98 },
     { name:'Romário',        pos:'FWD', role:'ST',  club:'BARCELONA',   rating:95 },
     { name:'Ronaldinho',     pos:'MID', role:'CAM', club:'BARCELONA',   rating:96 },
@@ -907,13 +907,14 @@ const LEGENDS = [
     { name:'Rivaldo',        pos:'MID', role:'CAM', club:'BARCELONA',   rating:93 },
     { name:'Cafu',           pos:'DEF', role:'RB',  club:'ROMA',        rating:92 },
     { name:'Roberto Carlos', pos:'DEF', role:'LB',  club:'REAL MADRID', rating:93 },
+    { name:'Dani Alves',     pos:'DEF', role:'RB',  club:'BARCELONA',   rating:89 },
     { name:'Lúcio',          pos:'DEF', role:'CB',  club:'INTER MILAN', rating:89 },
     { name:'Aldair',         pos:'DEF', role:'CB',  club:'ROMA',        rating:88 },
     { name:'Taffarel',       pos:'GK',  role:'GK',  club:'GALATASARAY', rating:88 },
   ]},
   { code:'ARG', iso:'ar', name:'ARGENTINA', flag:'🇦🇷', group:'LGD', players:[
-    { name:'Diego Maradona', pos:'MID', role:'CAM', club:'NAPOLI',      rating:99 },
-    { name:'Lionel Messi',   pos:'FWD', role:'RW',  club:'BARCELONA',   rating:98 },
+    { name:'Diego Maradona', pos:'MID', role:'CAM', club:'NAPOLI',      rating:98 },
+    { name:'Lionel Messi',   pos:'FWD', role:'RW',  club:'BARCELONA',   rating:99 },
     { name:'G. Batistuta',   pos:'FWD', role:'ST',  club:'FIORENTINA',  rating:95 },
     { name:'Sergio Agüero',  pos:'FWD', role:'ST',  club:'MAN CITY',    rating:93 },
     { name:'J. Mascherano',  pos:'MID', role:'CDM', club:'BARCELONA',   rating:90 },
@@ -974,13 +975,13 @@ const LEGENDS = [
     { name:'Fernando Hierro',pos:'DEF', role:'CB',  club:'REAL MADRID', rating:91 },
     { name:'Carles Puyol',   pos:'DEF', role:'CB',  club:'BARCELONA',   rating:90 },
     { name:'Sergio Ramos',   pos:'DEF', role:'CB',  club:'REAL MADRID', rating:92 },
-    { name:'Dani Alves',     pos:'DEF', role:'RB',  club:'BARCELONA',   rating:89 },
+    { name:'Míchel Salgado', pos:'DEF', role:'RB',  club:'REAL MADRID', rating:85 },
     { name:'Iker Casillas',  pos:'GK',  role:'GK',  club:'REAL MADRID', rating:93 },
   ]},
   { code:'POR', iso:'pt', name:'PORTUGAL', flag:'🇵🇹', group:'LGD', players:[
     { name:'Eusébio',        pos:'FWD', role:'ST',  club:'BENFICA',     rating:96 },
     { name:'Luís Figo',      pos:'FWD', role:'RW',  club:'REAL MADRID', rating:96 },
-    { name:'Cristiano Ronaldo (peak)',pos:'FWD',role:'LW',club:'REAL MADRID',rating:97 },
+    { name:'Cristiano Ronaldo (peak)',pos:'FWD',role:'LW',club:'REAL MADRID',rating:99 },
     { name:'Rui Costa',      pos:'MID', role:'CAM', club:'AC MILAN',    rating:93 },
     { name:'Deco',           pos:'MID', role:'CAM', club:'BARCELONA',   rating:91 },
     { name:'Pauleta',        pos:'FWD', role:'ST',  club:'PSG',         rating:89 },
@@ -1857,6 +1858,40 @@ const U25_PLAYERS = new Set([
   'Joel Ordóñez',
   'Facundo Pellistri',
 ].forEach(n => U25_PLAYERS.add(n));
+
+// ============================================================
+// U23 — genuinely young stars: born 2003 or later, so 23-or-younger
+// at the 2026 World Cup. Used ONLY for the Best Young Player award.
+// (The award used to draw from U25, which by 2026 includes 25-27 yo
+// players like Mbappé '98 / Haaland '00 / Saka '01 — not "young".)
+// Every name here is birth-year verified ≥2003.
+// ============================================================
+const U23_PLAYERS = new Set([
+  'Lamine Yamal',        // 2007
+  'Endrick',             // 2006
+  'Kendry Páez',         // 2007
+  'Arda Güler',          // 2005
+  'Kenan Yıldız',        // 2005
+  'Antonio Nusa',        // 2005
+  'Ben Doak',            // 2005
+  'Tyler Bindon',        // 2005
+  'João Neves',          // 2004
+  'Bilal El Khannouss',  // 2004
+  'Lamine Camara',       // 2004
+  'Julio Enciso',        // 2004
+  'Garang Kuol',         // 2004
+  'Abdukodir Khusanov',  // 2004
+  'Yankuba Minteh',      // 2004
+  'Jamal Musiala',       // 2003
+  'Florian Wirtz',       // 2003
+  'Jude Bellingham',     // 2003 (Jun)
+  'Xavi Simons',         // 2003 (Apr)
+  'Diego Gómez',         // 2003
+  'Jhon Durán',          // 2003 (Dec)
+  'Hannibal Mejbri',     // 2003 (Jan)
+  'Abbosbek Fayzullaev', // 2003 (Oct)
+  'Ernest Nuamah',       // 2003 (Nov)
+]);
 
 // ============================================================
 // SQUAD EXTRAS — extends CLASSIC rosters toward the real 26-man squads

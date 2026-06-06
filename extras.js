@@ -84,7 +84,7 @@ const LEADERBOARD = [
   { ovr: 90, chem: 27, lineup: 'VINÍCIUS · KANE · DÍAZ · DE BRUYNE · VALVERDE · BELLINGHAM · KIM MIN-JAE · MARQUINHOS · HAKIMI · SALIBA · DONNARUMMA', by: 'BUILT IN LONDON', mode: 'CLASSIC' },
   { ovr: 89, chem: 21, lineup: 'MESSI · OSIMHEN · SAKA · MUSIALA · MODRIĆ · ENZO · VAN DIJK · BASTONI · DAVIES · HAKIMI · MAIGNAN', by: 'BUILT IN BUENOS AIRES', mode: 'LEGENDS' },
   { ovr: 88, chem: 18, lineup: 'MBAPPÉ · LUKAKU · MITOMA · ØDEGAARD · DE JONG · BARELLA · AKANJI · RÜDIGER · MAZRAOUI · HAKIMI · BONO', by: 'BUILT IN TOKYO', mode: 'CLASSIC' },
-  { ovr: 87, chem: 14, lineup: 'PULISIC · HØJLUND · LEÃO · BRUNO F. · TCHOUAMÉNI · LEE KANG-IN · KOULIBALY · CHRISTENSEN · DAVIES · HAKIMI · SOMMER', by: 'BUILT IN NEW YORK', mode: 'U-25' },
+  { ovr: 87, chem: 14, lineup: 'PULISIC · HØJLUND · LEÃO · BRUNO F. · TCHOUAMÉNI · LEE KANG-IN · KOULIBALY · CHRISTENSEN · DAVIES · HAKIMI · SOMMER', by: 'BUILT IN NEW YORK', mode: 'TOP50' },
   { ovr: 86, chem: 12, lineup: 'SON · LOZANO · SARR · JAMES · CASEMIRO · BARELLA · VAN DIJK · MARQUINHOS · DAVIES · HAKIMI · OCHOA', by: 'BUILT IN SEOUL', mode: 'CLASSIC' },
 ];
 
@@ -159,6 +159,27 @@ function isEntryClean(e) {
   return true;
 }
 
+// Mode filter state + cache of the last-merged rows, so switching tabs
+// re-paints instantly without refetching. Mode strings stored by the app:
+// 'CLASSIC', 'TOP50', 'LEGENDS' (see xi-script submit path).
+let _lbRows = [];
+let _lbFilter = 'ALL';
+const LB_FILTER_LABELS = { ALL: 'ALL MODES', CLASSIC: 'CLASSIC', TOP50: 'TOP 50', LEGENDS: 'LEGENDS' };
+
+function normalizeMode(m) {
+  const v = (m || 'CLASSIC').toUpperCase().replace(/\s+/g, '');
+  if (v === 'TOP50' || v === 'TOP-50') return 'TOP50';
+  if (v === 'LEGENDS' || v === 'LEGEND') return 'LEGENDS';
+  if (v === 'CLASSIC') return 'CLASSIC';
+  return v; // legacy values (e.g. U-25) only ever show under ALL
+}
+
+// Friendly label for the small per-row mode badge (TOP50 → "TOP 50").
+function modeDisplay(m) {
+  const v = normalizeMode(m);
+  return v === 'TOP50' ? 'TOP 50' : v;
+}
+
 async function renderLeaderboard() {
   const grid = document.getElementById('leaderboardGrid');
   if (!grid) return;
@@ -185,21 +206,44 @@ async function renderLeaderboard() {
     _leaderboardIsGlobal = false;
   }
 
+  _lbRows = rows.filter(isEntryClean);     // ★ skip corrupted-Unicode entries
+  paintLeaderboard();
+}
+
+// Paints from _lbRows using the active mode filter. Tab clicks call this
+// directly — no network round-trip.
+function paintLeaderboard() {
+  const grid = document.getElementById('leaderboardGrid');
+  if (!grid) return;
+
+  let rows = _lbRows.slice();
+  if (_lbFilter !== 'ALL') {
+    rows = rows.filter(r => normalizeMode(r.mode) === _lbFilter);
+  }
   const combined = rows
-    .filter(isEntryClean)                  // ★ skip corrupted-Unicode entries
     .sort((a, b) => b.ovr - a.ovr)
     .slice(0, 12)
     .map((row, i) => ({ ...row, rank: i + 1 }));
 
-  const badge = _leaderboardIsGlobal
-    ? '<div class="lb-meta lb-meta--global">🌍 GLOBAL · TOP 12 ACROSS ALL PLAYERS</div>'
-    : '<div class="lb-meta lb-meta--local">📱 LOCAL · GLOBAL LEADERBOARD OFFLINE</div>';
+  const scope = _leaderboardIsGlobal
+    ? `<span class="lb-meta--global">🌍 GLOBAL</span>`
+    : `<span class="lb-meta--local">📱 LOCAL · OFFLINE</span>`;
+  const badge = `<div class="lb-meta">${scope} · ${LB_FILTER_LABELS[_lbFilter] || _lbFilter} · TOP ${combined.length || 12}</div>`;
+
+  if (!combined.length) {
+    grid.innerHTML = badge + `
+      <div class="lb-empty">
+        <p class="lb-empty__title">NO ${LB_FILTER_LABELS[_lbFilter] || _lbFilter} XIs YET</p>
+        <p class="lb-empty__sub">Be the first — build one and claim the top spot.</p>
+      </div>`;
+    return;
+  }
 
   grid.innerHTML = badge + combined.map(row => `
     <article class="lb-row ${row.user ? 'lb-row--user' : ''}">
       <div class="lb-row__rank">
         <span class="lb-row__rank-num">${String(row.rank).padStart(2, '0')}</span>
-        <span class="lb-row__mode">${row.mode || 'CLASSIC'}</span>
+        <span class="lb-row__mode">${modeDisplay(row.mode)}</span>
       </div>
       <div class="lb-row__body">
         <p class="lb-row__lineup">${row.lineup}</p>
@@ -213,9 +257,26 @@ async function renderLeaderboard() {
   `).join('');
 }
 
+function wireLeaderboardFilters() {
+  const bar = document.getElementById('leaderboardFilters');
+  if (!bar) return;
+  bar.querySelectorAll('.lb-filter').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _lbFilter = btn.dataset.lbMode || 'ALL';
+      bar.querySelectorAll('.lb-filter').forEach(b => {
+        const active = b === btn;
+        b.classList.toggle('lb-filter--active', active);
+        b.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      paintLeaderboard();
+    });
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   renderTicker();
   renderSponsorTicker();
+  wireLeaderboardFilters();
   renderLeaderboard();
   updateCountdown();
   setInterval(updateCountdown, 30 * 1000);

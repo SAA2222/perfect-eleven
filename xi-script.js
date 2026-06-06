@@ -1292,7 +1292,9 @@ function computeAwards() {
   //  Messi '22 Ball [7 G] · Mbappé '22 Boot [8 G], Forlán '10 Ball · Müller '10 Boot, etc.)
   const goldenBall = claim(weightedTopPick(exclude(all), 10, generalBias));
 
-  const youngs = exclude(all.filter(p => typeof U25_PLAYERS !== 'undefined' && U25_PLAYERS.has(p.name)));
+  // Best YOUNG PLAYER must actually be young — U-23 at the 2026 WC (born 2003+),
+  // not the old U25 pool that by now includes 25-27 yo stars (Mbappé/Haaland/Saka).
+  const youngs = exclude(all.filter(p => typeof U23_PLAYERS !== 'undefined' && U23_PLAYERS.has(p.name)));
   const youngPlayer = youngs.length ? claim(weightedTopPick(youngs, 8, generalBias)) : null;
 
   const defenders = exclude(all.filter(p => ['CB','LB','RB'].includes(p.role)));
