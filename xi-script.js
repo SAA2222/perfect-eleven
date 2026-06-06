@@ -2169,7 +2169,7 @@ function submitReport(e) {
     `Submitted: ${new Date().toISOString()}`,
   ].join('\n');
 
-  const mailto = `mailto:hello@perfecteleven.app?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const mailto = `mailto:saarim1745@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.location.href = mailto;
 
   // Reset + toast

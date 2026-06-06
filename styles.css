@@ -1006,6 +1006,58 @@ a.footer__crosspromo-card:hover {
   color: var(--pitch);
 }
 
+/* Secondary links moved out of the top nav */
+.footer__links {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 18px var(--pad) 4px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 22px;
+}
+.footer__links a {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mute);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.footer__links a:hover { color: var(--pitch); }
+
+/* SportsMarket F.C. studio stamp — very bottom-left, under the copyright */
+.footer__studio-row {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 14px var(--pad) 24px;
+}
+.footer__studio {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.footer__studio-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+.footer__studio-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--mute);
+  transition: color 0.2s;
+}
+.footer__studio:hover .footer__studio-text { color: var(--pitch); }
+.footer__studio-handle { color: var(--mute-2, #6b7280); font-weight: 600; }
+
 .footer__bottom {
   max-width: var(--max);
   margin: 0 auto;
