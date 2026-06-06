@@ -690,6 +690,85 @@ body.swap-mode .xi-pitch::after {
 }
 .modal__close:hover { background: var(--ink-2); }
 
+/* Pick-modal MINIMIZE button (replaces the old × close — peek at your team) */
+.modal__minimize {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  border: 1px solid var(--pitch);
+  color: var(--pitch);
+  height: 36px;
+  padding: 0 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  flex-shrink: 0;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+}
+.modal__minimize:hover { background: var(--pitch); color: var(--ink); }
+.modal__minimize-icon { font-size: 16px; line-height: 1; }
+
+/* Floating resume bar — shown while the pick modal is minimized */
+.pick-resume {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: calc(100vw - 28px);
+  padding: 12px 18px;
+  background: var(--pitch);
+  color: var(--ink);
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  cursor: pointer;
+  animation: pickResumePulse 1.8s ease-in-out infinite;
+}
+.pick-resume[hidden] { display: none; }
+@keyframes pickResumePulse {
+  0%, 100% { box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 0 0 0 rgba(0,200,83,0.45); }
+  50%      { box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 0 0 10px rgba(0,200,83,0); }
+}
+.pick-resume__text { display: flex; flex-direction: column; gap: 2px; text-align: left; min-width: 0; }
+.pick-resume__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  opacity: 0.7;
+}
+.pick-resume__nation {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-display, Impact);
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pick-resume__flag { width: 22px; height: 15px; object-fit: cover; border-radius: 2px; }
+.pick-resume__cta {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  background: var(--ink);
+  color: var(--pitch);
+  padding: 8px 12px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
 .modal__players {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));

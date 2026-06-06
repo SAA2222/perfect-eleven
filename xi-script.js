@@ -228,6 +228,7 @@ function openPickModal() {
   }).join('');
 
   $('modalPlayers').innerHTML = html;
+  hidePickResumeBar();
   $('pickModal').hidden = false;
 
   $('modalPlayers').querySelectorAll('.player').forEach(btn => {
@@ -240,8 +241,46 @@ function openPickModal() {
 
 function closePickModal() {
   $('pickModal').hidden = true;
+  hidePickResumeBar();
   clearSlotHighlights();
   $('spinBtn').disabled = false;
+}
+
+// ============================================================
+// MINIMIZE / RESUME the pick modal — peek at your team mid-pick.
+// Hides the modal WITHOUT spending a skip or losing the spun nation,
+// keeps the open-slot highlights visible, and drops a resume bar so you
+// can jump back in. (On mobile the modal covers the whole pitch, so you
+// couldn't see which slots still need filling without committing.)
+// ============================================================
+function minimizePickModal() {
+  if (!state.currentNation) { closePickModal(); return; }
+  $('pickModal').hidden = true;            // hide, but keep currentNation + highlights
+  const bar = $('pickResumeBar');
+  const nm  = $('pickResumeNation');
+  if (nm) {
+    nm.innerHTML = `<img class="pick-resume__flag" src="${flagURL(state.currentNation.iso, 40)}" alt="" /> ${state.currentNation.name}`;
+  }
+  if (bar) bar.hidden = false;
+  // Bring the pitch into view so the open (highlighted) slots are visible.
+  const pitch = document.getElementById('pitch');
+  if (pitch) pitch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function resumePickModal() {
+  hidePickResumeBar();
+  if (!state.currentNation) return;
+  if (state.pickSwapMode) {
+    $('pickModal').hidden = false;
+    rerenderPickModalForSwapIn();
+  } else {
+    openPickModal();                       // re-renders from state.currentNation
+  }
+}
+
+function hidePickResumeBar() {
+  const bar = $('pickResumeBar');
+  if (bar) bar.hidden = true;
 }
 
 function pickPlayer(p) {
@@ -2228,9 +2267,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // SWAP from inside the pick modal — enters pick-swap mode (pick the player to swap in)
   const pickSwapInit = document.getElementById('pickSwapBtn');
   if (pickSwapInit) pickSwapInit.onclick = enterPickSwapMode;
-  $('modalClose').addEventListener('click', passSpin);
-  $('modalBackdrop').addEventListener('click', passSpin);
+  // Header button + tapping the backdrop now MINIMIZE (peek at your team) — they
+  // no longer silently spend a skip. Only the explicit PASS button re-spins.
+  $('modalMinimize').addEventListener('click', minimizePickModal);
+  $('modalBackdrop').addEventListener('click', minimizePickModal);
   $('passBtn').addEventListener('click', passSpin);
+  const resumeBar = document.getElementById('pickResumeBar');
+  if (resumeBar) resumeBar.addEventListener('click', resumePickModal);
   $('shareBtn').addEventListener('click', showCompleteModal);
   $('swapBtn').onclick = enterSwapMode;
   $('playAgainBtn').addEventListener('click', () => {
