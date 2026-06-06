@@ -164,12 +164,16 @@ function isEntryClean(e) {
 // 'CLASSIC', 'TOP50', 'LEGENDS' (see xi-script submit path).
 let _lbRows = [];
 let _lbFilter = 'ALL';
-const LB_FILTER_LABELS = { ALL: 'ALL MODES', CLASSIC: 'CLASSIC', TOP50: 'TOP 50', LEGENDS: 'LEGENDS' };
+let _lbPeriod = 'ALLTIME';   // 'ALLTIME' | 'WEEK'
+const LB_TOP_N = 10;
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const LB_FILTER_LABELS = { ALL: 'ALL MODES', CLASSIC: 'CLASSIC', TACTICAL: 'TACTICAL', TOP50: 'TOP 50', LEGENDS: 'LEGENDS' };
 
 function normalizeMode(m) {
   const v = (m || 'CLASSIC').toUpperCase().replace(/\s+/g, '');
   if (v === 'TOP50' || v === 'TOP-50') return 'TOP50';
   if (v === 'LEGENDS' || v === 'LEGEND') return 'LEGENDS';
+  if (v === 'TACTICAL') return 'TACTICAL';
   if (v === 'CLASSIC') return 'CLASSIC';
   return v; // legacy values (e.g. U-25) only ever show under ALL
 }
@@ -220,15 +224,20 @@ function paintLeaderboard() {
   if (_lbFilter !== 'ALL') {
     rows = rows.filter(r => normalizeMode(r.mode) === _lbFilter);
   }
+  if (_lbPeriod === 'WEEK') {
+    const cutoff = Date.now() - WEEK_MS;
+    rows = rows.filter(r => r.createdAt && r.createdAt >= cutoff);
+  }
   const combined = rows
     .sort((a, b) => b.ovr - a.ovr)
-    .slice(0, 12)
+    .slice(0, LB_TOP_N)
     .map((row, i) => ({ ...row, rank: i + 1 }));
 
   const scope = _leaderboardIsGlobal
     ? `<span class="lb-meta--global">🌍 GLOBAL</span>`
     : `<span class="lb-meta--local">📱 LOCAL · OFFLINE</span>`;
-  const badge = `<div class="lb-meta">${scope} · ${LB_FILTER_LABELS[_lbFilter] || _lbFilter} · TOP ${combined.length || 12}</div>`;
+  const periodLabel = _lbPeriod === 'WEEK' ? 'THIS WEEK' : 'ALL TIME';
+  const badge = `<div class="lb-meta">${scope} · ${LB_FILTER_LABELS[_lbFilter] || _lbFilter} · ${periodLabel} · TOP ${LB_TOP_N}</div>`;
 
   if (!combined.length) {
     grid.innerHTML = badge + `
@@ -259,18 +268,34 @@ function paintLeaderboard() {
 
 function wireLeaderboardFilters() {
   const bar = document.getElementById('leaderboardFilters');
-  if (!bar) return;
-  bar.querySelectorAll('.lb-filter').forEach(btn => {
-    btn.addEventListener('click', () => {
-      _lbFilter = btn.dataset.lbMode || 'ALL';
-      bar.querySelectorAll('.lb-filter').forEach(b => {
-        const active = b === btn;
-        b.classList.toggle('lb-filter--active', active);
-        b.setAttribute('aria-selected', active ? 'true' : 'false');
+  if (bar) {
+    bar.querySelectorAll('.lb-filter').forEach(btn => {
+      btn.addEventListener('click', () => {
+        _lbFilter = btn.dataset.lbMode || 'ALL';
+        bar.querySelectorAll('.lb-filter').forEach(b => {
+          const active = b === btn;
+          b.classList.toggle('lb-filter--active', active);
+          b.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        paintLeaderboard();
       });
-      paintLeaderboard();
     });
-  });
+  }
+  // Time-period toggle (ALL TIME / THIS WEEK)
+  const period = document.getElementById('leaderboardPeriod');
+  if (period) {
+    period.querySelectorAll('.lb-period').forEach(btn => {
+      btn.addEventListener('click', () => {
+        _lbPeriod = btn.dataset.lbPeriod || 'ALLTIME';
+        period.querySelectorAll('.lb-period').forEach(b => {
+          const active = b === btn;
+          b.classList.toggle('lb-period--active', active);
+          b.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        paintLeaderboard();
+      });
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {

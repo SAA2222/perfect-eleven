@@ -294,6 +294,40 @@
   background: var(--ink-3);
   flex-shrink: 0;
 }
+/* TACTICAL — position cards in the wheel (no flag, big position label) */
+.xi-card--pos { gap: 8px; }
+.xi-card__poslabel {
+  font-family: var(--font-display, Impact);
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--pitch);
+}
+/* TACTICAL — spun-result + modal position badges */
+.result-pos {
+  display: inline-grid;
+  place-items: center;
+  min-width: 96px;
+  height: 64px;
+  padding: 0 14px;
+  font-family: var(--font-display, Impact);
+  font-size: 40px;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  background: var(--pitch);
+  border-radius: 6px;
+}
+.modal-pos, .pick-resume__pos {
+  display: inline-block;
+  padding: 3px 9px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  background: var(--pitch);
+  border-radius: 4px;
+}
 .xi-card__name {
   font-family: var(--font-display);
   font-size: 13px;
@@ -2675,11 +2709,38 @@ body { padding-bottom: 56px; }
   line-height: 1.55;
 }
 /* Leaderboard mode filter tabs (ALL / CLASSIC / TOP 50 / LEGENDS) */
+/* Leaderboard time-period toggle (ALL TIME / THIS WEEK) */
+.leaderboard__period {
+  display: inline-flex;
+  gap: 4px;
+  margin: 16px 0 0;
+  padding: 4px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--ink-2, #16191e);
+}
+.lb-period {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mute);
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.lb-period:hover { color: var(--bone); }
+.lb-period--active { color: var(--ink); background: var(--pitch); }
+
 .leaderboard__filters {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  margin: 14px 0 0;
+  margin: 10px 0 0;
 }
 .lb-filter {
   flex: 1 1 auto;

@@ -62,9 +62,38 @@ let state = {
   pickSwapMode: false, // user clicked SWAP from inside pick modal → next pick replaces
   blind: false,        // EXPERT mode — ratings hidden during the draft (38-0-style)
   revealed: false,     // flips true on the complete screen → the big reveal
+  currentSlot: null,   // TACTICAL mode — the open slot the spinner landed on
+  usedPlayers: new Set(), // TACTICAL mode — players already drafted (no repeats)
+  tacticalDraw: null,  // TACTICAL mode — the current 5 candidates
 };
 
 const $ = (id) => document.getElementById(id);
+
+// Per-mode resources. Tactical is tighter (2 skips / 1 swap) — it's a paid mode.
+const MODE_RESOURCES = {
+  classic:  { skips: 3, swaps: 2 },
+  top50:    { skips: 3, swaps: 2 },
+  legends:  { skips: 3, swaps: 2 },
+  tactical: { skips: 2, swaps: 1 },
+};
+function applyModeResources() {
+  const r = MODE_RESOURCES[state.mode] || { skips: 3, swaps: 2 };
+  state.skipsLeft = r.skips;
+  state.swapsLeft = r.swaps;
+}
+// Rebuild the skip/swap pip dots to match the mode's max (Tactical shows 2/1).
+function renderResourcePips() {
+  const r = MODE_RESOURCES[state.mode] || { skips: 3, swaps: 2 };
+  const sk = $('skipPips'), sw = $('swapPips');
+  if (sk) sk.innerHTML = Array.from({ length: r.skips }, () => '<span class="xi-res__pip on"></span>').join('');
+  if (sw) sw.innerHTML = Array.from({ length: r.swaps }, () => '<span class="xi-res__pip on"></span>').join('');
+}
+
+// Full position names for the Tactical spinner / result.
+const POS_FULL = {
+  GK:'GOALKEEPER', LB:'LEFT-BACK', RB:'RIGHT-BACK', LCB:'CENTRE-BACK', RCB:'CENTRE-BACK',
+  CDM:'DEF. MIDFIELD', LCM:'CENTRE MID', RCM:'CENTRE MID', LW:'LEFT WING', RW:'RIGHT WING', ST:'STRIKER',
+};
 
 // EXPERT / BLIND draft: hide every rating + chem number until the final reveal.
 // Pure display gate — game logic (OVR/chem/finish) is unchanged. One predicate
@@ -88,6 +117,7 @@ function updateBlindToggleLock() {
 // SPINNER
 // ============================================================
 function buildSpinnerCards() {
+  if (state.mode === 'tactical') return buildTacticalSpinnerCards();
   const pool = getNationPool(state.mode);
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   const long = [...shuffled, ...shuffled, ...shuffled, ...shuffled];
@@ -95,6 +125,18 @@ function buildSpinnerCards() {
     <div class="xi-card" data-code="${n.code}">
       <img class="xi-card__flag" src="${flagURL(n.iso, 80)}" srcset="${flagURL2x(n.iso, 80)} 2x" alt="${n.name}" />
       <span class="xi-card__name">${n.name}</span>
+    </div>
+  `).join('');
+}
+
+// TACTICAL — the wheel spins POSITIONS, not nations.
+function buildTacticalSpinnerCards() {
+  const slots = Object.values(SLOT_DEF);
+  const long = [...slots, ...slots, ...slots, ...slots].sort(() => Math.random() - 0.5);
+  $('spinnerCards').innerHTML = long.map(s => `
+    <div class="xi-card xi-card--pos" data-code="${s.role}">
+      <span class="xi-card__poslabel">${s.role}</span>
+      <span class="xi-card__name">${POS_FULL[s.role] || s.role}</span>
     </div>
   `).join('');
 }
@@ -129,45 +171,74 @@ function weightedPick(pool) {
   return pool[pool.length - 1];
 }
 
+// Spin button reads "SPIN POSITION" in Tactical, "SPIN THE WORLD" otherwise.
+function updateSpinButtonLabel() {
+  const btn = $('spinBtn');
+  const span = btn && btn.querySelector('span:not(.xi-btn__arrow)');
+  if (span) span.textContent = state.mode === 'tactical' ? 'SPIN POSITION' : 'SPIN THE WORLD';
+}
+
+// Shared spinner animation — scrolls the strip so the card with `code` lands center.
+function animateSpinnerTo(code, onDone) {
+  const cards = $('spinnerCards');
+  cards.classList.remove('spinning');
+  cards.style.transition = 'none';
+  cards.style.transform = 'translate(0, -50%)';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const matches = [...cards.querySelectorAll(`.xi-card[data-code="${code}"]`)];
+      const targetCard = matches[Math.min(matches.length - 1, Math.floor(matches.length * 0.7))];
+      if (targetCard) {
+        const containerW = $('spinner').offsetWidth;
+        const actualCardW = targetCard.offsetWidth;
+        const cardCenter = targetCard.offsetLeft + (actualCardW / 2);
+        const offset = (containerW / 2) - cardCenter;
+        cards.style.transition = '';
+        cards.classList.add('spinning');
+        cards.style.transform = `translate(${offset}px, -50%)`;
+      }
+    });
+  });
+  setTimeout(() => { state.isSpinning = false; onDone && onDone(); }, 4300);
+}
+
 function spin() {
   if (state.isSpinning) return;
+  if (state.mode === 'tactical') return spinTactical();
   const available = getNationPool(state.mode).filter(n => !state.usedNations.has(n.code));
   if (available.length === 0) return;
 
   state.isSpinning = true;
   $('spinBtn').disabled = true;
   $('spinnerResult').classList.remove('show');
-
   buildSpinnerCards();
 
   const winner = weightedPick(available);
   state.currentNation = winner;
-
-  const cards = $('spinnerCards');
-  cards.classList.remove('spinning');
-  cards.style.transition = 'none';
-  cards.style.transform = 'translate(0, -50%)';
-
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      const matches = [...cards.querySelectorAll(`.xi-card[data-code="${winner.code}"]`)];
-      const targetCard = matches[Math.min(matches.length - 1, Math.floor(matches.length * 0.7))];
-      const containerW = $('spinner').offsetWidth;
-      // use the actual rendered card width (90px on mobile, 110px on desktop)
-      const actualCardW = targetCard.offsetWidth;
-      const cardCenter = targetCard.offsetLeft + (actualCardW / 2);
-      const offset = (containerW / 2) - cardCenter;
-      cards.style.transition = '';
-      cards.classList.add('spinning');
-      cards.style.transform = `translate(${offset}px, -50%)`;
-    });
-  });
-
-  setTimeout(() => {
-    state.isSpinning = false;
+  animateSpinnerTo(winner.code, () => {
     showResult(winner);
     setTimeout(openPickModal, 600);
-  }, 4300);
+  });
+}
+
+// TACTICAL — spin lands on a random OPEN position, then deals 5 candidates.
+function spinTactical() {
+  const openSlots = Object.keys(SLOT_DEF).filter(i => !state.roster[i]);
+  if (!openSlots.length) return;
+
+  state.isSpinning = true;
+  $('spinBtn').disabled = true;
+  $('spinnerResult').classList.remove('show');
+  buildSpinnerCards();
+
+  const slotIdx = openSlots[Math.floor(Math.random() * openSlots.length)];
+  state.currentSlot = slotIdx;
+  state.tacticalDraw = null;   // fresh 5 for this new spin
+  const role = SLOT_DEF[slotIdx].role;
+  animateSpinnerTo(role, () => {
+    showResultTactical(slotIdx);
+    setTimeout(openPickModal, 600);
+  });
 }
 
 function showResult(nation) {
@@ -175,6 +246,110 @@ function showResult(nation) {
   $('resultName').textContent = nation.name;
   $('resultGroup').textContent = nation.group;
   $('spinnerResult').classList.add('show');
+}
+
+function showResultTactical(slotIdx) {
+  const role = SLOT_DEF[slotIdx].role;
+  $('resultFlag').innerHTML = `<span class="result-pos">${role}</span>`;
+  $('resultName').textContent = POS_FULL[role] || role;
+  $('resultGroup').textContent = 'PICK THE BEST ONE';
+  $('spinnerResult').classList.add('show');
+}
+
+// ============================================================
+// TACTICAL ENGINE — position-first drafting
+// ============================================================
+// Reverse of ROLE_FIT: which player roles NATURALLY fill a given slot role.
+function playerRolesForSlot(slotRole) {
+  const roles = [];
+  for (const [pRole, slots] of Object.entries(ROLE_FIT)) {
+    if (slots.includes(slotRole)) roles.push(pRole);
+  }
+  return roles;
+}
+
+// Flatten the CLASSIC pool into players tagged with their nation.
+function tacticalPlayerPool() {
+  const all = [];
+  NATIONS.forEach(n => n.players.forEach(p => {
+    all.push({ ...p, nation: n.name, flag: n.flag, code: n.code, iso: n.iso, league: clubToLeague(p.club) });
+  }));
+  return all;
+}
+
+// Deal `count` distinct candidates for a slot — rating-weighted (so you usually
+// get a mix of a star or two and squad players), de-duped against players already
+// drafted this run.
+function drawTacticalPlayers(slotRole, count = 5) {
+  const fitRoles = playerRolesForSlot(slotRole);
+  const pool = tacticalPlayerPool().filter(p => fitRoles.includes(p.role) && !state.usedPlayers.has(p.name));
+  const picked = [];
+  while (picked.length < count && pool.length) {
+    const weights = pool.map(p => Math.pow(Math.max(1, p.rating - 60), 1.7));
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total, idx = 0;
+    for (; idx < pool.length; idx++) { r -= weights[idx]; if (r <= 0) break; }
+    idx = Math.min(idx, pool.length - 1);
+    picked.push(pool[idx]);
+    pool.splice(idx, 1);
+  }
+  // Show the strongest first
+  return picked.sort((a, b) => b.rating - a.rating);
+}
+
+function openTacticalPickModal() {
+  const slotIdx = state.currentSlot;
+  if (slotIdx == null) return;
+  const role = SLOT_DEF[slotIdx].role;
+  // Reuse the existing draw on resume; deal a fresh 5 on a new spin.
+  const players = state.tacticalDraw || drawTacticalPlayers(role, 5);
+  state.tacticalDraw = players;
+
+  // Highlight the target slot on the pitch
+  clearSlotHighlights();
+  const slotEl = document.querySelector(`.slot[data-slot="${slotIdx}"]`);
+  if (slotEl) slotEl.classList.add('slot--empty-target');
+
+  $('modalTitle').innerHTML = `<span class="modal-pos">${role}</span> ${POS_FULL[role] || role}`;
+  $('modalLede').textContent = `The wheel landed on ${POS_FULL[role] || role}. Pick the best one of these five.`;
+
+  $('modalPlayers').innerHTML = players.map((p, idx) => {
+    const league = clubToLeague(p.club);
+    return `
+      <button class="player" data-idx="${idx}">
+        <div class="player__top">
+          <span class="player__pos player__pos--${p.pos.toLowerCase()}">${p.role}</span>
+          <span class="player__rating">${maskRating(p.rating)}</span>
+        </div>
+        <div class="player__name">${p.name}</div>
+        <div class="player__meta">
+          <span class="player__club">${p.club}</span>
+          <span class="player__league player__league--${league.toLowerCase()}">${league}</span>
+        </div>
+        <div class="player__fit player__fit--natural">${p.nation.toUpperCase()}</div>
+      </button>
+    `;
+  }).join('');
+
+  hidePickResumeBar();
+  $('pickModal').hidden = false;
+  $('modalPlayers').querySelectorAll('.player').forEach(btn => {
+    btn.addEventListener('click', () => pickPlayer(state.tacticalDraw[parseInt(btn.dataset.idx, 10)]));
+  });
+}
+
+function pickTacticalPlayer(p) {
+  const slotIdx = state.currentSlot;
+  if (slotIdx == null) return;
+  state.roster[slotIdx] = { ...p, naturalFit: true };
+  state.usedPlayers.add(p.name);
+  state.currentSlot = null;
+  state.tacticalDraw = null;
+  fillSlot(slotIdx);
+  updateProgress();
+  closePickModal();
+  $('spinnerResult').classList.remove('show');
+  if (Object.keys(state.roster).length === 11) setTimeout(showCompleteModal, 400);
 }
 
 // ============================================================
@@ -207,6 +382,7 @@ function canPlayerFit(player) {
 // PICK MODAL
 // ============================================================
 function openPickModal() {
+  if (state.mode === 'tactical') return openTacticalPickModal();
   const n = state.currentNation;
   if (!n) return;
 
@@ -275,12 +451,16 @@ function closePickModal() {
 // couldn't see which slots still need filling without committing.)
 // ============================================================
 function minimizePickModal() {
-  if (!state.currentNation) { closePickModal(); return; }
-  $('pickModal').hidden = true;            // hide, but keep currentNation + highlights
+  if (!state.currentNation && state.currentSlot == null) { closePickModal(); return; }
+  $('pickModal').hidden = true;            // hide, but keep the spun nation/slot + highlights
   const bar = $('pickResumeBar');
   const nm  = $('pickResumeNation');
   if (nm) {
-    nm.innerHTML = `<img class="pick-resume__flag" src="${flagURL(state.currentNation.iso, 40)}" alt="" /> ${state.currentNation.code}`;
+    if (state.mode === 'tactical' && state.currentSlot != null) {
+      nm.innerHTML = `<span class="pick-resume__pos">${SLOT_DEF[state.currentSlot].role}</span>`;
+    } else if (state.currentNation) {
+      nm.innerHTML = `<img class="pick-resume__flag" src="${flagURL(state.currentNation.iso, 40)}" alt="" /> ${state.currentNation.code}`;
+    }
   }
   if (bar) bar.hidden = false;
   // Bring the pitch into view so the open (highlighted) slots are visible.
@@ -290,12 +470,12 @@ function minimizePickModal() {
 
 function resumePickModal() {
   hidePickResumeBar();
-  if (!state.currentNation) return;
+  if (!state.currentNation && state.currentSlot == null) return;
   if (state.pickSwapMode) {
     $('pickModal').hidden = false;
     rerenderPickModalForSwapIn();
   } else {
-    openPickModal();                       // re-renders from state.currentNation
+    openPickModal();                       // re-renders from current nation OR tactical slot
   }
 }
 
@@ -310,6 +490,7 @@ function pickPlayer(p) {
     executePickSwap(p);
     return;
   }
+  if (state.mode === 'tactical') return pickTacticalPlayer(p);
   const fit = bestSlotForPlayer(p);
   if (!fit) return;
   const slotIdx = fit.slotIdx;
@@ -574,6 +755,7 @@ function passSpin() {
   updateResources();
   closePickModal();
   state.currentNation = null;
+  state.currentSlot = null;   // TACTICAL — drop the spun position too
   $('spinnerResult').classList.remove('show');
   toast(`SKIP USED. ${state.skipsLeft} LEFT.`);
 }
@@ -711,7 +893,8 @@ function onSwapSlotClick(e) {
   if (!p) return;
   // remove the player
   delete state.roster[slotIdx];
-  state.usedNations.delete(p.code);
+  if (state.mode === 'tactical') state.usedPlayers.delete(p.name);  // free the player to be re-drawable
+  else state.usedNations.delete(p.code);
   // reset the slot visually
   el.classList.remove('slot--filled', 'slot--oop', 'slot--swappable');
   el.innerHTML = '<span class="slot__open">OPEN</span>';
@@ -2195,9 +2378,12 @@ function toast(msg) {
 function resetRoster() {
   state.roster = {};
   state.usedNations = new Set();
+  state.usedPlayers = new Set();   // TACTICAL — clear drafted players
   state.currentNation = null;
-  state.skipsLeft = MAX_SKIPS;
-  state.swapsLeft = MAX_SWAPS;
+  state.currentSlot = null;
+  state.tacticalDraw = null;
+  applyModeResources();            // per-mode skips/swaps (Tactical = 2/1)
+  renderResourcePips();            // rebuild pip dots to match the mode's max
   state.swapMode = false;
   state.revealed = false;          // new draft → numbers hidden again if blind is on
   updateBlindToggleLock();         // empty roster → re-enable the expert toggle
@@ -2235,7 +2421,7 @@ function initSlots() {
 // PREMIUM PAYWALL (unlocks TOP 50 + LEGENDS together)
 // ============================================================
 const PREMIUM_UNLOCK_KEY = 'pe_premium_unlocked';
-const PREMIUM_MODES = new Set(['top50', 'legends']);
+const PREMIUM_MODES = new Set(['top50', 'legends', 'tactical']);
 
 // Stripe Payment Link — live checkout URL. Currently TEST mode (sandbox).
 // Switch to live mode in Stripe Dashboard → toggle off sandbox → create new
@@ -2276,7 +2462,7 @@ function handleStripeReturn() {
 function initModes() {
   // sync lock state at boot
   if (isPremium()) {
-    ['top50Tab', 'legendsTab'].forEach(id => {
+    ['top50Tab', 'legendsTab', 'tacticalTab'].forEach(id => {
       const tab = document.getElementById(id);
       if (!tab) return;
       tab.classList.remove('xi-mode--locked');
@@ -2297,6 +2483,7 @@ function initModes() {
       state.mode = btn.dataset.mode;
       resetRoster();
       buildSpinnerCards();
+      updateSpinButtonLabel();
       const label = state.mode === 'u25' ? 'U-25' : state.mode === 'top50' ? 'TOP 50' : state.mode.toUpperCase();
       toast(`MODE: ${label}`);
     });
