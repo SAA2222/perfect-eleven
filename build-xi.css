@@ -1568,6 +1568,20 @@ body.swap-mode .xi-pitch::after {
   background: var(--ink);
   color: var(--gold);
 }
+/* POST ON X — black X-brand button (stands out on the green complete panel) */
+.modal__foot--complete .xi-btn--x,
+.xi-btn--x {
+  background: #000;
+  color: #fff;
+  border: 2px solid #000;
+  font-weight: 700;
+}
+.modal__foot--complete .xi-btn--x:hover:not(:disabled),
+.xi-btn--x:hover:not(:disabled) {
+  background: #1a1a1a;
+  border-color: #1a1a1a;
+  color: #fff;
+}
 @media (max-width: 720px) {
   .modal__foot--complete { grid-template-columns: 1fr; }
   .modal__foot-center { flex-direction: column; }

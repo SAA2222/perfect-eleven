@@ -1622,6 +1622,32 @@ function copyToClipboard() {
   });
 }
 
+// Post the result to X (Twitter) via the web intent — result-aware copy,
+// tags @SportsMarket_FC, links back to the app. (X intents can't attach an
+// image, so this posts text + link; the 📸 button handles the image.)
+function shareToX() {
+  if (Object.keys(state.roster).length !== 11) { toast('FINISH THE XI FIRST'); return; }
+  const ovr = computeFinalOVR();
+  const chem = teamChemistry();
+  const finish = (typeof projectedFinish === 'function') ? projectedFinish(ovr, chem, 0) : null;
+  const tier = finish && finish.tier;
+  const finishLabel = ((finish && finish.label) || '').replace(/[^\w\s-]/g, '').trim();
+  let line;
+  if (tier === 'CHAMPIONS')       line = `I built a WORLD CUP-WINNING XI — ${ovr} OVR 🏆`;
+  else if (tier === 'RUNNERS_UP') line = `My World Cup XI reached the FINAL — ${ovr} OVR 🥈`;
+  else if (tier === 'THIRD')      line = `My World Cup XI took 3RD — ${ovr} OVR 🥉`;
+  else line = `My 2026 World Cup XI: ${ovr} OVR${finishLabel ? ' · ' + finishLabel : ''}`;
+  const expertTag = (state.blind && state.revealed) ? ' (drafted BLIND 👁️)' : '';
+  const text = `${line}${expertTag}\n\nCan you beat it?`;
+  const params = new URLSearchParams({
+    text,
+    url: 'https://perfect-eleven.vercel.app',
+    via: 'SportsMarket_FC',
+    hashtags: 'WorldCup2026,PerfectEleven',
+  });
+  window.open(`https://twitter.com/intent/tweet?${params.toString()}`, '_blank', 'noopener,noreferrer');
+}
+
 // ============================================================
 // ROSTERS MODAL — browse all 48 nations and their full squads
 // ============================================================
@@ -2341,6 +2367,8 @@ document.addEventListener('DOMContentLoaded', () => {
     resetRoster();
   });
   $('copyBtn').addEventListener('click', copyToClipboard);
+  const shareXBtn = document.getElementById('shareXBtn');
+  if (shareXBtn) shareXBtn.addEventListener('click', shareToX);
   const shareImgBtn = document.getElementById('shareImgBtn');
   if (shareImgBtn) shareImgBtn.addEventListener('click', shareXICardImage);
   const rostersLink = document.getElementById('rostersLink');

@@ -957,6 +957,12 @@ button, input { font: inherit; color: inherit; }
   letter-spacing: 0.18em;
   color: var(--mute);
 }
+.footer__crosspromo-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+}
 .footer__crosspromo-card {
   display: inline-flex;
   align-items: center;
@@ -965,6 +971,12 @@ button, input { font: inherit; color: inherit; }
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--rule);
   border-radius: 12px;
+  text-decoration: none;
+  transition: border-color 0.2s, transform 0.15s;
+}
+a.footer__crosspromo-card:hover {
+  border-color: var(--pitch);
+  transform: translateY(-2px);
 }
 .footer__crosspromo-logo {
   width: 54px;
