@@ -18,15 +18,24 @@ const SLOT_DEF = {
   10: { pos: 'GK',  role: 'GK'  },
 };
 
-// player role → matching slot roles (in priority order)
+// player role → slot roles that count as a NATURAL fit (exact, no penalty).
+// Anything else falls back to "same line, OUT OF POSITION" (-1 rating).
+// Positions are kept honest — each role has its own zone:
+//   · the holding 6 (CDM) is NOT the same job as an advanced 8 (CM) or a #10 (CAM)
+//   · a #10/8 (CAM/CM) dropped onto the holding-6 slot is out of position
+//   · a holder (CDM) pushed up into an 8 slot is out of position
+//   · wingers (LW/RW) are never natural through the middle, and a striker (ST)
+//     is never natural out wide — and vice-versa
+// Note: a 4-3-3 has no dedicated #10 slot, so a CAM's natural home is the two
+// central-mid (8) slots, never the holding 6.
 const ROLE_FIT = {
   GK:  ['GK'],
   CB:  ['LCB', 'RCB'],
   LB:  ['LB'],
   RB:  ['RB'],
-  CDM: ['CDM', 'LCM', 'RCM'],
-  CM:  ['LCM', 'RCM', 'CDM'],
-  CAM: ['LCM', 'RCM', 'CDM'],
+  CDM: ['CDM'],          // holding 6
+  CM:  ['LCM', 'RCM'],   // box-to-box 8s
+  CAM: ['LCM', 'RCM'],   // advanced 8 / #10 — the 8 slots, never the 6
   LW:  ['LW'],
   ST:  ['ST'],
   RW:  ['RW'],
