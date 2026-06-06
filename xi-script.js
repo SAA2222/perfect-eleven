@@ -1821,7 +1821,7 @@ function copyToClipboard() {
 // Post the result to X (Twitter) via the web intent — result-aware copy,
 // tags @SportsMarket_FC, links back to the app. (X intents can't attach an
 // image, so this posts text + link; the 📸 button handles the image.)
-function shareToX() {
+async function shareToX() {
   if (Object.keys(state.roster).length !== 11) { toast('FINISH THE XI FIRST'); return; }
   const ovr = computeFinalOVR();
   const chem = teamChemistry();
@@ -1834,14 +1834,21 @@ function shareToX() {
   else if (tier === 'THIRD')      line = `My World Cup XI took 3RD — ${ovr} OVR 🥉`;
   else line = `My 2026 World Cup XI: ${ovr} OVR${finishLabel ? ' · ' + finishLabel : ''}`;
   const expertTag = (state.blind && state.revealed) ? ' (drafted BLIND 👁️)' : '';
-  const text = `${line}${expertTag}\n\nCan you beat it?`;
-  const params = new URLSearchParams({
-    text,
+  // Caption carries the @mention + hashtags inline so they survive BOTH paths
+  // (the native share sheet doesn't support via/hashtags params).
+  const caption = `${line}${expertTag}\n\nCan you beat it?\n\nvia @SportsMarket_FC #WorldCup2026 #PerfectEleven`;
+  // Desktop fallback intent (text + link; image is downloaded for manual attach)
+  const intentParams = new URLSearchParams({
+    text: `${line}${expertTag}\n\nCan you beat it? (image attached 👇)`,
     url: 'https://perfect-eleven.vercel.app',
     via: 'SportsMarket_FC',
     hashtags: 'WorldCup2026,PerfectEleven',
   });
-  window.open(`https://twitter.com/intent/tweet?${params.toString()}`, '_blank', 'noopener,noreferrer');
+  const intentUrl = `https://twitter.com/intent/tweet?${intentParams.toString()}`;
+  // Render the team screenshot and share it WITH the caption. On mobile the
+  // share sheet lets you pick X → image + caption posted together. On desktop
+  // the image downloads and the X composer opens for a manual drag-in.
+  await shareXICardImage({ caption, thenOpenXIntent: intentUrl });
 }
 
 // ============================================================
@@ -1975,7 +1982,7 @@ function drawTrophyIcon(ctx, cx, cy, size, color) {
   ctx.restore();
 }
 
-async function shareXICardImage() {
+async function shareXICardImage(opts = {}) {
   if (Object.keys(state.roster).length !== 11) {
     toast('FINISH THE XI FIRST');
     return;
@@ -2263,27 +2270,34 @@ async function shareXICardImage() {
   if (!blob) { toast('IMAGE EXPORT FAILED'); return; }
 
   const file = new File([blob], 'perfect-eleven.png', { type: 'image/png' });
-  // Prefer Web Share API on mobile (lets user post directly to IG/TikTok/X).
-  // Include https:// so iMessage / WhatsApp / X auto-linkify the URL. Pass
-  // `url` separately too — some apps surface it as a "Visit" action button.
+  const caption = opts.caption || `${ovr} OVR · ${chem} CHEM — build yours at https://perfect-eleven.vercel.app`;
+  // Prefer Web Share API on mobile — this is the ONLY way to attach the team
+  // image to a tweet (pick X from the share sheet → image + caption posted).
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({
         files: [file],
         title: 'My Perfect Eleven',
-        text: `${ovr} OVR · ${chem} CHEM — build yours at https://perfect-eleven.vercel.app`,
+        text: caption,
         url: 'https://perfect-eleven.vercel.app',
       });
       return;
     } catch (e) { /* user cancelled — fall through to download */ }
   }
-  // Desktop / no Web Share: download
+  // Desktop / no Web Share: download the image so it can be attached manually.
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = 'perfect-eleven.png';
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
-  toast('IMAGE DOWNLOADED — POST IT!');
+  if (opts.thenOpenXIntent) {
+    // Desktop X flow: image is now saved; open the composer with the caption
+    // pre-filled so the user drags the downloaded image in.
+    toast('📸 IMAGE SAVED — DRAG IT INTO YOUR TWEET');
+    setTimeout(() => window.open(opts.thenOpenXIntent, '_blank', 'noopener,noreferrer'), 400);
+  } else {
+    toast('IMAGE DOWNLOADED — POST IT!');
+  }
 }
 
 // ============================================================
