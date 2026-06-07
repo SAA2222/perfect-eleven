@@ -1810,6 +1810,7 @@ function showCompleteModal() {
   // sync the swap-in-complete button state
   const compSwap = document.getElementById('completeSwapBtn');
   if (compSwap) compSwap.disabled = state.swapsLeft <= 0;
+  const sp = $('sharePrompt'); if (sp) sp.hidden = true;  // reset share prompt for a fresh result
   $('completeModal').hidden = false;
   // 🎉 fire confetti when you win the World Cup
   if (finish.label && finish.label.includes('CHAMPIONS')) {
@@ -2374,15 +2375,29 @@ async function submitLineupToLeaderboard() {
 
   if (btn) { btn.disabled = false; btn.innerHTML = 'SUBMIT TO LEADERBOARD →'; }
 
-  if (result?.ok) {
-    toast(`✓ SUBMITTED · ${final} OVR · GLOBAL LEADERBOARD UPDATED`);
-  } else if (result?.status === 429) {
+  if (result?.status === 429) {
     toast('TOO MANY SUBMISSIONS — TRY AGAIN IN A MIN');
-  } else {
-    // API down — local entry was saved as fallback
-    toast(`SUBMITTED LOCALLY · ${final} OVR · GLOBAL OFFLINE`);
+    return;   // keep the modal open so they can retry
   }
 
+  toast(result?.ok
+    ? `✓ SUBMITTED · ${final} OVR · GLOBAL LEADERBOARD UPDATED`
+    : `SUBMITTED LOCALLY · ${final} OVR · GLOBAL OFFLINE`);
+
+  // Submitted — now ASK if they want to share, before we close + reset. The
+  // roster stays intact so the share card can still render.
+  showSharePrompt();
+}
+
+function showSharePrompt() {
+  const sp = $('sharePrompt');
+  if (sp) sp.hidden = false;
+}
+
+// Close out the complete flow: hide prompt + modal, reset, jump to the board.
+function finishCompleteFlow() {
+  const sp = $('sharePrompt');
+  if (sp) sp.hidden = true;
   $('completeModal').hidden = true;
   resetRoster();
   document.getElementById('leaderboard')?.scrollIntoView({ behavior: 'smooth' });
@@ -2653,6 +2668,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (rostersSearch) rostersSearch.addEventListener('input', e => renderRosters(e.target.value));
   const submitBtn = document.getElementById('submitLineupBtn');
   if (submitBtn) submitBtn.addEventListener('click', submitLineupToLeaderboard);
+  // Share prompt (appears after a successful leaderboard submit)
+  $('sharePromptImg')?.addEventListener('click', () => shareXICardImage());
+  $('sharePromptX')?.addEventListener('click', shareToX);
+  $('sharePromptSkip')?.addEventListener('click', finishCompleteFlow);
   // HELP MODAL
   const openHelp = (tab) => {
     $('helpModal').hidden = false;

@@ -2417,6 +2417,77 @@ body { padding-bottom: 56px; }
   background: var(--ink);
   border: 2px solid var(--gold);
 }
+
+/* Share prompt — overlays the complete modal after a leaderboard submit */
+.share-prompt {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(7, 12, 8, 0.94);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+.share-prompt[hidden] { display: none; }
+.share-prompt__card {
+  text-align: center;
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.share-prompt__badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--pitch);
+  background: rgba(0, 200, 83, 0.14);
+  border: 1px solid var(--pitch);
+  padding: 6px 14px;
+  border-radius: 999px;
+}
+.share-prompt__title {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 7vw, 52px);
+  line-height: 0.95;
+  color: var(--bone);
+  margin: 4px 0 0;
+}
+.share-prompt__lede {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--mute-2);
+  margin: 0;
+  max-width: 300px;
+}
+.share-prompt__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+}
+.share-prompt__actions .xi-btn { width: 100%; justify-content: center; }
+.share-prompt__skip {
+  margin-top: 4px;
+  background: none;
+  border: none;
+  color: var(--mute);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  padding: 8px;
+}
+.share-prompt__skip:hover { color: var(--bone); }
 .modal__panel--paywall .modal__title em {
   color: var(--gold);
 }

@@ -137,8 +137,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="preconnect" href="https://flagcdn.com" />
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=20260605do" />
-<link rel="stylesheet" href="build-xi.css?v=20260605do" />
+<link rel="stylesheet" href="styles.css?v=20260605dp" />
+<link rel="stylesheet" href="build-xi.css?v=20260605dp" />
 <!-- Google AdSense verification + loader -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9372890411087994"
         crossorigin="anonymous"></script>
@@ -535,6 +535,20 @@
         <span class="xi-btn__arrow">⇆</span>
       </button>
     </div>
+
+    <!-- Share prompt — overlays the results after a successful leaderboard submit -->
+    <div class="share-prompt" id="sharePrompt" hidden>
+      <div class="share-prompt__card">
+        <span class="share-prompt__badge">✓ YOU'RE ON THE LEADERBOARD</span>
+        <h3 class="share-prompt__title">Share your XI?</h3>
+        <p class="share-prompt__lede">Post your team so friends can try to beat your rating.</p>
+        <div class="share-prompt__actions">
+          <button class="xi-btn xi-btn--gold" id="sharePromptImg">📸 SHARE AS IMAGE</button>
+          <button class="xi-btn xi-btn--ink xi-btn--x" id="sharePromptX">𝕏 POST ON X</button>
+        </div>
+        <button class="share-prompt__skip" id="sharePromptSkip">Continue to leaderboard →</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -766,10 +780,10 @@
   </div>
 </footer>
 
-<script src="live-stats.js?v=20260605do"></script>
-<script src="xi-data.js?v=20260605do"></script>
-<script src="xi-script.js?v=20260605do"></script>
-<script src="extras.js?v=20260605do"></script>
+<script src="live-stats.js?v=20260605dp"></script>
+<script src="xi-data.js?v=20260605dp"></script>
+<script src="xi-script.js?v=20260605dp"></script>
+<script src="extras.js?v=20260605dp"></script>
 
 <!-- Vercel Web Analytics (page views + custom funnel events).
      Enable "Web Analytics" in the Vercel project dashboard to start collecting. -->
