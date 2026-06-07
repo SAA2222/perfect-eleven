@@ -67,6 +67,11 @@ let state = {
 
 const $ = (id) => document.getElementById(id);
 
+// Vercel Analytics custom event — no-ops if analytics isn't loaded.
+function track(name, data) {
+  try { if (window.va) window.va('event', data ? { name, data } : { name }); } catch (e) {}
+}
+
 // Per-mode resources. Tactical is tighter (2 skips / 1 swap) — it's a paid mode.
 const MODE_RESOURCES = {
   classic:  { skips: 3, swaps: 2 },
@@ -206,6 +211,7 @@ function animateSpinnerTo(code, onDone) {
 
 function spin() {
   if (state.isSpinning) return;
+  track('spin', { mode: state.mode });
   if (state.mode === 'tactical') return spinTactical();
   const available = getNationPool(state.mode).filter(n => !state.usedNations.has(n.code));
   if (available.length === 0) return;
@@ -1663,6 +1669,7 @@ function showCompleteModal() {
   const final = Math.max(60, baseFinal - injuryLoss);
   const grade = gradeFromOVR(final, chem);
   const finish = projectedFinish(baseFinal, chem, injuryLoss);
+  track('xi_complete', { mode: state.mode, ovr: final, finish: finish.tier, blind: state.blind });
 
   const kicker = document.getElementById('completeKicker');
   if (kicker) kicker.textContent = wasBlind ? '🎭 THE BIG REVEAL — YOU DRAFTED BLIND' : 'YOUR ELEVEN IS COMPLETE';
@@ -1865,7 +1872,7 @@ async function shareToX() {
   // Render the team screenshot and share it WITH the caption. On mobile the
   // share sheet lets you pick X → image + caption posted together. On desktop
   // the image downloads and the X composer opens for a manual drag-in.
-  await shareXICardImage({ caption, thenOpenXIntent: intentUrl });
+  await shareXICardImage({ caption, thenOpenXIntent: intentUrl, via: 'x' });
 }
 
 // ============================================================
@@ -2004,6 +2011,7 @@ async function shareXICardImage(opts = {}) {
     toast('FINISH THE XI FIRST');
     return;
   }
+  track(opts.via === 'x' ? 'share_x' : 'share_image', { mode: state.mode });
   toast('RENDERING CARD…');
 
   // === Story-format canvas: 9:16 — perfect for IG Stories / TikTok / X mobile ===
@@ -2360,6 +2368,7 @@ async function submitLineupToLeaderboard() {
   if (btn) { btn.disabled = true; btn.textContent = 'SUBMITTING…'; }
   toast('SUBMITTING TO GLOBAL LEADERBOARD…');
 
+  track('leaderboard_submit', { mode: state.mode, ovr: final });
   const result = await storeLineup(entry);  // global POST + local backup
   await renderLeaderboard();                 // re-pull global top 12
 
@@ -2487,6 +2496,7 @@ function isPremium() {
   return localStorage.getItem(PREMIUM_UNLOCK_KEY) === '1';
 }
 function unlockPremium() {
+  track('premium_unlock');
   localStorage.setItem(PREMIUM_UNLOCK_KEY, '1');
   ['tacticalTab', 'top50Tab', 'legendsTab'].forEach(id => {
     const tab = document.getElementById(id);
@@ -2495,7 +2505,7 @@ function unlockPremium() {
     tab.querySelector('.xi-mode__lock')?.remove();
   });
 }
-function openPaywall() { $('paywallModal').hidden = false; }
+function openPaywall() { track('paywall_open', { mode: state.mode }); $('paywallModal').hidden = false; }
 function closePaywall() { $('paywallModal').hidden = true; }
 
 // Auto-unlock when Stripe redirects back with ?premium=success or
