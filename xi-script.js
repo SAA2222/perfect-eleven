@@ -2482,7 +2482,9 @@ function initSlots() {
 // ============================================================
 // PREMIUM PAYWALL (unlocks TOP 50 + LEGENDS together)
 // ============================================================
-const PREMIUM_UNLOCK_KEY = 'pe_premium_unlocked';
+// NOTE: key rotated to pe_prem_v2 to REVOKE all the free unlocks that leaked via
+// the old guessable ?premium=success / success123 links. Everyone must re-unlock.
+const PREMIUM_UNLOCK_KEY = 'pe_prem_v2';
 const PREMIUM_MODES = new Set(['top50', 'legends', 'tactical']);
 
 // Stripe Payment Link — LIVE checkout ($4.99, takes real payments).
@@ -2506,13 +2508,16 @@ function unlockPremium() {
 function openPaywall() { track('paywall_open', { mode: state.mode }); $('paywallModal').hidden = false; }
 function closePaywall() { $('paywallModal').hidden = true; }
 
-// Auto-unlock when Stripe redirects back with ?premium=success or
-// ?premium=success123 (owner bookmark variant). Both accepted so the
-// existing Stripe Payment Link redirect keeps working without dashboard edits.
+// Auto-unlock when Stripe redirects back after a successful payment. The old
+// success / success123 tokens were guessable and leaked, so they're retired.
+// ⚠️ Stripe's Payment Link "after payment" redirect MUST be updated to this new
+// token or real buyers won't unlock. NOTE: this still lives in public client
+// code — see the server-side verify fix for true security.
+const PREMIUM_TOKEN = 'pe_8Kq3Zx9Mw2';
 function handleStripeReturn() {
   const params = new URLSearchParams(window.location.search);
   const token = params.get('premium');
-  if (token === 'success' || token === 'success123') {
+  if (token === PREMIUM_TOKEN) {
     unlockPremium();
     const cleanUrl = window.location.pathname + window.location.hash;
     window.history.replaceState({}, document.title, cleanUrl);
