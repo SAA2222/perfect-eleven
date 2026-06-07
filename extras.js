@@ -264,7 +264,7 @@ function paintLeaderboard() {
       </div>
       <div class="lb-row__body">
         <p class="lb-row__lineup">${row.lineup}</p>
-        <span class="lb-row__by">${row.by}${row.user ? ' · <span style="color:var(--pitch);">YOU</span>' : ''}</span>
+        <span class="lb-row__by">${(typeof hasProfanity === 'function' && hasProfanity(row.by)) ? 'EARTH' : row.by}${row.user ? ' · <span style="color:var(--pitch);">YOU</span>' : ''}</span>
       </div>
       <div class="lb-row__ovr">
         <span class="lb-row__ovr-num">${row.ovr}</span>

@@ -2325,9 +2325,10 @@ async function shareXICardImage(opts = {}) {
 function getBuiltByName() {
   const name = ($('lineupName')?.value || '').trim();
   const city = ($('lineupCity')?.value || '').trim();
-  if (!name) return city ? city.toUpperCase().slice(0, 38) : 'EARTH';
-  const combined = city ? `${name} · ${city}` : name;
-  return combined.toUpperCase().slice(0, 38);
+  const base = !name ? (city || 'EARTH') : (city ? `${name} · ${city}` : name);
+  // Don't let a slur reach the public board.
+  if (typeof hasProfanity === 'function' && hasProfanity(base)) return 'EARTH';
+  return base.toUpperCase().slice(0, 38);
 }
 
 async function submitLineupToLeaderboard() {

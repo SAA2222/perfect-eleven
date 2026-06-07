@@ -3653,6 +3653,24 @@ const FIFA_RANK = {
 };
 function fifaRank(code) { return FIFA_RANK[code] || null; }
 
+// ============================================================
+// PROFANITY FILTER — the leaderboard "name · city" field is the only
+// free-text user input shown publicly. Mask anything offensive so a
+// troll can't put a slur on the global board.
+// ============================================================
+const PROFANITY_RE = /(nigg|\bfagg|\bfag\b|kike|\bspic\b|chink|\bcoon\b|trann|retard|\bcunt|fuck|\bshit|bitch|whore|\bslut|pussy|asshole|bastard|motherf|\bwank|\bkys\b|\bporn|nazi|dickhead)/i;
+function hasProfanity(s) {
+  if (typeof s !== 'string') return false;
+  // Normalise leetspeak + strip separators so "f u c k", "b!tch", "a$$hole",
+  // "p0rn" all reduce to plain letters before testing. Word-boundary anchors on
+  // the false-positive-prone words keep legit names safe (e.g. Scunthorpe).
+  const norm = s.toLowerCase()
+    .replace(/[\s._\-*'`]+/g, '')
+    .replace(/0/g, 'o').replace(/[1!|]/g, 'i').replace(/3/g, 'e')
+    .replace(/4/g, 'a').replace(/@/g, 'a').replace(/[$5]/g, 's').replace(/7/g, 't');
+  return PROFANITY_RE.test(norm) || PROFANITY_RE.test(s.toLowerCase());
+}
+
 function getNationPool(mode) {
   if (mode === 'legends') return LEGENDS;
   if (mode === 'u25') {

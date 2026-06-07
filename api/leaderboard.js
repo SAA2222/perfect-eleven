@@ -44,6 +44,18 @@ function sanitize(s, maxLen) {
     .slice(0, maxLen);
 }
 
+// Profanity guard for the public "by" field (the only free-text input).
+const PROFANITY_RE = /(nigg|\bfagg|\bfag\b|kike|\bspic\b|chink|\bcoon\b|trann|retard|\bcunt|fuck|\bshit|bitch|whore|\bslut|pussy|asshole|bastard|motherf|\bwank|\bkys\b|\bporn|nazi|dickhead)/i;
+function cleanBy(s) {
+  const v = sanitize(s, 40);
+  if (!v) return 'EARTH';
+  const norm = v.toLowerCase()
+    .replace(/[\s._\-*'`]+/g, '')
+    .replace(/0/g, 'o').replace(/[1!|]/g, 'i').replace(/3/g, 'e')
+    .replace(/4/g, 'a').replace(/@/g, 'a').replace(/[$5]/g, 's').replace(/7/g, 't');
+  return (PROFANITY_RE.test(norm) || PROFANITY_RE.test(v.toLowerCase())) ? 'EARTH' : v;
+}
+
 function kvConfigured() {
   return kv !== null;
 }
@@ -90,7 +102,7 @@ export default async function handler(req, res) {
       const { by, ovr, chem, mode, lineup } = body || {};
 
       const entry = {
-        by:     sanitize(by, 40) || 'EARTH',
+        by:     cleanBy(by),
         ovr:    Math.max(0, Math.min(100, parseInt(ovr) || 0)),
         chem:   Math.max(0, Math.min(99, parseInt(chem) || 0)),
         mode:   sanitize(mode, 16).toUpperCase() || 'CLASSIC',
