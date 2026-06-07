@@ -1096,12 +1096,19 @@ function effectiveRating(p) {
   return p.naturalFit ? p.rating : p.rating - 1;
 }
 
-function computeFinalOVR() {
+// Squad base rating — the average of the 11 effective player ratings (caps ~99).
+function computeBaseOVR() {
   const eff = Object.values(state.roster).map(effectiveRating);
   if (!eff.length) return null;
-  const avg = Math.round(eff.reduce((a, b) => a + b, 0) / eff.length);
-  const chemBoost = Math.floor(teamChemistry() / 6);
-  return avg + chemBoost;
+  return Math.round(eff.reduce((a, b) => a + b, 0) / eff.length);
+}
+
+// DISPLAY rating. Chemistry is a real, uncapped boost (≈ chem/3, max +11), so a
+// well-linked squad can break 100 — e.g. 92 avg + 27 chem → 92 + 9 = 101.
+function computeFinalOVR() {
+  const base = computeBaseOVR();
+  if (base == null) return null;
+  return base + Math.round(teamChemistry() / 3);
 }
 
 function countOOP() {
@@ -1660,7 +1667,7 @@ function showCompleteModal() {
     updateProgress();
   }
 
-  const baseFinal = computeFinalOVR();
+  const baseFinal = computeFinalOVR();   // DISPLAY rating — chem can push it >100
   const chem = teamChemistry();
   const oop = countOOP();
   // Roll injuries for this tournament run
@@ -1668,7 +1675,10 @@ function showCompleteModal() {
   const injuryLoss = injuries.reduce((sum, i) => sum + i.ovrLoss, 0);
   const final = Math.max(60, baseFinal - injuryLoss);
   const grade = gradeFromOVR(final, chem);
-  const finish = projectedFinish(baseFinal, chem, injuryLoss);
+  // The World Cup finish keeps its original (harder) basis — avg + chem/6 — so
+  // the bigger display boost doesn't make winning easier than the calibrated bar.
+  const finishBasis = computeBaseOVR() + Math.floor(chem / 6);
+  const finish = projectedFinish(finishBasis, chem, injuryLoss);
   track('xi_complete', { mode: state.mode, ovr: final, finish: finish.tier, blind: state.blind });
 
   const kicker = document.getElementById('completeKicker');
@@ -2137,12 +2147,15 @@ async function shareXICardImage(opts = {}) {
   ctx.font = 'bold 16px ui-monospace, "JetBrains Mono", monospace';
   ctx.fillText('CHEM', 260, 1175);
 
+  // Global leaderboard rank (replaces the always-11/11 SLOTS stat). Falls back
+  // to SLOTS if the leaderboard hasn't loaded yet.
+  const gRank = (typeof userGlobalRank === 'function') ? userGlobalRank(ovr) : null;
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 64px Impact, "Arial Black", sans-serif';
-  ctx.fillText(`${filled}/11`, 440, 1130);
+  ctx.fillText(gRank ? `#${gRank}` : `${filled}/11`, 440, 1130);
   ctx.fillStyle = '#7a8590';
   ctx.font = 'bold 16px ui-monospace, "JetBrains Mono", monospace';
-  ctx.fillText('SLOTS', 440, 1175);
+  ctx.fillText(gRank ? 'GLOBAL RANK' : 'SLOTS', 440, 1175);
 
   // Grade pill (right side of stat strip)
   ctx.fillStyle = resolveCssVarsForCanvas(grade.color || '#fff');

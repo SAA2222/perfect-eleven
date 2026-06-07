@@ -187,6 +187,15 @@ function modeDisplay(m) {
   return v === 'TOP50' ? 'TOP 50' : v;
 }
 
+// This squad's would-be position on the ALL-TIME, all-modes leaderboard — used
+// on the share card. Counts existing entries rated strictly higher; ties rank
+// above. Returns null if the board hasn't loaded yet (card falls back to SLOTS).
+function userGlobalRank(ovr) {
+  if (typeof ovr !== 'number' || !Array.isArray(_lbRows) || !_lbRows.length) return null;
+  const better = _lbRows.filter(e => (Number(e.ovr) || 0) > ovr).length;
+  return better + 1;
+}
+
 async function renderLeaderboard() {
   const grid = document.getElementById('leaderboardGrid');
   if (!grid) return;
