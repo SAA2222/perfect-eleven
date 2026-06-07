@@ -2422,7 +2422,17 @@ body { padding-bottom: 56px; }
   font-weight: 700;
   font-family: var(--font-mono);
   font-size: 12px;
+  flex-shrink: 0;
 }
+/* keep the description as ONE flowing unit so the bold mode label can't
+   become its own flex item and wrap ("TOP" / "50") */
+.pw-features__text { flex: 1; min-width: 0; }
+.pw-features__mode {
+  white-space: nowrap;
+  color: var(--gold);
+  letter-spacing: 0.02em;
+}
+.pw-features__perk { color: var(--mute); font-size: 14px; }
 .pw-price {
   display: flex;
   flex-direction: column;
