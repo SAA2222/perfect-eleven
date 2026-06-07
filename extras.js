@@ -60,6 +60,7 @@ const SPONSORS = [
   { name: 'YOUR BRAND',    tagline: 'AVAILABLE FOR SPONSORSHIP · CONTACT', accent: '#00ff85' },
   { name: '@CASUALZFC',    tagline: 'NOW ON TIKTOK',                       accent: '#69C9D0' },
   { name: '@EATOGRAPHY',   tagline: 'PLATES WORTH CHASING · NOW ON TIKTOK',accent: '#FF6B35' },
+  { name: 'CASAPER CONSTRUCTION', tagline: 'BUILT IT TOGETHER',           accent: '#F5A623' },
 ];
 
 function renderSponsorTicker() {
