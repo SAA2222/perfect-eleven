@@ -289,8 +289,9 @@ function tacticalPlayerPool() {
 
 // Deal `count` distinct candidates for a slot — rating-weighted (so you usually
 // get a mix of a star or two and squad players), de-duped against players already
-// drafted this run.
-function drawTacticalPlayers(slotRole, count = 5) {
+// drafted this run. Returned SHUFFLED (not sorted) so you have to read the names,
+// not just grab the top of the list.
+function drawTacticalPlayers(slotRole, count = 10) {
   const fitRoles = playerRolesForSlot(slotRole);
   const pool = tacticalPlayerPool().filter(p => fitRoles.includes(p.role) && !state.usedPlayers.has(p.name));
   const picked = [];
@@ -303,8 +304,12 @@ function drawTacticalPlayers(slotRole, count = 5) {
     picked.push(pool[idx]);
     pool.splice(idx, 1);
   }
-  // Show the strongest first
-  return picked.sort((a, b) => b.rating - a.rating);
+  // Fisher-Yates shuffle so the candidates aren't in rating order
+  for (let i = picked.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [picked[i], picked[j]] = [picked[j], picked[i]];
+  }
+  return picked;
 }
 
 function openTacticalPickModal() {
@@ -312,7 +317,7 @@ function openTacticalPickModal() {
   if (slotIdx == null) return;
   const role = SLOT_DEF[slotIdx].role;
   // Reuse the existing draw on resume; deal a fresh 5 on a new spin.
-  const players = state.tacticalDraw || drawTacticalPlayers(role, 5);
+  const players = state.tacticalDraw || drawTacticalPlayers(role, 10);
   state.tacticalDraw = players;
 
   // Highlight the target slot on the pitch
@@ -321,7 +326,7 @@ function openTacticalPickModal() {
   if (slotEl) slotEl.classList.add('slot--empty-target');
 
   $('modalTitle').innerHTML = `<span class="modal-pos">${role}</span> ${POS_FULL[role] || role}`;
-  $('modalLede').textContent = `The wheel landed on ${POS_FULL[role] || role}. Pick the best one of these five.`;
+  $('modalLede').textContent = `The wheel landed on ${POS_FULL[role] || role}. 10 options — read the names and pick wisely.`;
 
   $('modalPlayers').innerHTML = players.map((p, idx) => {
     const league = clubToLeague(p.club);
