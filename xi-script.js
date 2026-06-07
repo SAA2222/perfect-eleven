@@ -2485,12 +2485,10 @@ function initSlots() {
 const PREMIUM_UNLOCK_KEY = 'pe_premium_unlocked';
 const PREMIUM_MODES = new Set(['top50', 'legends', 'tactical']);
 
-// Stripe Payment Link — live checkout URL. Currently TEST mode (sandbox).
-// Switch to live mode in Stripe Dashboard → toggle off sandbox → create new
-// live link → paste here when ready to take real money.
-// Confirmation redirect is set to /?premium=success in Stripe so the
-// handleStripeReturn() handler at boot auto-unlocks Premium.
-const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/test_eVqdR2aRGaEZ8f05rl9oc00';
+// Stripe Payment Link — LIVE checkout ($4.99, takes real payments).
+// The link's after-payment redirect is set to /?premium=success in Stripe so
+// handleStripeReturn() auto-unlocks all 3 premium modes when the buyer returns.
+const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/6oU3cv3Bo3Vi1TW41Xes001';
 
 function isPremium() {
   return localStorage.getItem(PREMIUM_UNLOCK_KEY) === '1';
