@@ -2693,11 +2693,11 @@ body { padding-bottom: 56px; }
 /* Hero variant — bigger, more inviting copy for the BUILT BY field */
 .submit-row--hero {
   display: block;
-  background: linear-gradient(135deg, rgba(0,200,83,0.10), rgba(255,196,0,0.06));
-  border: 2px solid var(--pitch);
+  background: #0b130e;                      /* dark inset — readable on the green panel */
+  border: 2px solid var(--gold, #ffc400);
   padding: 18px;
   margin-top: 24px;
-  border-radius: 4px;
+  border-radius: 8px;
   animation: heroPulse 2.4s ease-in-out infinite;
 }
 @keyframes heroPulse {
@@ -2854,6 +2854,18 @@ body { padding-bottom: 56px; }
 .xi-btn--ghost-ink:hover:not(:disabled) {
   background: var(--ink);
   color: var(--pitch);
+}
+/* On the bright-green complete modal, give the ghost buttons a dark fill so the
+   text is readable (dark-on-green outlines were too low-contrast). */
+.modal__panel--complete .xi-btn--ghost-ink {
+  background: rgba(0,0,0,0.55);
+  color: var(--bone, #f4f1ea);
+  border-color: rgba(255,255,255,0.22);
+}
+.modal__panel--complete .xi-btn--ghost-ink:hover:not(:disabled) {
+  background: #0b130e;
+  color: #fff;
+  border-color: rgba(255,255,255,0.4);
 }
 
 @media (max-width: 720px) {
