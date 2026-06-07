@@ -1688,9 +1688,43 @@ body.swap-mode .xi-pitch::after {
 }
 
 /* COMPLETE — GRADE + PROJECTED FINISH stat strip */
+/* Finish hero — the big "how did I do?" result banner on the complete modal */
+.xi-finish-hero {
+  background: #0c1410;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin: 10px 0 4px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.xi-finish-hero:empty { display: none; }
+.xi-finish-hero__kicker {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #7a8590;
+}
+.xi-finish-hero__result {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 6vw, 48px);
+  line-height: 1;
+  color: #fff;
+}
+.xi-finish-hero__match {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: #aeb8c2;
+}
+
 .xi-stat-strip {
   display: grid;
-  grid-template-columns: 1.4fr 0.7fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 1px;
   background: var(--ink);
   border: 1px solid var(--ink);
@@ -3005,6 +3039,22 @@ body { padding-bottom: 56px; }
   letter-spacing: 0.12em;
   color: var(--mute);
 }
+/* Tournament finish badge on each leaderboard row */
+.lb-finish {
+  display: inline-block;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.lb-finish--champ  { color: var(--gold, #ffc400); background: rgba(255,196,0,0.12); }
+.lb-finish--runner { color: #d7dde3; background: rgba(215,221,227,0.10); }
+.lb-finish--podium { color: #e0a06a; background: rgba(205,127,50,0.12); }
+.lb-finish--ko     { color: var(--mute-2, #8a96a0); background: rgba(138,150,160,0.10); }
 .lb-row__ovr { text-align: right; }
 .lb-row__ovr-num {
   font-family: var(--font-display);

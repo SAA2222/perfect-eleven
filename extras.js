@@ -187,6 +187,43 @@ function modeDisplay(m) {
   return v === 'TOP50' ? 'TOP 50' : v;
 }
 
+// Tournament finish → compact leaderboard badge.
+const FINISH_SHORT = {
+  CHAMPIONS:    '🏆 CHAMPIONS',
+  RUNNERS_UP:   '🥈 RUNNERS-UP',
+  THIRD:        '🥉 THIRD',
+  FOURTH:       '4TH PLACE',
+  QUARTERFINAL: 'QUARTER-FINAL',
+  R16:          'ROUND OF 16',
+  R32:          'ROUND OF 32',
+  GROUP_OUT:    'GROUP STAGE',
+};
+// Reconstruct the finish tier for entries with no stored finish (old + demo).
+// Backs the chem display-boost out of the OVR so it matches the complete screen.
+function deriveFinishTier(ovr, chem) {
+  const c = Number(chem) || 0;
+  const basis = (Number(ovr) || 0) - Math.round(c / 3) + Math.floor(c / 6);
+  const score = basis + c * 0.5;
+  if (score >= 108) return 'CHAMPIONS';
+  if (score >= 103) return 'RUNNERS_UP';
+  if (score >= 99)  return 'THIRD';
+  if (score >= 95)  return 'FOURTH';
+  if (score >= 90)  return 'QUARTERFINAL';
+  if (score >= 84)  return 'R16';
+  if (score >= 78)  return 'R32';
+  return 'GROUP_OUT';
+}
+function finishBadge(entry) {
+  const tier = entry.finish || deriveFinishTier(entry.ovr, entry.chem);
+  const label = FINISH_SHORT[tier];
+  if (!label) return '';
+  const cls = tier === 'CHAMPIONS' ? 'lb-finish--champ'
+            : tier === 'RUNNERS_UP' ? 'lb-finish--runner'
+            : (tier === 'THIRD' || tier === 'FOURTH') ? 'lb-finish--podium'
+            : 'lb-finish--ko';
+  return `<span class="lb-finish ${cls}">${label}</span>`;
+}
+
 // This squad's would-be position on the ALL-TIME, all-modes leaderboard — used
 // on the share card. Counts existing entries rated strictly higher; ties rank
 // above. Returns null if the board hasn't loaded yet (card falls back to SLOTS).
@@ -274,6 +311,7 @@ function paintLeaderboard() {
       <div class="lb-row__body">
         <p class="lb-row__lineup">${row.lineup}</p>
         <span class="lb-row__by">${(typeof hasProfanity === 'function' && hasProfanity(row.by)) ? 'EARTH' : row.by}${row.user ? ' · <span style="color:var(--pitch);">YOU</span>' : ''}</span>
+        ${finishBadge(row)}
       </div>
       <div class="lb-row__ovr">
         <span class="lb-row__ovr-num">${row.ovr}</span>

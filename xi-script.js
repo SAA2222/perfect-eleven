@@ -1714,6 +1714,20 @@ function showCompleteModal() {
   const finishBasis = computeBaseOVR() + Math.floor(chem / 6);
   const finish = projectedFinish(finishBasis, chem, injuryLoss);
   track('xi_complete', { mode: state.mode, ovr: final, finish: finish.tier, blind: state.blind });
+  state.lastFinishTier = finish.tier;   // remembered for the leaderboard submit + share
+
+  // Hero finish banner — the big, color-coded "how did I do?" answer up top.
+  const finishHero = $('xiFinishHero');
+  if (finishHero) {
+    const tierColors = { CHAMPIONS:'#ffc400', RUNNERS_UP:'#d7dde3', THIRD:'#cd7f32', FOURTH:'#9aa7b2' };
+    const c = tierColors[finish.tier] || '#ffffff';
+    const matchBit = finish.opp ? `<span class="xi-finish-hero__match">${finish.scoreLine} vs ${finish.opp}</span>` : '';
+    finishHero.innerHTML = `
+      <span class="xi-finish-hero__kicker">YOUR TOURNAMENT FINISH</span>
+      <span class="xi-finish-hero__result" style="color:${c};">${finish.label}</span>
+      ${matchBit}
+    `;
+  }
 
   const kicker = document.getElementById('completeKicker');
   if (kicker) kicker.textContent = wasBlind ? '🎭 THE BIG REVEAL — YOU DRAFTED BLIND' : 'YOUR ELEVEN IS COMPLETE';
@@ -1773,19 +1787,10 @@ function showCompleteModal() {
     `;
   }
 
-  // Inject the stat strip with PROJECTED FINISH + GRADE + OVERALL
+  // Stat strip — GRADE + OVERALL (the finish now headlines the hero banner above)
   const statStrip = document.getElementById('xiStatStrip');
   if (statStrip) {
-    const resultClass = finish.result === 'WIN' ? 'xi-stat--win' : finish.result === 'LOSS' ? 'xi-stat--loss' : '';
-    const scoreLine = finish.opp
-      ? `<span class="xi-stat__match"><span class="xi-stat__matchscore">${finish.scoreLine}</span> <span class="xi-stat__matchopp">vs ${finish.opp}</span></span>`
-      : '';
     statStrip.innerHTML = `
-      <div class="xi-stat xi-stat--finish ${resultClass}">
-        <span class="xi-stat__label">PROJECTED FINISH</span>
-        <span class="xi-stat__value xi-stat__finish">${finish.label}</span>
-        ${scoreLine}
-      </div>
       <div class="xi-stat">
         <span class="xi-stat__label">GRADE</span>
         <span class="xi-stat__value xi-stat__grade" style="color:${grade.color};">${grade.letter}</span>
@@ -2379,12 +2384,13 @@ async function shareXICardImage(opts = {}) {
 // Combine the NAME + CITY boxes into one display string ("NAME · CITY"),
 // shared by the leaderboard submit and the share-card footer.
 function getBuiltByName() {
-  const name = ($('lineupName')?.value || '').trim();
-  const city = ($('lineupCity')?.value || '').trim();
-  const base = !name ? (city || 'EARTH') : (city ? `${name} · ${city}` : name);
-  // Don't let a slur reach the public board.
-  if (typeof hasProfanity === 'function' && hasProfanity(base)) return 'EARTH';
-  return base.toUpperCase().slice(0, 38);
+  let name = ($('lineupName')?.value || '').trim();
+  let city = ($('lineupCity')?.value || '').trim();
+  // No name → ANONYMOUS, no city → EARTH. Same fallback if either is a slur.
+  const bad = (s) => typeof hasProfanity === 'function' && hasProfanity(s);
+  if (!name || bad(name)) name = 'ANONYMOUS';
+  if (!city || bad(city)) city = 'EARTH';
+  return `${name} · ${city}`.toUpperCase().slice(0, 38);
 }
 
 async function submitLineupToLeaderboard() {
@@ -2408,6 +2414,7 @@ async function submitLineupToLeaderboard() {
     chem,
     mode: state.mode.toUpperCase().replace('U25', 'U-25'),
     lineup,
+    finish: state.lastFinishTier || (typeof deriveFinishTier === 'function' ? deriveFinishTier(final, chem) : null),
     user: true,
   };
 

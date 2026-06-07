@@ -99,7 +99,8 @@ export default async function handler(req, res) {
       let body = req.body;
       // Some Vercel runtimes don't auto-parse JSON
       if (typeof body === 'string') { try { body = JSON.parse(body); } catch {} }
-      const { by, ovr, chem, mode, lineup } = body || {};
+      const { by, ovr, chem, mode, lineup, finish } = body || {};
+      const FINISH_TIERS = ['CHAMPIONS','RUNNERS_UP','THIRD','FOURTH','QUARTERFINAL','R16','R32','GROUP_OUT'];
 
       const entry = {
         by:     cleanBy(by),
@@ -107,6 +108,7 @@ export default async function handler(req, res) {
         chem:   Math.max(0, Math.min(99, parseInt(chem) || 0)),
         mode:   sanitize(mode, 16).toUpperCase() || 'CLASSIC',
         lineup: sanitize(lineup, 320),
+        finish: FINISH_TIERS.includes(String(finish)) ? String(finish) : null,
         createdAt: Date.now(),
       };
       if (!entry.ovr || !entry.lineup) {
