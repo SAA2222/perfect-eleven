@@ -1714,7 +1714,11 @@ function showCompleteModal() {
   const finishBasis = computeBaseOVR() + Math.floor(chem / 6);
   const finish = projectedFinish(finishBasis, chem, injuryLoss);
   track('xi_complete', { mode: state.mode, ovr: final, finish: finish.tier, blind: state.blind });
-  state.lastFinishTier = finish.tier;   // remembered for the leaderboard submit + share
+  state.lastFinishTier = finish.tier;   // remembered for the leaderboard submit
+  // The share card + tweet MUST reuse this exact result, not recompute (the
+  // display OVR is chem-inflated and would upgrade the finish, e.g. RUNNERS-UP
+  // on the result screen but CHAMPIONS on the card).
+  state.lastResult = { ovr: final, chem, grade, finish };
 
   // Hero finish banner — the big, color-coded "how did I do?" answer up top.
   const finishHero = $('xiFinishHero');
@@ -1898,9 +1902,11 @@ function copyToClipboard() {
 // image, so this posts text + link; the 📸 button handles the image.)
 async function shareToX() {
   if (Object.keys(state.roster).length !== 11) { toast('FINISH THE XI FIRST'); return; }
-  const ovr = computeFinalOVR();
-  const chem = teamChemistry();
-  const finish = (typeof projectedFinish === 'function') ? projectedFinish(ovr, chem, 0) : null;
+  // Reuse the result screen's exact finish (don't recompute off the inflated OVR).
+  const r = state.lastResult;
+  const ovr = r ? r.ovr : computeFinalOVR();
+  const finish = r ? r.finish
+    : projectedFinish(computeBaseOVR() + Math.floor(teamChemistry() / 6), teamChemistry(), 0);
   const tier = finish && finish.tier;
   const finishLabel = ((finish && finish.label) || '').replace(/[^\w\s-]/g, '').trim();
   let line;
@@ -2071,16 +2077,19 @@ async function shareXICardImage(opts = {}) {
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  // Compute everything we'll need
-  const ovr = computeFinalOVR();
-  const chem = teamChemistry();
+  // Reuse the result screen's EXACT numbers + finish. Recomputing here would run
+  // projectedFinish off the chem-inflated display OVR and upgrade the finish
+  // (e.g. RUNNERS-UP on the result screen → CHAMPIONS on the card).
+  const r = state.lastResult;
+  const ovr = r ? r.ovr : computeFinalOVR();
+  const chem = r ? r.chem : teamChemistry();
   const filled = Object.keys(state.roster).length;
-  const finish = (typeof projectedFinish === 'function')
-    ? projectedFinish(ovr, chem, 0)
-    : { label: '', opponent: null, score: null, result: null };
-  const grade = (typeof gradeFromOVR === 'function')
-    ? gradeFromOVR(ovr, chem)
-    : { letter: '?', color: '#fff', blurb: '' };
+  const finish = (r && r.finish) ? r.finish
+    : ((typeof projectedFinish === 'function')
+        ? projectedFinish(computeBaseOVR() + Math.floor(chem / 6), chem, 0)
+        : { label: '', opponent: null, score: null, result: null });
+  const grade = (r && r.grade) ? r.grade
+    : ((typeof gradeFromOVR === 'function') ? gradeFromOVR(ovr, chem) : { letter: '?', color: '#fff', blurb: '' });
   const awards = (typeof computeAwards === 'function') ? computeAwards() : null;
 
   // === Background ===
@@ -2400,8 +2409,9 @@ async function submitLineupToLeaderboard() {
     return;
   }
   const name = getBuiltByName();
-  const final = computeFinalOVR();
-  const chem = teamChemistry();
+  // Use the result screen's exact OVR/chem so the board, card and rank all match.
+  const final = state.lastResult ? state.lastResult.ovr : computeFinalOVR();
+  const chem = state.lastResult ? state.lastResult.chem : teamChemistry();
 
   const ordered = [10, 6, 7, 8, 9, 3, 4, 5, 0, 1, 2];
   const lineup = ordered.map(i => {
