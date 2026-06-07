@@ -133,6 +133,47 @@
   filter: hue-rotate(40deg) brightness(1.2);
 }
 
+/* ---------- STICKY SPIN BAR (mobile build helper) ---------- */
+/* Hidden by default and on desktop (≥1025px the spinner + pitch sit side by
+   side, so there's nothing to scroll). On the stacked mobile layout it appears
+   when the main SPIN button scrolls off, so you spin from the pitch. */
+.sticky-spin {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: rgba(8, 12, 9, 0.96);
+  border-top: 1px solid var(--rule);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.45);
+  animation: stickySpinIn 0.18s ease-out;
+}
+.sticky-spin[hidden] { display: none; }
+@keyframes stickySpinIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sticky-spin__progress {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+  flex-shrink: 0;
+}
+.sticky-spin__label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--mute);
+}
+.sticky-spin__count {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--bone);
+}
+.sticky-spin__btn { flex: 1; justify-content: center; }
+@media (min-width: 1025px) { .sticky-spin { display: none !important; } }
+
 /* ---------- GAME LAYOUT ---------- */
 .xi-game {
   max-width: var(--max);

@@ -183,6 +183,7 @@ function updateSpinButtonLabel() {
   const btn = $('spinBtn');
   const span = btn && btn.querySelector('span:not(.xi-btn__arrow)');
   if (span) span.textContent = state.mode === 'tactical' ? 'SPIN POSITION' : 'SPIN THE WORLD';
+  refreshStickySpin();
 }
 
 // Shared spinner animation — scrolls the strip so the card with `code` lands center.
@@ -218,6 +219,7 @@ function spin() {
 
   state.isSpinning = true;
   $('spinBtn').disabled = true;
+  refreshStickySpin();
   $('spinnerResult').classList.remove('show');
   buildSpinnerCards();
 
@@ -236,6 +238,7 @@ function spinTactical() {
 
   state.isSpinning = true;
   $('spinBtn').disabled = true;
+  refreshStickySpin();
   $('spinnerResult').classList.remove('show');
   buildSpinnerCards();
 
@@ -475,6 +478,7 @@ function closePickModal() {
   hidePickResumeBar();
   clearSlotHighlights();
   $('spinBtn').disabled = false;
+  refreshStickySpin();
 }
 
 // ============================================================
@@ -753,6 +757,7 @@ function doPickSwap(p, target) {
   $('pickModal').hidden = true;
   clearSlotHighlights();
   $('spinBtn').disabled = false;
+  refreshStickySpin();
   state.currentNation = null;
   $('spinnerResult').classList.remove('show');
 
@@ -1115,10 +1120,39 @@ function countOOP() {
   return Object.values(state.roster).filter(p => !p.naturalFit).length;
 }
 
+// ----- Sticky mobile SPIN bar -----
+// Shows when the main SPIN button is scrolled off-screen during an active build,
+// so you can spin again from your pitch without scrolling back up.
+let _spinBtnOnScreen = true;
+function refreshStickySpin() {
+  const sticky = $('stickySpin');
+  if (!sticky) return;
+  const filled = Object.keys(state.roster).length;
+  sticky.hidden = !(!_spinBtnOnScreen && filled < 11);
+  // Mirror the main button's label + disabled state
+  $('stickyRound') && ($('stickyRound').textContent = filled);
+  const inline = $('spinBtn'), sBtn = $('stickySpinBtn'), sLbl = $('stickySpinLabel');
+  if (inline && sBtn) sBtn.disabled = inline.disabled;
+  if (sLbl) sLbl.textContent = state.mode === 'tactical' ? 'SPIN POSITION' : 'SPIN THE WORLD';
+}
+function initStickySpin() {
+  const inline = $('spinBtn'), sBtn = $('stickySpinBtn');
+  if (!inline || !sBtn) return;
+  sBtn.addEventListener('click', () => { if (!sBtn.disabled) spin(); });
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((entries) => {
+      _spinBtnOnScreen = entries[0].isIntersecting;
+      refreshStickySpin();
+    }, { rootMargin: '-8px 0px -120px 0px' }).observe(inline);
+  }
+  refreshStickySpin();
+}
+
 function updateProgress() {
   const filled = Object.keys(state.roster).length;
   $('roundNum').textContent = filled;
   $('progressFill').style.width = `${(filled / 11) * 100}%`;
+  refreshStickySpin();
   if (filled > 0 && ratingsHidden()) {
     // EXPERT mode — hide the running total; show how many are still blind-drafted
     $('overallRating').innerHTML = `<span style="letter-spacing:.06em;">?? <span style="color:var(--mute);font-size:.6em;">OVR</span> · <span style="color:var(--pitch);font-size:.55em;">BLIND DRAFT</span></span>`;
@@ -2633,6 +2667,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initLiveBadge();
 
   $('spinBtn').addEventListener('click', spin);
+  initStickySpin();   // mobile sticky SPIN bar (spin from your pitch, no scroll-up)
   $('resetBtn').addEventListener('click', resetRoster);
 
   // EXPERT (blind draft) toggle — committed once the draft starts
