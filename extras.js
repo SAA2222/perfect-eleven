@@ -47,20 +47,22 @@ function renderTicker() {
 // ============================================================
 // SPONSOR TICKER — bottom strip, brand integration
 // ============================================================
+// Accents chosen so no two ADJACENT brands share (or nearly share) a colour —
+// including the wrap from the last item back to the first (the ticker loops).
 const SPONSORS = [
-  { name: 'RED BULL',      tagline: 'GIVES YOU WINGS',                     accent: '#FFC906' },
-  { name: 'ADIDAS',        tagline: 'IMPOSSIBLE IS NOTHING',               accent: '#FFFFFF' },
-  { name: 'NIKE',          tagline: 'JUST DO IT',                          accent: '#FFFFFF' },
-  { name: 'VISA',          tagline: 'EVERYWHERE YOU WANT TO BE',           accent: '#1A1F71' },
-  { name: 'MASTERCARD',    tagline: 'START SOMETHING PRICELESS',           accent: '#FF5F00' },
-  { name: 'COCA-COLA',     tagline: 'TASTE THE FEELING',                   accent: '#E40712' },
-  { name: 'HYUNDAI',       tagline: 'NEW THINKING · NEW POSSIBILITIES',    accent: '#002C5F' },
-  { name: 'QATAR AIRWAYS', tagline: 'GOING PLACES TOGETHER',               accent: '#5C0F23' },
-  { name: 'HUBLOT',        tagline: 'FUSION OF INNOVATION',                accent: '#C9A24A' },
-  { name: 'YOUR BRAND',    tagline: 'AVAILABLE FOR SPONSORSHIP · CONTACT', accent: '#00ff85' },
-  { name: '@CASUALZFC',    tagline: 'NOW ON TIKTOK',                       accent: '#69C9D0' },
-  { name: '@EATOGRAPHY',   tagline: 'PLATES WORTH CHASING · NOW ON TIKTOK',accent: '#FF6B35' },
-  { name: 'CASAPER CONSTRUCTION', tagline: 'BUILT IT TOGETHER',           accent: '#F5A623' },
+  { name: 'RED BULL',      tagline: 'GIVES YOU WINGS',                     accent: '#FFC400' }, // yellow
+  { name: 'ADIDAS',        tagline: 'IMPOSSIBLE IS NOTHING',               accent: '#FFFFFF' }, // white
+  { name: 'NIKE',          tagline: 'JUST DO IT',                          accent: '#FF5A1F' }, // orange
+  { name: 'VISA',          tagline: 'EVERYWHERE YOU WANT TO BE',           accent: '#3B6BFF' }, // blue
+  { name: 'MASTERCARD',    tagline: 'START SOMETHING PRICELESS',           accent: '#F79E1B' }, // amber
+  { name: 'COCA-COLA',     tagline: 'TASTE THE FEELING',                   accent: '#E40712' }, // red
+  { name: 'HYUNDAI',       tagline: 'NEW THINKING · NEW POSSIBILITIES',    accent: '#00B3A4' }, // teal
+  { name: 'QATAR AIRWAYS', tagline: 'GOING PLACES TOGETHER',               accent: '#B0184B' }, // maroon
+  { name: 'HUBLOT',        tagline: 'FUSION OF INNOVATION',                accent: '#C9A24A' }, // gold
+  { name: 'YOUR BRAND',    tagline: 'AVAILABLE FOR SPONSORSHIP · CONTACT', accent: '#00FF85' }, // green
+  { name: '@CASUALZFC',    tagline: 'NOW ON TIKTOK',                       accent: '#B14EFF' }, // purple
+  { name: '@EATOGRAPHY',   tagline: 'PLATES WORTH CHASING · NOW ON TIKTOK',accent: '#FF6B35' }, // coral
+  { name: 'CASAPER CONSTRUCTION', tagline: 'BUILT IT TOGETHER',           accent: '#69C9D0' }, // cyan
 ];
 
 function renderSponsorTicker() {
