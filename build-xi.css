@@ -339,6 +339,16 @@
   text-overflow: ellipsis;
   max-width: 100%;
 }
+/* FIFA rank under the nation name on the spinner cards (Classic / Top 50) */
+.xi-card__rank {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--gold, #ffc400);
+  white-space: nowrap;
+  margin-top: 2px;
+}
 
 .xi-spinner__result {
   position: absolute;

@@ -119,14 +119,18 @@ function updateBlindToggleLock() {
 function buildSpinnerCards() {
   if (state.mode === 'tactical') return buildTacticalSpinnerCards();
   const pool = getNationPool(state.mode);
+  const showRank = (state.mode === 'classic' || state.mode === 'top50');
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
   const long = [...shuffled, ...shuffled, ...shuffled, ...shuffled];
-  $('spinnerCards').innerHTML = long.map(n => `
+  $('spinnerCards').innerHTML = long.map(n => {
+    const r = (showRank && typeof fifaRank === 'function') ? fifaRank(n.code) : null;
+    return `
     <div class="xi-card" data-code="${n.code}">
       <img class="xi-card__flag" src="${flagURL(n.iso, 80)}" srcset="${flagURL2x(n.iso, 80)} 2x" alt="${n.name}" />
       <span class="xi-card__name">${n.name}</span>
-    </div>
-  `).join('');
+      ${r ? `<span class="xi-card__rank">FIFA&nbsp;#${r}</span>` : ''}
+    </div>`;
+  }).join('');
 }
 
 // TACTICAL — the wheel spins POSITIONS, not nations.
