@@ -220,6 +220,8 @@ function spin() {
   state.isSpinning = true;
   $('spinBtn').disabled = true;
   refreshStickySpin();
+  if (_stickyInitiatedSpin) startStickySpinFlash();
+  _stickyInitiatedSpin = false;
   $('spinnerResult').classList.remove('show');
   buildSpinnerCards();
 
@@ -239,6 +241,7 @@ function spinTactical() {
   state.isSpinning = true;
   $('spinBtn').disabled = true;
   refreshStickySpin();
+  _stickyInitiatedSpin = false;
   $('spinnerResult').classList.remove('show');
   buildSpinnerCards();
 
@@ -267,6 +270,7 @@ function showResult(nation) {
     ? `FIFA WORLD RANK #${r}`
     : nation.group;
   $('spinnerResult').classList.add('show');
+  if (typeof landStickySpin === 'function') landStickySpin(nation);   // mirror the result in the sticky bar
 }
 
 function showResultTactical(slotIdx) {
@@ -478,6 +482,7 @@ function closePickModal() {
   hidePickResumeBar();
   clearSlotHighlights();
   $('spinBtn').disabled = false;
+  resetStickySpin();
   refreshStickySpin();
 }
 
@@ -757,6 +762,7 @@ function doPickSwap(p, target) {
   $('pickModal').hidden = true;
   clearSlotHighlights();
   $('spinBtn').disabled = false;
+  resetStickySpin();
   refreshStickySpin();
   state.currentNation = null;
   $('spinnerResult').classList.remove('show');
@@ -1135,10 +1141,44 @@ function refreshStickySpin() {
   if (inline && sBtn) sBtn.disabled = inline.disabled;
   if (sLbl) sLbl.textContent = state.mode === 'tactical' ? 'SPIN POSITION' : 'SPIN THE WORLD';
 }
+// While spinning from the sticky bar, flash the flag ribbon there (then the
+// landed nation) so you see the result without scrolling up to the wheel.
+let _stickyInitiatedSpin = false;
+let _stickyFlashTimer = null;
+function startStickySpinFlash() {
+  const view = $('stickySpinView'), sticky = $('stickySpin');
+  if (!view || !sticky || state.mode === 'tactical') return;
+  const pool = (typeof getNationPool === 'function') ? getNationPool(state.mode) : [];
+  if (!pool.length) return;
+  sticky.hidden = false;          // force the bar visible so the spin shows
+  view.hidden = false;
+  const flag = $('stickySpinFlag'), name = $('stickySpinName');
+  const flash = () => {
+    const n = pool[Math.floor(Math.random() * pool.length)];
+    if (flag && n.iso) { flag.src = flagURL(n.iso, 80); flag.style.visibility = 'visible'; }
+    if (name) name.textContent = n.name;
+  };
+  flash();
+  if (_stickyFlashTimer) clearInterval(_stickyFlashTimer);
+  _stickyFlashTimer = setInterval(flash, 70);
+}
+function landStickySpin(nation) {
+  if (_stickyFlashTimer) { clearInterval(_stickyFlashTimer); _stickyFlashTimer = null; }
+  const view = $('stickySpinView');
+  if (!view || view.hidden || !nation) return;
+  const flag = $('stickySpinFlag'), name = $('stickySpinName');
+  if (flag && nation.iso) flag.src = flagURL(nation.iso, 80);
+  if (name) name.textContent = nation.name;
+}
+function resetStickySpin() {
+  if (_stickyFlashTimer) { clearInterval(_stickyFlashTimer); _stickyFlashTimer = null; }
+  const view = $('stickySpinView');
+  if (view) view.hidden = true;
+}
 function initStickySpin() {
   const inline = $('spinBtn'), sBtn = $('stickySpinBtn');
   if (!inline || !sBtn) return;
-  sBtn.addEventListener('click', () => { if (!sBtn.disabled) spin(); });
+  sBtn.addEventListener('click', () => { if (!sBtn.disabled) { _stickyInitiatedSpin = true; spin(); } });
   if ('IntersectionObserver' in window) {
     new IntersectionObserver((entries) => {
       _spinBtnOnScreen = entries[0].isIntersecting;
@@ -1738,7 +1778,7 @@ function showCompleteModal() {
   // The share card + tweet MUST reuse this exact result, not recompute (the
   // display OVR is chem-inflated and would upgrade the finish, e.g. RUNNERS-UP
   // on the result screen but CHAMPIONS on the card).
-  state.lastResult = { ovr: final, chem, grade, finish };
+  state.lastResult = { ovr: final, chem, grade, finish, expert: !!state.blind };
 
   // Hero finish banner — the big, color-coded "how did I do?" answer up top.
   const finishHero = $('xiFinishHero');
@@ -2226,8 +2266,9 @@ async function shareXICardImage(opts = {}) {
   ctx.fillText('CHEM', 260, 1175);
 
   // Global leaderboard rank (replaces the always-11/11 SLOTS stat). Falls back
-  // to SLOTS if the leaderboard hasn't loaded yet.
-  const gRank = (typeof userGlobalRank === 'function') ? userGlobalRank(ovr) : null;
+  // to SLOTS if the leaderboard hasn't loaded yet. Expert drafts count 2×.
+  const userScore = (r && r.expert) ? ovr * 2 : ovr;
+  const gRank = (typeof userGlobalRank === 'function') ? userGlobalRank(userScore) : null;
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 64px Impact, "Arial Black", sans-serif';
   ctx.fillText(gRank ? `#${gRank}` : `${filled}/11`, 440, 1130);
@@ -2465,6 +2506,7 @@ async function submitLineupToLeaderboard() {
     mode: state.mode.toUpperCase().replace('U25', 'U-25'),
     lineup,
     finish: state.lastFinishTier || (typeof deriveFinishTier === 'function' ? deriveFinishTier(final, chem) : null),
+    expert: state.lastResult ? !!state.lastResult.expert : !!state.blind,   // blind draft → 2× score
     user: true,
   };
 

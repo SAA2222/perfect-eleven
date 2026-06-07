@@ -224,12 +224,19 @@ function finishBadge(entry) {
   return `<span class="lb-finish ${cls}">${label}</span>`;
 }
 
-// This squad's would-be position on the ALL-TIME, all-modes leaderboard — used
-// on the share card. Counts existing entries rated strictly higher; ties rank
-// above. Returns null if the board hasn't loaded yet (card falls back to SLOTS).
-function userGlobalRank(ovr) {
-  if (typeof ovr !== 'number' || !Array.isArray(_lbRows) || !_lbRows.length) return null;
-  const better = _lbRows.filter(e => (Number(e.ovr) || 0) > ovr).length;
+// Leaderboard score — an Expert (blind) draft is worth DOUBLE.
+function lbScore(e) { return (Number(e && e.ovr) || 0) * (e && e.expert ? 2 : 1); }
+function expertBadge(e) {
+  if (!e || !e.expert) return '';
+  return `<span class="lb-expert">🎭 EXPERT · ${lbScore(e)} PTS</span>`;
+}
+
+// This squad's would-be position on the ALL-TIME, all-modes leaderboard (ranked
+// by lbScore so Expert 2× counts) — used on the share card. Returns null if the
+// board hasn't loaded yet (card falls back to SLOTS).
+function userGlobalRank(score) {
+  if (typeof score !== 'number' || !Array.isArray(_lbRows) || !_lbRows.length) return null;
+  const better = _lbRows.filter(e => lbScore(e) > score).length;
   return better + 1;
 }
 
@@ -279,7 +286,7 @@ function paintLeaderboard() {
   }
   // Mode tabs (CLASSIC/TACTICAL/TOP50/LEGENDS) show TOP 10. The ALL tab shows
   // everyone — no cap.
-  const sorted = rows.sort((a, b) => b.ovr - a.ovr);
+  const sorted = rows.sort((a, b) => lbScore(b) - lbScore(a));   // Expert 2× counts
   const isAll = _lbFilter === 'ALL';
   const combined = (isAll ? sorted : sorted.slice(0, LB_TOP_N))
     .map((row, i) => ({ ...row, rank: i + 1 }));
@@ -311,7 +318,7 @@ function paintLeaderboard() {
       <div class="lb-row__body">
         <p class="lb-row__lineup">${row.lineup}</p>
         <span class="lb-row__by">${(typeof hasProfanity === 'function' && hasProfanity(row.by)) ? 'EARTH' : row.by}${row.user ? ' · <span style="color:var(--pitch);">YOU</span>' : ''}</span>
-        ${finishBadge(row)}
+        <span class="lb-badges">${finishBadge(row)}${expertBadge(row)}</span>
       </div>
       <div class="lb-row__ovr">
         <span class="lb-row__ovr-num">${row.ovr}</span>

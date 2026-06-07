@@ -718,7 +718,7 @@ NATIONS.push(
     { name:'Lautaro Martínez',pos:'FWD',role:'ST',  club:'INTER MILAN', rating:89 },
     { name:'Ángel Di María', pos:'FWD', role:'RW',  club:'BENFICA',     rating:84 },
     { name:'Enzo Fernández', pos:'MID', role:'CM',  club:'CHELSEA',     rating:86 },
-    { name:'Alexis Mac Allister',pos:'MID',role:'CM',club:'LIVERPOOL',  rating:86 },
+    { name:'Alexis Mac Allister',pos:'MID',role:'CM',club:'LIVERPOOL',  rating:87 },
     { name:'Rodrigo De Paul',pos:'MID', role:'CM',  club:'ATLÉTICO',    rating:84 },
     { name:'Leandro Paredes',pos:'MID', role:'CDM', club:'BOCA',        rating:81 },
     { name:'Cuti Romero',    pos:'DEF', role:'CB',  club:'TOTTENHAM',   rating:87 },
@@ -3226,7 +3226,7 @@ const OFFICIAL_SQUADS_2026 = {
     { name:'Rodrigo De Paul',        pos:'MID', role:'CM',  club:'INTER MIAMI',     rating:82 },
     { name:'Exequiel Palacios',      pos:'MID', role:'CM',  club:'LEVERKUSEN',      rating:81 },
     { name:'Enzo Fernández',         pos:'MID', role:'CM',  club:'CHELSEA',         rating:85 },
-    { name:'Alexis Mac Allister',    pos:'MID', role:'CM',  club:'LIVERPOOL',       rating:86 },
+    { name:'Alexis Mac Allister',    pos:'MID', role:'CM',  club:'LIVERPOOL',       rating:87 },
     { name:'Giovani Lo Celso',       pos:'MID', role:'CAM', club:'REAL BETIS',      rating:78 },
     { name:'Valentín Barco',         pos:'MID', role:'LB',  club:'STRASBOURG',      rating:76 },
     { name:'Lionel Messi',           pos:'FWD', role:'RW',  club:'INTER MIAMI',     rating:91 },
@@ -3631,6 +3631,7 @@ const RATING_OVERRIDES = {
   'João Félix':        93,
   'Cristiano Ronaldo': 92,
   'Lionel Messi':      91,
+  'Alexis Mac Allister': 87,   // pin (team-finish multiplier was pushing 86→90)
 };
 NATIONS.forEach(n => n.players.forEach(p => {
   if (RATING_OVERRIDES[p.name] !== undefined) p.rating = RATING_OVERRIDES[p.name];

@@ -172,6 +172,32 @@
   color: var(--bone);
 }
 .sticky-spin__btn { flex: 1; justify-content: center; }
+/* Spin view — overlays the bar with the flashing flag ribbon / landed nation */
+.sticky-spin__view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 14px;
+  background: rgba(8, 12, 9, 0.98);
+}
+.sticky-spin__view[hidden] { display: none; }
+.sticky-spin__viewflag {
+  width: 40px; height: 27px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.2);
+}
+.sticky-spin__viewname {
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  color: var(--bone);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 @media (min-width: 1025px) { .sticky-spin { display: none !important; } }
 
 /* ---------- GAME LAYOUT ---------- */
@@ -3083,12 +3109,15 @@ body { padding-bottom: 56px; }
 /* Tournament finish badge on each leaderboard row */
 .lb-finish {
   display: inline-block;
+  align-self: flex-start;   /* don't stretch to the row width in the flex column */
+  width: fit-content;
+  max-width: 100%;
   margin-top: 6px;
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.08em;
-  padding: 3px 9px;
+  padding: 3px 10px;
   border-radius: 999px;
   border: 1px solid currentColor;
 }
@@ -3096,6 +3125,22 @@ body { padding-bottom: 56px; }
 .lb-finish--runner { color: #d7dde3; background: rgba(215,221,227,0.10); }
 .lb-finish--podium { color: #e0a06a; background: rgba(205,127,50,0.12); }
 .lb-finish--ko     { color: var(--mute-2, #8a96a0); background: rgba(138,150,160,0.10); }
+/* Expert (blind draft) badge — score counts double */
+.lb-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.lb-badges .lb-finish, .lb-badges .lb-expert { margin-top: 0; }
+.lb-expert {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: #c08cff;
+  background: rgba(177,78,255,0.14);
+  border: 1px solid #c08cff;
+  white-space: nowrap;
+}
 .lb-row__ovr { text-align: right; }
 .lb-row__ovr-num {
   font-family: var(--font-display);
