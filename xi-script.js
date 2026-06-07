@@ -2739,7 +2739,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $('completeModal').hidden = true;
     resetRoster();
   });
-  $('copyBtn').addEventListener('click', copyToClipboard);
+  $('copyBtn')?.addEventListener('click', copyToClipboard);  // COPY LINEUP removed (redundant w/ SHARE AS IMAGE)
   const shareXBtn = document.getElementById('shareXBtn');
   if (shareXBtn) shareXBtn.addEventListener('click', shareToX);
   const shareImgBtn = document.getElementById('shareImgBtn');

@@ -2855,6 +2855,10 @@ body { padding-bottom: 56px; }
   background: var(--ink);
   color: var(--pitch);
 }
+/* SHARE AS IMAGE / POST ON X have no trailing arrow, so centre their labels
+   (base .xi-btn uses space-between for buttons that do carry an arrow). */
+#shareImgBtn, #shareXBtn { justify-content: center; }
+
 /* On the bright-green complete modal, give the ghost buttons a dark fill so the
    text is readable (dark-on-green outlines were too low-contrast). */
 .modal__panel--complete .xi-btn--ghost-ink {
