@@ -2488,8 +2488,9 @@ const PREMIUM_UNLOCK_KEY = 'pe_prem_v2';
 const PREMIUM_MODES = new Set(['top50', 'legends', 'tactical']);
 
 // Stripe Payment Link — LIVE checkout ($4.99, takes real payments).
-// The link's after-payment redirect is set to /?premium=success in Stripe so
-// handleStripeReturn() auto-unlocks all 3 premium modes when the buyer returns.
+// ⚠️ Set the link's after-payment redirect to:
+//   https://perfect-eleven.vercel.app/?session_id={CHECKOUT_SESSION_ID}
+// handlePremiumReturn() then verifies that session server-side before unlocking.
 const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/6oU3cv3Bo3Vi1TW41Xes001';
 
 function isPremium() {
@@ -2508,20 +2509,38 @@ function unlockPremium() {
 function openPaywall() { track('paywall_open', { mode: state.mode }); $('paywallModal').hidden = false; }
 function closePaywall() { $('paywallModal').hidden = true; }
 
-// Auto-unlock when Stripe redirects back after a successful payment. The old
-// success / success123 tokens were guessable and leaked, so they're retired.
-// ⚠️ Stripe's Payment Link "after payment" redirect MUST be updated to this new
-// token or real buyers won't unlock. NOTE: this still lives in public client
-// code — see the server-side verify fix for true security.
-const PREMIUM_TOKEN = 'pe_8Kq3Zx9Mw2';
-function handleStripeReturn() {
+// Unlock ONLY after the server confirms a real, paid, LIVE Stripe checkout.
+// The Payment Link's "after payment" redirect must be set to
+//   https://perfect-eleven.vercel.app/?session_id={CHECKOUT_SESSION_ID}
+// Stripe substitutes the real session id; /api/verify-premium checks it against
+// Stripe with the secret key. Guessed ids, test-mode checkouts, and shared links
+// all fail. (?comp=<code> hits the same endpoint for owner/comp access.)
+async function handlePremiumReturn() {
   const params = new URLSearchParams(window.location.search);
-  const token = params.get('premium');
-  if (token === PREMIUM_TOKEN) {
-    unlockPremium();
-    const cleanUrl = window.location.pathname + window.location.hash;
+  const sessionId = params.get('session_id');
+  const comp = params.get('comp');
+  if (!sessionId && !comp) return;
+
+  const cleanUrl = window.location.pathname + window.location.hash;
+  const q = sessionId ? `session_id=${encodeURIComponent(sessionId)}` : `comp=${encodeURIComponent(comp)}`;
+  try {
+    toast('VERIFYING PAYMENT…');
+    const r = await fetch(`/api/verify-premium?${q}`);
+    const data = await r.json().catch(() => ({}));
     window.history.replaceState({}, document.title, cleanUrl);
-    setTimeout(() => toast('🎉 PREMIUM UNLOCKED · TACTICAL + TOP 50 + LEGENDS LIVE'), 600);
+    if (data && data.premium) {
+      unlockPremium();
+      setTimeout(() => toast('🎉 PREMIUM UNLOCKED · TACTICAL + TOP 50 + LEGENDS LIVE'), 400);
+    } else {
+      const msg = data?.reason === 'redeemed'  ? 'THIS RECEIPT IS ALREADY IN USE'
+                : data?.reason === 'not_paid'   ? 'PAYMENT NOT COMPLETED'
+                : data?.reason === 'not_configured' ? 'CHECKOUT SETUP PENDING — TRY AGAIN SOON'
+                : 'COULDN’T VERIFY — EMAIL SUPPORT';
+      toast(msg);
+    }
+  } catch (e) {
+    window.history.replaceState({}, document.title, cleanUrl);
+    toast('VERIFY FAILED — CHECK CONNECTION');
   }
 }
 
@@ -2579,7 +2598,7 @@ function initModes() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  handleStripeReturn();   // auto-unlock if Stripe redirected back with ?premium=success
+  handlePremiumReturn();  // verify + unlock if Stripe redirected back with ?session_id=
   initSlots();
   initModes();
   buildSpinnerCards();
