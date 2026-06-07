@@ -1510,7 +1510,7 @@ function playerCanonicalStats(p) {
 
 function statFor(awardType, p) {
   if (!p) return '';
-  const s = playerCanonicalStats(p);
+  const s = p._stat || playerCanonicalStats(p);   // _stat = display-consistent (capped) stats
   switch (awardType) {
     case 'goldenBoot':  return `${s.G} GOALS`;
     case 'topAssister': return `${s.A} ASSISTS`;
@@ -1649,7 +1649,27 @@ function computeAwards() {
     ? outfield.reduce((m, p) => p.rating > m.rating ? p : m)
     : userPlayers[0];
 
-  return applyLiveAwards({ goldenBall, captain, goldenBoot, topAssister, goldenGlove, youngPlayer, bestDefender, bestMid });
+  const awards = { goldenBall, captain, goldenBoot, topAssister, goldenGlove, youngPlayer, bestDefender, bestMid };
+
+  // Display consistency: the headline stat winners must be the UNIQUE leaders on
+  // the cards shown — no other award card may tie or beat the Boot's goals, the
+  // Assister's assists, or the Glove's clean sheets. (Each card otherwise renders
+  // its own canonical stat, so e.g. two mids could both show 4 assists.)
+  const capTo = (statKey, leaderKey) => {
+    const leader = awards[leaderKey];
+    const lead = leader ? playerCanonicalStats(leader)[statKey] : Infinity;
+    Object.entries(awards).forEach(([k, p]) => {
+      if (!p || k === leaderKey) return;
+      const s = p._stat || { ...playerCanonicalStats(p) };
+      if (s[statKey] >= lead) s[statKey] = Math.max(0, lead - 1);
+      p._stat = s;
+    });
+  };
+  capTo('G',  'goldenBoot');     // Boot has the most goals
+  capTo('A',  'topAssister');    // Assister has the most assists
+  capTo('CS', 'goldenGlove');    // Glove has the most clean sheets
+
+  return applyLiveAwards(awards);
 }
 
 function awardCardHTML(emoji, label, awardKey, player) {
