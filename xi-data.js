@@ -1336,6 +1336,115 @@ const MISSED_NATIONS = [
 ];
 
 // ============================================================
+// TOP-50 EXTRA — nations in the FIFA top 50 that aren't World Cup
+// qualifiers and aren't in MISSED_NATIONS. Used to build the real
+// top-50 pool. Squads are current-era, editorial ratings.
+// ============================================================
+const TOP50_EXTRA = [
+  { code:'RUS', iso:'ru', name:'RUSSIA', flag:'🇷🇺', group:'TOP50', players:[
+    { name:'Matvei Safonov',  pos:'GK',  role:'GK',  club:'PSG',         rating:80 },
+    { name:'Georgi Dzhikiya', pos:'DEF', role:'CB',  club:'SPARTAK',     rating:75 },
+    { name:'Igor Diveev',     pos:'DEF', role:'CB',  club:'CSKA MOSCOW', rating:75 },
+    { name:'V. Karavaev',     pos:'DEF', role:'RB',  club:'ZENIT',       rating:73 },
+    { name:'Dmitri Chistyakov',pos:'DEF',role:'LB',  club:'ZENIT',       rating:73 },
+    { name:'Daler Kuzyaev',   pos:'MID', role:'CDM', club:'LE HAVRE',    rating:75 },
+    { name:'Aleksandr Golovin',pos:'MID',role:'CAM', club:'MONACO',      rating:83 },
+    { name:'Aleksei Miranchuk',pos:'MID',role:'CAM', club:'ATLANTA',     rating:79 },
+    { name:'Maksim Glushenkov',pos:'FWD',role:'RW',  club:'ZENIT',       rating:77 },
+    { name:'Aleksei Batrakov', pos:'MID',role:'CM',  club:'LOKOMOTIV',   rating:76 },
+    { name:'Aleksandr Sobolev',pos:'FWD',role:'ST',  club:'ZENIT',       rating:76 },
+    { name:'Fedor Chalov',    pos:'FWD', role:'ST',  club:'PAOK',        rating:75 },
+    { name:'Anton Miranchuk', pos:'FWD', role:'LW',  club:'SION',        rating:73 },
+  ]},
+  { code:'WAL', iso:'gb-wls', name:'WALES', flag:'🏴', group:'TOP50', players:[
+    { name:'Danny Ward',      pos:'GK',  role:'GK',  club:'LEICESTER',   rating:74 },
+    { name:'Ben Davies',      pos:'DEF', role:'CB',  club:'TOTTENHAM',   rating:80 },
+    { name:'Joe Rodon',       pos:'DEF', role:'CB',  club:'LEEDS',       rating:78 },
+    { name:'Connor Roberts',  pos:'DEF', role:'RB',  club:'BURNLEY',     rating:76 },
+    { name:'Neco Williams',   pos:'DEF', role:'LB',  club:'NOTTM FOREST',rating:78 },
+    { name:'Ethan Ampadu',    pos:'MID', role:'CDM', club:'LEEDS',       rating:79 },
+    { name:'Aaron Ramsey',    pos:'MID', role:'CM',  club:'CARDIFF',     rating:77 },
+    { name:'Harry Wilson',    pos:'MID', role:'CAM', club:'FULHAM',      rating:78 },
+    { name:'David Brooks',    pos:'MID', role:'CAM', club:'BOURNEMOUTH', rating:77 },
+    { name:'Brennan Johnson', pos:'FWD', role:'RW',  club:'TOTTENHAM',   rating:81 },
+    { name:'Daniel James',    pos:'FWD', role:'LW',  club:'LEEDS',       rating:78 },
+    { name:'Kieffer Moore',   pos:'FWD', role:'ST',  club:'WREXHAM',     rating:74 },
+    { name:'Nathan Broadhead',pos:'FWD', role:'ST',  club:'IPSWICH',     rating:73 },
+  ]},
+  { code:'HUN', iso:'hu', name:'HUNGARY', flag:'🇭🇺', group:'TOP50', players:[
+    { name:'Péter Gulácsi',   pos:'GK',  role:'GK',  club:'RB LEIPZIG',  rating:80 },
+    { name:'Willi Orbán',     pos:'DEF', role:'CB',  club:'RB LEIPZIG',  rating:81 },
+    { name:'Attila Szalai',   pos:'DEF', role:'CB',  club:'FREIBURG',    rating:76 },
+    { name:'Loïc Négo',       pos:'DEF', role:'RB',  club:'LE HAVRE',    rating:74 },
+    { name:'Milos Kerkez',    pos:'DEF', role:'LB',  club:'LIVERPOOL',   rating:82 },
+    { name:'András Schäfer',  pos:'MID', role:'CDM', club:'UNION BERLIN',rating:76 },
+    { name:'Dominik Szoboszlai',pos:'MID',role:'CAM',club:'LIVERPOOL',   rating:85 },
+    { name:'Callum Styles',   pos:'MID', role:'CM',  club:'SUNDERLAND',  rating:74 },
+    { name:'Dániel Gazdag',   pos:'MID', role:'CAM', club:'PHILADELPHIA',rating:74 },
+    { name:'Roland Sallai',   pos:'FWD', role:'RW',  club:'GALATASARAY', rating:78 },
+    { name:'Barnabás Varga',  pos:'FWD', role:'ST',  club:'FERENCVÁROS', rating:76 },
+    { name:'Martin Ádám',     pos:'FWD', role:'ST',  club:'ULSAN',       rating:73 },
+    { name:'Kevin Csoboth',   pos:'FWD', role:'LW',  club:'UDINESE',     rating:73 },
+  ]},
+  { code:'CMR', iso:'cm', name:'CAMEROON', flag:'🇨🇲', group:'TOP50', players:[
+    { name:'André Onana',     pos:'GK',  role:'GK',  club:'MAN UNITED',  rating:84 },
+    { name:'J-C. Castelletto',pos:'DEF', role:'CB',  club:'NANTES',      rating:76 },
+    { name:'Christopher Wooh',pos:'DEF', role:'CB',  club:'RENNES',      rating:77 },
+    { name:'Collins Fai',     pos:'DEF', role:'RB',  club:'AL-TAI',      rating:73 },
+    { name:'Nouhou Tolo',     pos:'DEF', role:'LB',  club:'SEATTLE',     rating:74 },
+    { name:'Frank Anguissa',  pos:'MID', role:'CDM', club:'NAPOLI',      rating:84 },
+    { name:'Carlos Baleba',   pos:'MID', role:'CDM', club:'BRIGHTON',    rating:81 },
+    { name:'Martin Hongla',   pos:'MID', role:'CM',  club:'ALMERÍA',     rating:73 },
+    { name:'Bryan Mbeumo',    pos:'FWD', role:'RW',  club:'MAN UNITED',  rating:84 },
+    { name:'Karl Toko Ekambi',pos:'FWD', role:'LW',  club:'ABHA',        rating:76 },
+    { name:'Vincent Aboubakar',pos:'FWD',role:'ST',  club:'HATAYSPOR',   rating:77 },
+    { name:'Christian Bassogog',pos:'FWD',role:'RW', club:'QINGDAO',     rating:72 },
+  ]},
+  { code:'GRE', iso:'gr', name:'GREECE', flag:'🇬🇷', group:'TOP50', players:[
+    { name:'O. Vlachodimos',  pos:'GK',  role:'GK',  club:'NEWCASTLE',   rating:78 },
+    { name:'K. Mavropanos',   pos:'DEF', role:'CB',  club:'WEST HAM',    rating:79 },
+    { name:'P. Hatzidiakos',  pos:'DEF', role:'CB',  club:'WOLFSBURG',   rating:75 },
+    { name:'G. Vagiannidis',  pos:'DEF', role:'RB',  club:'PANATHINAIKOS',rating:74 },
+    { name:'K. Tsimikas',     pos:'DEF', role:'LB',  club:'LIVERPOOL',   rating:79 },
+    { name:'Manolis Siopis',  pos:'MID', role:'CDM', club:'CARDIFF',     rating:74 },
+    { name:'A. Bakasetas',    pos:'MID', role:'CAM', club:'TRABZONSPOR', rating:77 },
+    { name:'Petros Mantalos', pos:'MID', role:'CM',  club:'AEK ATHENS',  rating:73 },
+    { name:'Christos Tzolis', pos:'FWD', role:'RW',  club:'BRUGGE',      rating:80 },
+    { name:'Giorgos Masouras',pos:'FWD', role:'LW',  club:'OLYMPIACOS',  rating:75 },
+    { name:'Vangelis Pavlidis',pos:'FWD',role:'ST',  club:'BENFICA',     rating:81 },
+    { name:'Fotis Ioannidis', pos:'FWD', role:'ST',  club:'PANATHINAIKOS',rating:78 },
+  ]},
+  { code:'SVK', iso:'sk', name:'SLOVAKIA', flag:'🇸🇰', group:'TOP50', players:[
+    { name:'Martin Dúbravka', pos:'GK',  role:'GK',  club:'NEWCASTLE',   rating:78 },
+    { name:'Milan Škriniar',  pos:'DEF', role:'CB',  club:'FENERBAHÇE',  rating:83 },
+    { name:'Dávid Hancko',    pos:'DEF', role:'CB',  club:'ATLÉTICO',    rating:81 },
+    { name:'Peter Pekarík',   pos:'DEF', role:'RB',  club:'HERTHA',      rating:71 },
+    { name:'Denis Vavro',     pos:'DEF', role:'LB',  club:'WOLFSBURG',   rating:75 },
+    { name:'Stanislav Lobotka',pos:'MID',role:'CDM', club:'NAPOLI',      rating:83 },
+    { name:'László Bénes',    pos:'MID', role:'CM',  club:'HAMBURG',     rating:74 },
+    { name:'Ondrej Duda',     pos:'MID', role:'CAM', club:'HELLAS VERONA',rating:76 },
+    { name:'Lukáš Haraslín',  pos:'FWD', role:'LW',  club:'SPARTA PRAGUE',rating:78 },
+    { name:'Ivan Schranz',    pos:'FWD', role:'RW',  club:'SLAVIA PRAGUE',rating:76 },
+    { name:'Róbert Boženík',  pos:'FWD', role:'ST',  club:'BOAVISTA',    rating:75 },
+    { name:'David Strelec',   pos:'FWD', role:'ST',  club:'SLOVAN',      rating:74 },
+  ]},
+  { code:'VEN', iso:'ve', name:'VENEZUELA', flag:'🇻🇪', group:'TOP50', players:[
+    { name:'Rafael Romo',     pos:'GK',  role:'GK',  club:'UNAM',        rating:74 },
+    { name:'Nahuel Ferraresi',pos:'DEF', role:'CB',  club:'SÃO PAULO',   rating:76 },
+    { name:'Yordan Osorio',   pos:'DEF', role:'CB',  club:'SPARTAK',     rating:75 },
+    { name:'Jon Aramburu',    pos:'DEF', role:'RB',  club:'REAL SOCIEDAD',rating:75 },
+    { name:'Miguel Navarro',  pos:'DEF', role:'LB',  club:'TALLERES',    rating:73 },
+    { name:'Yangel Herrera',  pos:'MID', role:'CDM', club:'GIRONA',      rating:80 },
+    { name:'Cristian Cásseres',pos:'MID',role:'CM',  club:'TOLUCA',      rating:75 },
+    { name:'Tomás Rincón',    pos:'MID', role:'CM',  club:'UCV',         rating:73 },
+    { name:'Yeferson Soteldo',pos:'FWD', role:'LW',  club:'GREMIO',      rating:78 },
+    { name:'Jefferson Savarino',pos:'FWD',role:'RW', club:'BOTAFOGO',    rating:78 },
+    { name:'Salomón Rondón',  pos:'FWD', role:'ST',  club:'PACHUCA',     rating:76 },
+    { name:'Jhonder Cádiz',   pos:'FWD', role:'ST',  club:'FAMALICÃO',   rating:74 },
+  ]},
+];
+
+// ============================================================
 // YOUTH BONUS — U-17/U-20/U-21 tournament standouts
 // Players who may not be senior callups yet but are the future
 // Merged into U-25 pool
@@ -3528,19 +3637,19 @@ NATIONS.forEach(n => n.players.forEach(p => {
 }));
 
 // ============================================================
-// FIFA WORLD RANKING — per nation (FIFA/Coca-Cola Men's Ranking,
-// 1 Apr 2026 update). Qualified figures are official; the 6 Top-50
-// "missed" nations use their nearest known positions.
+// FIFA WORLD RANKING — FIFA/Coca-Cola Men's Ranking, 1 Apr 2026 update.
+// Positions 1-50 are official; nations outside the top 50 use their nearest
+// known position (only used for the rank badge, never the Top-50 pool).
 // ============================================================
 const FIFA_RANK = {
+  // Official top 50
   FRA:1, ESP:2, ARG:3, ENG:4, POR:5, BRA:6, NED:7, MAR:8, BEL:9, GER:10,
-  CRO:11, COL:13, SEN:14, MEX:15, USA:16, URU:17, JPN:18, SUI:19, IRN:21,
-  AUT:23, ECU:24, KOR:25, AUS:26, EGY:29, CAN:30, CIV:33, QAT:35, ALG:36,
-  SWE:39, TUN:40, CZE:41, TUR:42, NOR:44, SCO:47, COD:51, BIH:52, PAN:53,
-  KSA:57, RSA:60, IRQ:61, UZB:62, PAR:64, GHA:65, JOR:68, CPV:70, CUW:81,
-  HAI:83, NZL:95,
-  // Top-50 missed nations
-  ITA:12, DEN:20, UKR:27, SRB:32, POL:34, NGA:43,
+  CRO:11, ITA:12, COL:13, SEN:14, MEX:15, USA:16, URU:17, JPN:18, SUI:19, DEN:20,
+  IRN:21, TUR:22, ECU:23, AUT:24, KOR:25, NGA:26, AUS:27, ALG:28, EGY:29, CAN:30,
+  NOR:31, UKR:32, PAN:33, CIV:34, POL:35, RUS:36, WAL:37, SWE:38, SRB:39, PAR:40,
+  CZE:41, HUN:42, SCO:43, TUN:44, CMR:45, COD:46, GRE:47, SVK:48, VEN:49, UZB:50,
+  // Outside the top 50 (badge only — excluded from the Top-50 pool)
+  QAT:55, KSA:58, IRQ:59, RSA:60, JOR:68, CPV:70, GHA:73, BIH:74, CUW:81, HAI:83, NZL:95,
 };
 function fifaRank(code) { return FIFA_RANK[code] || null; }
 
@@ -3569,8 +3678,14 @@ function getNationPool(mode) {
     return Object.values(byCode).filter(n => n.players.length > 0);
   }
   if (mode === 'top50') {
-    // 48 qualifiers + 6 marquee missed nations = 54 elite footballing nations
-    return [...NATIONS, ...MISSED_NATIONS];
+    // The ACTUAL FIFA top 50 — every nation ranked ≤ 50, sorted by rank.
+    // Qualifiers ranked > 50 drop out; the 6 missed nations + 7 non-qualifier
+    // top-50 sides (Russia, Wales, Hungary, Cameroon, Greece, Slovakia,
+    // Venezuela) come in.
+    const all = [...NATIONS, ...MISSED_NATIONS, ...TOP50_EXTRA];
+    return all
+      .filter(n => (FIFA_RANK[n.code] || 999) <= 50)
+      .sort((a, b) => (FIFA_RANK[a.code] || 999) - (FIFA_RANK[b.code] || 999));
   }
   return NATIONS;
 }
