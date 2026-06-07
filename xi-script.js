@@ -2006,9 +2006,9 @@ function renderRosters(query) {
 // ============================================================
 const XI_CARD_SLOT_POS = {
   // % of card width / height — matches pitch layout in index.html
-  0:  { x:0.18, y:0.27, label:'LW'  },   // LW
-  1:  { x:0.50, y:0.23, label:'ST'  },   // ST
-  2:  { x:0.82, y:0.27, label:'RW'  },   // RW
+  0:  { x:0.18, y:0.20, label:'LW'  },   // LW  (pushed forward for space above the mid)
+  1:  { x:0.50, y:0.15, label:'ST'  },   // ST
+  2:  { x:0.82, y:0.20, label:'RW'  },   // RW
   3:  { x:0.30, y:0.40, label:'LCM' },   // LCM
   4:  { x:0.70, y:0.40, label:'RCM' },   // RCM
   5:  { x:0.50, y:0.52, label:'CDM' },   // CDM
@@ -2198,6 +2198,15 @@ async function shareXICardImage(opts = {}) {
     ctx.fillStyle = '#00c853';
     ctx.font = 'bold 28px Impact, "Arial Black", sans-serif';
     ctx.fillText(String(p.rating), cx, y + 86);
+
+    // Chemistry dots (top-right) — green = same-league link, like the pitch
+    const pchem = (typeof chemistryForPlayer === 'function') ? chemistryForPlayer(i) : 0;
+    for (let d = 0; d < 3; d++) {
+      ctx.beginPath();
+      ctx.arc(x + CARD_W - 34 + d * 12, y + 14, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = d < pchem ? '#00c853' : 'rgba(255,255,255,0.16)';
+      ctx.fill();
+    }
   }
 
   // === Stat strip (y: 1100–1180) — OVR / CHEM / SLOTS / GRADE ===
@@ -2259,6 +2268,8 @@ async function shareXICardImage(opts = {}) {
     THIRD:      '#cd7f32',  // bronze
   };
   const iconColor = tierColors[finish.tier];
+  // 2nd/3rd use the actual medal emoji; 1st keeps the drawn gold trophy.
+  const tierEmoji = { RUNNERS_UP: '🥈', THIRD: '🥉' };
 
   if (iconColor) {
     // Measure the label so we can pin the icon to its left edge
@@ -2269,8 +2280,16 @@ async function shareXICardImage(opts = {}) {
     const groupW = ICON_SIZE + GAP + labelW;
     const iconCx = W/2 - groupW/2 + ICON_SIZE/2;
     const iconCy = FY + 110;
-    drawTrophyIcon(ctx, iconCx, iconCy, ICON_SIZE, iconColor);
+    const emoji = tierEmoji[finish.tier];
+    if (emoji) {
+      ctx.font = `${ICON_SIZE}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(emoji, iconCx, iconCy + 2);
+    } else {
+      drawTrophyIcon(ctx, iconCx, iconCy, ICON_SIZE, iconColor);
+    }
     ctx.fillStyle = '#fff';
+    ctx.font = 'bold 64px Impact, "Arial Black", sans-serif';
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillText(finishLabel, iconCx + ICON_SIZE/2 + GAP, iconCy);
   } else {
