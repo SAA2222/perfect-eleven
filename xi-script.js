@@ -241,10 +241,20 @@ function spinTactical() {
   });
 }
 
+// FIFA world ranking — shown only in CLASSIC / TOP 50 (current nations).
+function fifaRankBadge(code) {
+  if (state.mode !== 'classic' && state.mode !== 'top50') return '';
+  const r = (typeof fifaRank === 'function') ? fifaRank(code) : null;
+  return r ? ` <span class="fifa-rank">FIFA&nbsp;#${r}</span>` : '';
+}
+
 function showResult(nation) {
   $('resultFlag').innerHTML = `<img src="${flagURL(nation.iso, 160)}" srcset="${flagURL2x(nation.iso, 160)} 2x" alt="${nation.name}" class="result-flag-img" />`;
   $('resultName').textContent = nation.name;
-  $('resultGroup').textContent = nation.group;
+  const r = (typeof fifaRank === 'function') ? fifaRank(nation.code) : null;
+  $('resultGroup').textContent = ((state.mode === 'classic' || state.mode === 'top50') && r)
+    ? `FIFA WORLD RANK #${r}`
+    : nation.group;
   $('spinnerResult').classList.add('show');
 }
 
@@ -400,7 +410,7 @@ function openPickModal() {
   // figure which positions/roles are still open
   highlightOpenSlots(n.players);
 
-  $('modalTitle').innerHTML = `<img src="${flagURL(n.iso, 80)}" srcset="${flagURL2x(n.iso, 80)} 2x" alt="${n.name}" class="modal-title-flag" /> ${n.name}`;
+  $('modalTitle').innerHTML = `<img src="${flagURL(n.iso, 80)}" srcset="${flagURL2x(n.iso, 80)} 2x" alt="${n.name}" class="modal-title-flag" /> ${n.name}${fifaRankBadge(n.code)}`;
   $('modalLede').textContent = `Pick one player from ${n.name}. Players in already-filled positions are locked.`;
 
   const html = n.players.map((p, idx) => {

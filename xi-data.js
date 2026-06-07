@@ -3527,6 +3527,23 @@ NATIONS.forEach(n => n.players.forEach(p => {
   if (RATING_OVERRIDES[p.name] !== undefined) p.rating = RATING_OVERRIDES[p.name];
 }));
 
+// ============================================================
+// FIFA WORLD RANKING — per nation (FIFA/Coca-Cola Men's Ranking,
+// 1 Apr 2026 update). Qualified figures are official; the 6 Top-50
+// "missed" nations use their nearest known positions.
+// ============================================================
+const FIFA_RANK = {
+  FRA:1, ESP:2, ARG:3, ENG:4, POR:5, BRA:6, NED:7, MAR:8, BEL:9, GER:10,
+  CRO:11, COL:13, SEN:14, MEX:15, USA:16, URU:17, JPN:18, SUI:19, IRN:21,
+  AUT:23, ECU:24, KOR:25, AUS:26, EGY:29, CAN:30, CIV:33, QAT:35, ALG:36,
+  SWE:39, TUN:40, CZE:41, TUR:42, NOR:44, SCO:47, COD:51, BIH:52, PAN:53,
+  KSA:57, RSA:60, IRQ:61, UZB:62, PAR:64, GHA:65, JOR:68, CPV:70, CUW:81,
+  HAI:83, NZL:95,
+  // Top-50 missed nations
+  ITA:12, DEN:20, UKR:27, SRB:32, POL:34, NGA:43,
+};
+function fifaRank(code) { return FIFA_RANK[code] || null; }
+
 function getNationPool(mode) {
   if (mode === 'legends') return LEGENDS;
   if (mode === 'u25') {
