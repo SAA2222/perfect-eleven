@@ -1291,7 +1291,7 @@ function fireConfetti(durationMs = 6000) {
 //   - 92 OVR + 33 chem = 108.5  (pure chemistry)
 //   - 98 OVR + 20 chem = 108.0  (peak talent + decent chem)
 const BRACKET = [
-  { tier:'CHAMPIONS',    label:'🏆 WORLD CUP CHAMPIONS',  threshold:108, opp:'BRAZIL',      oppRating:90, result:'WIN',  stage:'WON FINAL' },
+  { tier:'CHAMPIONS',    label:'🏆 WORLD CUP WINNER',      threshold:108, opp:'BRAZIL',      oppRating:90, result:'WIN',  stage:'WON FINAL' },
   { tier:'RUNNERS_UP',   label:'🥈 RUNNERS-UP',            threshold:103, opp:'FRANCE',      oppRating:93, result:'LOSS', stage:'LOST FINAL' },
   { tier:'THIRD',        label:'🥉 THIRD PLACE',            threshold:99,  opp:'NETHERLANDS', oppRating:87, result:'WIN',  stage:'WON 3RD-PLACE' },
   { tier:'FOURTH',       label:'4TH PLACE',                 threshold:95,  opp:'GERMANY',     oppRating:87, result:'LOSS', stage:'LOST 3RD-PLACE' },
@@ -1732,10 +1732,9 @@ function showCompleteModal() {
   const kicker = document.getElementById('completeKicker');
   if (kicker) kicker.textContent = wasBlind ? '🎭 THE BIG REVEAL — YOU DRAFTED BLIND' : 'YOUR ELEVEN IS COMPLETE';
 
-  $('finalOvr').textContent = final;
   const oopNote = oop > 0 ? ` ${oop} OOP (−${oop} OVR).` : '';
   const injuryNote = injuryLoss > 0 ? ` 🚑 ${injuries.length} injuries (−${injuryLoss} OVR).` : '';
-  $('finalBlurb').textContent = ` ${chem} CHEM.${oopNote}${injuryNote} ${grade.blurb}`;
+  $('finalBlurb').textContent = `${grade.blurb}${oopNote}${injuryNote}`;
 
   // Render injury report card (if any)
   const injuryContainer = document.getElementById('xiInjuries');
@@ -1772,18 +1771,20 @@ function showCompleteModal() {
       ? `<div class="xi-awards__caption xi-awards__caption--live">● LIVE · ${phase} · UPDATED ${updatedAt}</div>`
       : `<div class="xi-awards__caption">SIMULATED · TOURNAMENT KICKS OFF JUNE 11</div>`;
     awardsContainer.innerHTML = `
-      <h3 class="xi-awards__title">TOURNAMENT AWARDS</h3>
-      ${caption}
-      <div class="xi-awards__grid">
-        ${awardCardHTML('🏆', 'GOLDEN BALL',     'goldenBall',   awards.goldenBall)}
-        ${awardCardHTML('Ⓒ',  'CAPTAIN (XI)',    'captain',      awards.captain)}
-        ${awardCardHTML('⚽', 'GOLDEN BOOT',     'goldenBoot',   awards.goldenBoot)}
-        ${awardCardHTML('🅰️', 'TOP ASSISTER',    'topAssister',  awards.topAssister)}
-        ${awardCardHTML('🧤', 'GOLDEN GLOVE',    'goldenGlove',  awards.goldenGlove)}
-        ${awardCardHTML('🌟', 'YOUNG PLAYER',    'youngPlayer',  awards.youngPlayer)}
-        ${awardCardHTML('🛡️', 'BEST DEFENDER',  'bestDefender', awards.bestDefender)}
-        ${awardCardHTML('⚙️', 'BEST MIDFIELDER','bestMid',      awards.bestMid)}
-      </div>
+      <details class="xi-awards-details">
+        <summary class="xi-awards__summary">🏅 TOURNAMENT AWARDS <span class="xi-awards__chev">▾</span></summary>
+        ${caption}
+        <div class="xi-awards__grid">
+          ${awardCardHTML('🏆', 'GOLDEN BALL',     'goldenBall',   awards.goldenBall)}
+          ${awardCardHTML('Ⓒ',  'CAPTAIN (XI)',    'captain',      awards.captain)}
+          ${awardCardHTML('⚽', 'GOLDEN BOOT',     'goldenBoot',   awards.goldenBoot)}
+          ${awardCardHTML('🅰️', 'TOP ASSISTER',    'topAssister',  awards.topAssister)}
+          ${awardCardHTML('🧤', 'GOLDEN GLOVE',    'goldenGlove',  awards.goldenGlove)}
+          ${awardCardHTML('🌟', 'YOUNG PLAYER',    'youngPlayer',  awards.youngPlayer)}
+          ${awardCardHTML('🛡️', 'BEST DEFENDER',  'bestDefender', awards.bestDefender)}
+          ${awardCardHTML('⚙️', 'BEST MIDFIELDER','bestMid',      awards.bestMid)}
+        </div>
+      </details>
     `;
   }
 
@@ -1862,7 +1863,7 @@ function showCompleteModal() {
   const sp = $('sharePrompt'); if (sp) sp.hidden = true;  // reset share prompt for a fresh result
   $('completeModal').hidden = false;
   // 🎉 fire confetti when you win the World Cup
-  if (finish.label && finish.label.includes('CHAMPIONS')) {
+  if (finish.tier === 'CHAMPIONS') {
     setTimeout(fireConfetti, 250);
   }
 }

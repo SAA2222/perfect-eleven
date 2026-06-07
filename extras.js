@@ -189,7 +189,7 @@ function modeDisplay(m) {
 
 // Tournament finish → compact leaderboard badge.
 const FINISH_SHORT = {
-  CHAMPIONS:    '🏆 CHAMPIONS',
+  CHAMPIONS:    '🏆 WORLD CUP WINNER',
   RUNNERS_UP:   '🥈 RUNNERS-UP',
   THIRD:        '🥉 THIRD',
   FOURTH:       '4TH PLACE',

@@ -1692,9 +1692,11 @@ body.swap-mode .xi-pitch::after {
 .xi-finish-hero {
   background: #0c1410;
   border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px;
-  padding: 14px 18px;
-  margin: 10px 0 4px;
+  border-radius: 14px;
+  padding: 12px 24px;
+  margin: 10px auto 4px;     /* centred, hugs its content (not full width) */
+  width: fit-content;
+  max-width: 100%;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -1885,6 +1887,29 @@ body.swap-mode .xi-pitch::after {
   color: var(--gold);
   border-bottom: 1px solid var(--gold);
   padding-bottom: 6px;
+  margin-bottom: 14px;
+}
+/* Collapsible awards — tap to open (declutters the complete screen) */
+.xi-awards__summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--gold);
+}
+.xi-awards__summary::-webkit-details-marker { display: none; }
+.xi-awards__summary::marker { content: ''; }
+.xi-awards__chev { transition: transform 0.2s ease; font-size: 13px; }
+.xi-awards-details[open] .xi-awards__chev { transform: rotate(180deg); }
+.xi-awards-details[open] .xi-awards__summary {
+  border-bottom: 1px solid var(--gold);
+  padding-bottom: 8px;
   margin-bottom: 14px;
 }
 .xi-awards__grid {
