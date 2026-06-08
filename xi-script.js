@@ -241,6 +241,7 @@ function spinTactical() {
   state.isSpinning = true;
   $('spinBtn').disabled = true;
   refreshStickySpin();
+  if (_stickyInitiatedSpin) startStickySpinFlash();
   _stickyInitiatedSpin = false;
   $('spinnerResult').classList.remove('show');
   buildSpinnerCards();
@@ -279,6 +280,7 @@ function showResultTactical(slotIdx) {
   $('resultName').textContent = POS_FULL[role] || role;
   $('resultGroup').textContent = 'PICK THE BEST ONE';
   $('spinnerResult').classList.add('show');
+  if (typeof landStickySpin === 'function') landStickySpin({ iso: null, name: POS_FULL[role] || role });
 }
 
 // ============================================================
@@ -1145,34 +1147,47 @@ function refreshStickySpin() {
   if (inline && sBtn) sBtn.disabled = inline.disabled;
   if (sLbl) sLbl.textContent = state.mode === 'tactical' ? 'SPIN POSITION' : 'SPIN THE WORLD';
 }
-// While spinning from the sticky bar, flash the flag ribbon there (then the
-// landed nation) so you see the result without scrolling up to the wheel.
+// While spinning from the sticky bar, flash the ribbon there (flags in nation
+// modes, POSITIONS in Tactical) then the landed result — so you see what you got
+// without scrolling up to the wheel.
 let _stickyInitiatedSpin = false;
 let _stickyFlashTimer = null;
+function setStickyView(iso, name) {
+  const flag = $('stickySpinFlag'), nm = $('stickySpinName');
+  if (flag) {
+    if (iso) { flag.src = flagURL(iso, 80); flag.style.display = ''; }
+    else { flag.style.display = 'none'; }   // Tactical positions have no flag
+  }
+  if (nm) nm.textContent = name || '';
+}
+// Items to flash for the current mode: {iso, name}. Tactical → open positions.
+function stickyFlashItems() {
+  if (state.mode === 'tactical') {
+    return Object.keys(SLOT_DEF)
+      .filter(i => !state.roster[i])
+      .map(i => ({ iso: null, name: (POS_FULL[SLOT_DEF[i].role] || SLOT_DEF[i].role) }));
+  }
+  const pool = (typeof getNationPool === 'function') ? getNationPool(state.mode) : [];
+  return pool.map(n => ({ iso: n.iso, name: n.name }));
+}
 function startStickySpinFlash() {
   const view = $('stickySpinView'), sticky = $('stickySpin');
-  if (!view || !sticky || state.mode === 'tactical') return;
-  const pool = (typeof getNationPool === 'function') ? getNationPool(state.mode) : [];
-  if (!pool.length) return;
+  if (!view || !sticky) return;
+  const items = stickyFlashItems();
+  if (!items.length) return;
   sticky.hidden = false;          // force the bar visible so the spin shows
   view.hidden = false;
-  const flag = $('stickySpinFlag'), name = $('stickySpinName');
-  const flash = () => {
-    const n = pool[Math.floor(Math.random() * pool.length)];
-    if (flag && n.iso) { flag.src = flagURL(n.iso, 80); flag.style.visibility = 'visible'; }
-    if (name) name.textContent = n.name;
-  };
+  const flash = () => { const it = items[Math.floor(Math.random() * items.length)]; setStickyView(it.iso, it.name); };
   flash();
   if (_stickyFlashTimer) clearInterval(_stickyFlashTimer);
   _stickyFlashTimer = setInterval(flash, 70);
 }
-function landStickySpin(nation) {
+// Land on the result — pass a nation ({iso,name}) or a position ({iso:null,name}).
+function landStickySpin(item) {
   if (_stickyFlashTimer) { clearInterval(_stickyFlashTimer); _stickyFlashTimer = null; }
   const view = $('stickySpinView');
-  if (!view || view.hidden || !nation) return;
-  const flag = $('stickySpinFlag'), name = $('stickySpinName');
-  if (flag && nation.iso) flag.src = flagURL(nation.iso, 80);
-  if (name) name.textContent = nation.name;
+  if (!view || view.hidden || !item) return;
+  setStickyView(item.iso, item.name);
 }
 function resetStickySpin() {
   if (_stickyFlashTimer) { clearInterval(_stickyFlashTimer); _stickyFlashTimer = null; }
