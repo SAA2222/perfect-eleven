@@ -1133,6 +1133,8 @@ function countOOP() {
 // so you can spin again from your pitch without scrolling back up.
 let _spinBtnOnScreen = true;
 let _pitchInView = true;
+let _sponsorEl = null;   // cached so the scroll path doesn't re-query the DOM
+let _sponsorH = 0;       // cached docked height (re-measured on resize only)
 function refreshStickySpin() {
   const sticky = $('stickySpin');
   if (!sticky) return;
@@ -1144,14 +1146,16 @@ function refreshStickySpin() {
   // mid-spin regardless, so scrolling doesn't hide the flags.
   const show = showingSpin || (!_spinBtnOnScreen && _pitchInView && filled < 11);
   sticky.hidden = !show;
-  // Dock the sponsor ticker directly BENEATH the spin bar (stacked) while it's
-  // showing — sponsors on the very bottom, spin/flags above. Otherwise the
-  // sponsor ticker sits statically at the page bottom (so it never covers the
-  // leaderboard).
-  const sponsor = document.querySelector('.sponsor-ticker');
-  if (sponsor) {
-    sponsor.classList.toggle('sponsor-ticker--docked', show);
-    sticky.style.bottom = show ? `${Math.round(sponsor.getBoundingClientRect().height)}px` : '0px';
+  // Dock the sponsor ticker BENEATH the spin bar (stacked) while the bar shows —
+  // MOBILE ONLY (≤1024px). On desktop the bar is display:none, so the sponsor
+  // must NOT dock there (it would float alone over content). Height is cached so
+  // the scroll path never reads layout.
+  if (!_sponsorEl) _sponsorEl = document.querySelector('.sponsor-ticker');
+  if (_sponsorEl) {
+    const dock = show && window.innerWidth <= 1024;
+    _sponsorEl.classList.toggle('sponsor-ticker--docked', dock);
+    if (dock && !_sponsorH) _sponsorH = Math.round(_sponsorEl.getBoundingClientRect().height) || 44;
+    sticky.style.bottom = dock ? `${_sponsorH}px` : '0px';
   }
   // Mirror the main button's label + disabled state
   $('stickyRound') && ($('stickyRound').textContent = filled);
@@ -1248,6 +1252,8 @@ function initStickySpin() {
       }, { rootMargin: '0px 0px -40px 0px' }).observe(pitch);
     }
   }
+  // Re-measure the cached sponsor height after a resize / orientation change.
+  window.addEventListener('resize', () => { _sponsorH = 0; refreshStickySpin(); });
   refreshStickySpin();
 }
 
