@@ -166,16 +166,110 @@ const NATION_TIER = {
   HAI:1, CUW:1, QAT:1, BIH:1, JOR:1, IRQ:1, UZB:1, PAN:1, RSA:1, NZL:1, COD:1, SAU:1, CPV:1,
 };
 
+// ----- Daily Challenge: a seeded RNG so EVERYONE gets the same 11 spins today --
+// mulberry32 — tiny deterministic PRNG. Seeded from the date string.
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const DAILY_EPOCH = Date.UTC(2026, 5, 8);   // 8 Jun 2026 = Daily #1
+function dailyDayString(d) {
+  d = d || new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function dailyNumber() {
+  const d = new Date();
+  const today = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  return Math.max(1, Math.floor((today - DAILY_EPOCH) / 86400000) + 1);
+}
+function fnv1a(s) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+let _spinRng = Math.random;   // swapped to the seeded RNG while in Daily mode
+
 function weightedPick(pool) {
   // Build cumulative weight array
   const weights = pool.map(n => NATION_TIER[n.code] || 2);
   const total = weights.reduce((a, b) => a + b, 0);
-  let r = Math.random() * total;
+  let r = _spinRng() * total;
   for (let i = 0; i < pool.length; i++) {
     r -= weights[i];
     if (r <= 0) return pool[i];
   }
   return pool[pool.length - 1];
+}
+
+// ----- Daily challenge state + helpers -----
+function loadDailyState() {
+  try { return JSON.parse(localStorage.getItem('pe_daily') || '{}') || {}; }
+  catch (e) { return {}; }
+}
+function saveDailyState(s) { try { localStorage.setItem('pe_daily', JSON.stringify(s)); } catch (e) {} }
+function dailyYesterdayString() { const d = new Date(); d.setDate(d.getDate() - 1); return dailyDayString(d); }
+function dailyPlayedToday() { return loadDailyState().lastDay === dailyDayString(); }
+function dailyStreak() { return loadDailyState().streak || 0; }
+
+// Begin today's Daily — Classic pool, but a date-seeded spin sequence (same 11
+// for everyone) and NO skips/swaps so runs are directly comparable.
+function startDailyChallenge() {
+  state.mode = 'classic';
+  state.daily = true;
+  _spinRng = mulberry32(fnv1a('PE-DAILY-' + dailyDayString()));
+  document.querySelectorAll('.xi-mode').forEach(b => b.classList.toggle('xi-mode--active', b.dataset.mode === 'classic'));
+  resetRoster();
+  state.skipsLeft = 0; state.swapsLeft = 0;   // identical challenge for all
+  updateResources();
+  buildSpinnerCards();
+  updateSpinButtonLabel();
+  document.body.classList.add('is-daily');
+  toast(`⭐ DAILY #${dailyNumber()} — same 11 for everyone`);
+  document.getElementById('spinner')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function exitDaily() {   // leaving Daily for a normal mode
+  state.daily = false;
+  _spinRng = Math.random;
+  document.body.classList.remove('is-daily');
+}
+// Update + return the streak after completing today's Daily.
+function recordDailyCompletion(ovr) {
+  const today = dailyDayString();
+  const st = loadDailyState();
+  if (st.lastDay === today) return st.streak || 1;        // already counted today
+  st.streak = (st.lastDay === dailyYesterdayString()) ? (st.streak || 0) + 1 : 1;
+  st.lastDay = today;
+  st.bestOvr = Math.max(st.bestOvr || 0, ovr || 0);
+  saveDailyState(st);
+  return st.streak;
+}
+// 2-letter ISO → flag emoji (renders as the OS flag on the share text).
+function flagEmoji(iso) {
+  if (!iso || iso.length !== 2) return '⚽';
+  const A = 0x1F1E6;
+  return String.fromCodePoint(A + iso.toLowerCase().charCodeAt(0) - 97, A + iso.toLowerCase().charCodeAt(1) - 97);
+}
+function dailyShareText(ovr, finishLabel, streak) {
+  const order = [10, 6, 7, 8, 9, 3, 4, 5, 0, 1, 2];
+  const flags = order.map(i => flagEmoji((state.roster[i] || {}).iso)).join('');
+  const fin = (finishLabel || '').replace(/[^\w\s-]/g, '').trim();
+  return `Perfect Eleven · Daily #${dailyNumber()}\n${ovr} OVR${fin ? ' · ' + fin : ''}${streak > 1 ? ' · 🔥 ' + streak + ' day streak' : ''}\n${flags}\nperfect-eleven.vercel.app`;
+}
+// Refresh the Daily CTA copy (number, streak, played-today state).
+function updateDailyCta() {
+  const title = $('dailyTitle'), sub = $('dailySub'), go = $('dailyGo');
+  if (!sub) return;
+  const streak = dailyStreak();
+  if (title) title.textContent = `DAILY #${dailyNumber()}`;
+  sub.textContent = streak > 0
+    ? `🔥 ${streak}-day streak · same 11 for everyone`
+    : 'Same 11 spins for everyone · no skips';
+  if (go) go.textContent = dailyPlayedToday() ? 'REPLAY →' : 'PLAY →';
 }
 
 // Spin button reads "SPIN POSITION" in Tactical, "SPIN THE WORLD" otherwise.
@@ -1847,6 +1941,13 @@ function showCompleteModal() {
   // display OVR is chem-inflated and would upgrade the finish, e.g. RUNNERS-UP
   // on the result screen but CHAMPIONS on the card).
   state.lastResult = { ovr: final, chem, grade, finish, expert: !!state.blind };
+  // Daily challenge — bump the streak (once/day) and remember it for the share.
+  let dailyStreakVal = 0;
+  if (state.daily) {
+    dailyStreakVal = recordDailyCompletion(final);
+    state.lastResult.daily = true;
+    state.lastResult.streak = dailyStreakVal;
+  }
 
   // Hero finish banner — the big, color-coded "how did I do?" answer up top.
   const finishHero = $('xiFinishHero');
@@ -1862,7 +1963,9 @@ function showCompleteModal() {
   }
 
   const kicker = document.getElementById('completeKicker');
-  if (kicker) kicker.textContent = wasBlind ? '🎭 THE BIG REVEAL — YOU DRAFTED BLIND' : 'YOUR ELEVEN IS COMPLETE';
+  if (kicker) kicker.textContent = state.daily
+    ? `⭐ DAILY #${dailyNumber()} · 🔥 ${dailyStreakVal}-DAY STREAK`
+    : (wasBlind ? '🎭 THE BIG REVEAL — YOU DRAFTED BLIND' : 'YOUR ELEVEN IS COMPLETE');
 
   const oopNote = oop > 0 ? ` ${oop} OOP (−${oop} OVR).` : '';
   const injuryNote = injuryLoss > 0 ? ` 🚑 ${injuries.length} injuries (−${injuryLoss} OVR).` : '';
@@ -2039,11 +2142,12 @@ async function shareToX() {
   const tier = finish && finish.tier;
   const finishLabel = ((finish && finish.label) || '').replace(/[^\w\s-]/g, '').trim();
   let line;
-  if (tier === 'CHAMPIONS')       line = `I built a WORLD CUP-WINNING XI — ${ovr} OVR 🏆`;
+  if (r && r.daily)               line = dailyShareText(ovr, finishLabel, r.streak || 0);
+  else if (tier === 'CHAMPIONS')  line = `I built a WORLD CUP-WINNING XI — ${ovr} OVR 🏆`;
   else if (tier === 'RUNNERS_UP') line = `My World Cup XI reached the FINAL — ${ovr} OVR 🥈`;
   else if (tier === 'THIRD')      line = `My World Cup XI took 3RD — ${ovr} OVR 🥉`;
   else line = `My 2026 World Cup XI: ${ovr} OVR${finishLabel ? ' · ' + finishLabel : ''}`;
-  const expertTag = (state.blind && state.revealed) ? ' (drafted BLIND 👁️)' : '';
+  const expertTag = (!(r && r.daily) && state.blind && state.revealed) ? ' (drafted BLIND 👁️)' : '';
   // Caption carries the @mention + hashtags inline so they survive BOTH paths
   // (the native share sheet doesn't support via/hashtags params).
   const caption = `${line}${expertTag}\n\nCan you beat it?\n\nvia @SportsMarket_FC #WorldCup2026 #PerfectEleven`;
@@ -2578,7 +2682,7 @@ async function submitLineupToLeaderboard() {
     by: `BUILT BY ${name}`,
     ovr: final,
     chem,
-    mode: state.mode.toUpperCase().replace('U25', 'U-25'),
+    mode: state.daily ? 'DAILY' : state.mode.toUpperCase().replace('U25', 'U-25'),
     lineup,
     finish: state.lastFinishTier || (typeof deriveFinishTier === 'function' ? deriveFinishTier(final, chem) : null),
     expert: state.lastResult ? !!state.lastResult.expert : !!state.blind,   // blind draft → 2× score
@@ -2681,6 +2785,11 @@ function resetRoster() {
   state.currentSlot = null;
   state.tacticalDraw = null;
   applyModeResources();            // per-mode skips/swaps (Tactical = 2/1)
+  // Daily: no skips/swaps, and re-seed so a reset restarts the SAME 11 spins.
+  if (state.daily) {
+    state.skipsLeft = 0; state.swapsLeft = 0;
+    _spinRng = mulberry32(fnv1a('PE-DAILY-' + dailyDayString()));
+  }
   renderResourcePips();            // rebuild pip dots to match the mode's max
   state.swapMode = false;
   state.revealed = false;          // new draft → numbers hidden again if blind is on
@@ -2798,7 +2907,8 @@ function initModes() {
         openPaywall();
         return;
       }
-      if (state.mode === btn.dataset.mode) return;
+      if (state.mode === btn.dataset.mode && !state.daily) return;
+      exitDaily();   // a mode tab always leaves the Daily challenge
       document.querySelectorAll('.xi-mode').forEach(b => b.classList.remove('xi-mode--active'));
       btn.classList.add('xi-mode--active');
       state.mode = btn.dataset.mode;
@@ -2842,6 +2952,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('spinBtn').addEventListener('click', spin);
   initStickySpin();   // mobile sticky SPIN bar (spin from your pitch, no scroll-up)
+  $('dailyCta')?.addEventListener('click', startDailyChallenge);
+  updateDailyCta();
   $('resetBtn').addEventListener('click', resetRoster);
 
   // EXPERT (blind draft) toggle — committed once the draft starts

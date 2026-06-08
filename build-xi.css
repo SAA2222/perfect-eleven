@@ -38,6 +38,38 @@
   border: 1px solid var(--rule);
   width: fit-content;
 }
+
+/* ---------- DAILY CHALLENGE CTA ---------- */
+.xi-daily {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 14px 0 4px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(255,196,0,0.16), rgba(255,196,0,0.05));
+  border: 1.5px solid var(--gold, #ffc400);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.xi-daily:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(255,196,0,0.18); }
+.xi-daily__star { font-size: 22px; flex-shrink: 0; }
+.xi-daily__body { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.xi-daily__title { font-family: var(--font-display); font-size: 16px; letter-spacing: 0.04em; color: var(--gold, #ffc400); }
+.xi-daily__sub { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; color: var(--mute-2, #8a96a0); }
+.xi-daily__go {
+  font-family: var(--font-mono);
+  font-size: 12px; font-weight: 800; letter-spacing: 0.08em;
+  color: var(--ink);
+  background: var(--gold, #ffc400);
+  padding: 8px 12px; border-radius: 6px; flex-shrink: 0;
+}
+/* The Daily has no skips/swaps — hide those controls while in it. */
+body.is-daily .xi-resources,
+body.is-daily #swapBtnTop,
+body.is-daily .xi-expert { display: none; }
 .xi-mode {
   background: transparent;
   border: none;
