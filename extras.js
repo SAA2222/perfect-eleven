@@ -162,6 +162,23 @@ function isEntryClean(e) {
   return true;
 }
 
+// Hide obvious dev/test submissions from the public board.
+function isTestEntry(e) {
+  const by = (e && e.by) || '';
+  return /\b(test|vercel|deploy|utf8|localhost|debug|asdf|qwerty)\b/i.test(by);
+}
+// Keep one best entry per person, per mode (highest score) — so one grinder's
+// many submissions (e.g. Kyle's 20) don't flood the board.
+function dedupeByPerson(rows) {
+  const best = new Map();
+  for (const e of rows) {
+    const key = `${(e.by || '').trim().toLowerCase()}|${normalizeMode(e.mode)}`;
+    const cur = best.get(key);
+    if (!cur || lbScore(e) > lbScore(cur)) best.set(key, e);
+  }
+  return [...best.values()];
+}
+
 // Mode filter state + cache of the last-merged rows, so switching tabs
 // re-paints instantly without refetching. Mode strings stored by the app:
 // 'CLASSIC', 'TOP50', 'LEGENDS' (see xi-script submit path).
@@ -266,7 +283,8 @@ async function renderLeaderboard() {
     _leaderboardIsGlobal = false;
   }
 
-  _lbRows = rows.filter(isEntryClean);     // ★ skip corrupted-Unicode entries
+  // Skip corrupted-Unicode + dev test entries, then one best per person/mode.
+  _lbRows = dedupeByPerson(rows.filter(e => isEntryClean(e) && !isTestEntry(e)));
   paintLeaderboard();
 }
 

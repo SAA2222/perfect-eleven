@@ -2225,6 +2225,7 @@ body.swap-mode .xi-pitch::after {
 body { padding-bottom: 56px; }
 
 .sponsor-ticker {
+  position: relative;   /* positioning context for the absolute label + fades */
   background: var(--ink);
   border-top: 1px solid var(--gold);
   border-bottom: 1px solid var(--rule);
