@@ -1142,7 +1142,17 @@ function refreshStickySpin() {
   // Show only while you're actually on the pitch (spin button scrolled off, build
   // incomplete) — so it never floats over the leaderboard below. Stays pinned
   // mid-spin regardless, so scrolling doesn't hide the flags.
-  sticky.hidden = !(showingSpin || (!_spinBtnOnScreen && _pitchInView && filled < 11));
+  const show = showingSpin || (!_spinBtnOnScreen && _pitchInView && filled < 11);
+  sticky.hidden = !show;
+  // Dock the sponsor ticker directly BENEATH the spin bar (stacked) while it's
+  // showing — sponsors on the very bottom, spin/flags above. Otherwise the
+  // sponsor ticker sits statically at the page bottom (so it never covers the
+  // leaderboard).
+  const sponsor = document.querySelector('.sponsor-ticker');
+  if (sponsor) {
+    sponsor.classList.toggle('sponsor-ticker--docked', show);
+    sticky.style.bottom = show ? `${Math.round(sponsor.getBoundingClientRect().height)}px` : '0px';
+  }
   // Mirror the main button's label + disabled state
   $('stickyRound') && ($('stickyRound').textContent = filled);
   const inline = $('spinBtn'), sBtn = $('stickySpinBtn'), sLbl = $('stickySpinLabel');
