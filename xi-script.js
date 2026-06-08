@@ -1170,6 +1170,7 @@ function stickyFlashItems() {
   const pool = (typeof getNationPool === 'function') ? getNationPool(state.mode) : [];
   return pool.map(n => ({ iso: n.iso, name: n.name }));
 }
+let _stickyFlagPreload = [];
 function startStickySpinFlash() {
   const view = $('stickySpinView'), sticky = $('stickySpin');
   if (!view || !sticky) return;
@@ -1177,10 +1178,32 @@ function startStickySpinFlash() {
   if (!items.length) return;
   sticky.hidden = false;          // force the bar visible so the spin shows
   view.hidden = false;
-  const flash = () => { const it = items[Math.floor(Math.random() * items.length)]; setStickyView(it.iso, it.name); };
+  const tactical = state.mode === 'tactical';
+  // Preload flags so we only ever show a FULLY-LOADED one (swapping src to an
+  // unloaded flag blanks the <img> — that's the "flag hiding" flicker).
+  _stickyFlagPreload = tactical ? [] : items.filter(it => it.iso).map(it => {
+    const img = new Image(); img.src = flagURL(it.iso, 80);
+    return { iso: it.iso, name: it.name, img };
+  });
+  const flash = () => {
+    if (tactical) {
+      const it = items[Math.floor(Math.random() * items.length)];
+      setStickyView(null, it.name);
+      return;
+    }
+    const loaded = _stickyFlagPreload.filter(c => c.img.complete && c.img.naturalWidth > 0);
+    if (loaded.length) {
+      const c = loaded[Math.floor(Math.random() * loaded.length)];
+      setStickyView(c.iso, c.name);
+    } else {
+      // none cached yet — flash a name only (no blank flag)
+      const it = items[Math.floor(Math.random() * items.length)];
+      setStickyView(null, it.name);
+    }
+  };
   flash();
   if (_stickyFlashTimer) clearInterval(_stickyFlashTimer);
-  _stickyFlashTimer = setInterval(flash, 70);
+  _stickyFlashTimer = setInterval(flash, 90);
 }
 // Land on the result — pass a nation ({iso,name}) or a position ({iso:null,name}).
 function landStickySpin(item) {
