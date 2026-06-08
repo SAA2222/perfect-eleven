@@ -172,7 +172,11 @@ function isTestEntry(e) {
 function dedupeByPerson(rows) {
   const best = new Map();
   for (const e of rows) {
-    const key = `${(e.by || '').trim().toLowerCase()}|${normalizeMode(e.mode)}`;
+    const mode = normalizeMode(e.mode);
+    // Daily entries are mode DAILY every day — tag by day so each day's challenge
+    // keeps its own per-person best (otherwise one good day hides all the rest).
+    const dayTag = mode === 'DAILY' ? '|' + new Date(e.createdAt || 0).toDateString() : '';
+    const key = `${(e.by || '').trim().toLowerCase()}|${mode}${dayTag}`;
     const cur = best.get(key);
     if (!cur || lbScore(e) > lbScore(cur)) best.set(key, e);
   }
@@ -187,7 +191,7 @@ let _lbFilter = 'ALL';
 let _lbPeriod = 'ALLTIME';   // 'ALLTIME' | 'WEEK'
 const LB_TOP_N = 10;
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-const LB_FILTER_LABELS = { ALL: 'ALL MODES', CLASSIC: 'CLASSIC', TACTICAL: 'TACTICAL', TOP50: 'TOP 50', LEGENDS: 'LEGENDS' };
+const LB_FILTER_LABELS = { ALL: 'ALL MODES', DAILY: "⭐ TODAY'S DAILY", CLASSIC: 'CLASSIC', TACTICAL: 'TACTICAL', TOP50: 'TOP 50', LEGENDS: 'LEGENDS' };
 
 function normalizeMode(m) {
   const v = (m || 'CLASSIC').toUpperCase().replace(/\s+/g, '');
@@ -295,7 +299,11 @@ function paintLeaderboard() {
   if (!grid) return;
 
   let rows = _lbRows.slice();
-  if (_lbFilter !== 'ALL') {
+  if (_lbFilter === 'DAILY') {
+    // Today's daily only — everyone faced the identical 11, so it's truly comparable.
+    const today = new Date().toDateString();
+    rows = rows.filter(r => normalizeMode(r.mode) === 'DAILY' && new Date(r.createdAt || 0).toDateString() === today);
+  } else if (_lbFilter !== 'ALL') {
     rows = rows.filter(r => normalizeMode(r.mode) === _lbFilter);
   }
   if (_lbPeriod === 'WEEK') {

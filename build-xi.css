@@ -3052,6 +3052,8 @@ body { padding-bottom: 56px; }
   background: var(--pitch);
   border-color: var(--pitch);
 }
+.lb-filter--daily:not(.lb-filter--active) { color: var(--gold, #ffc400); border-color: rgba(255,196,0,0.4); }
+.lb-filter--daily.lb-filter--active { background: var(--gold, #ffc400); border-color: var(--gold, #ffc400); }
 .lb-empty {
   text-align: center;
   padding: 40px 20px;
