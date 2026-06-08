@@ -1132,15 +1132,17 @@ function countOOP() {
 // Shows when the main SPIN button is scrolled off-screen during an active build,
 // so you can spin again from your pitch without scrolling back up.
 let _spinBtnOnScreen = true;
+let _pitchInView = true;
 function refreshStickySpin() {
   const sticky = $('stickySpin');
   if (!sticky) return;
   const view = $('stickySpinView');
   const showingSpin = !!(view && !view.hidden);   // the flash/result is on screen here
   const filled = Object.keys(state.roster).length;
-  // Keep the bar pinned while it's showing the spin — otherwise scrolling (which
-  // fires the IntersectionObserver) would hide the flags mid-spin.
-  sticky.hidden = !(showingSpin || (!_spinBtnOnScreen && filled < 11));
+  // Show only while you're actually on the pitch (spin button scrolled off, build
+  // incomplete) — so it never floats over the leaderboard below. Stays pinned
+  // mid-spin regardless, so scrolling doesn't hide the flags.
+  sticky.hidden = !(showingSpin || (!_spinBtnOnScreen && _pitchInView && filled < 11));
   // Mirror the main button's label + disabled state
   $('stickyRound') && ($('stickyRound').textContent = filled);
   const inline = $('spinBtn'), sBtn = $('stickySpinBtn'), sLbl = $('stickySpinLabel');
@@ -1226,6 +1228,15 @@ function initStickySpin() {
       _spinBtnOnScreen = entries[0].isIntersecting;
       refreshStickySpin();
     }, { rootMargin: '-8px 0px -120px 0px' }).observe(inline);
+    // Only show the bar while the pitch is on screen — hide it once you scroll
+    // down to the leaderboard so it never covers it.
+    const pitch = document.getElementById('pitch');
+    if (pitch) {
+      new IntersectionObserver((entries) => {
+        _pitchInView = entries[0].isIntersecting;
+        refreshStickySpin();
+      }, { rootMargin: '0px 0px -40px 0px' }).observe(pitch);
+    }
   }
   refreshStickySpin();
 }
