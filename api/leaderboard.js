@@ -104,7 +104,7 @@ export default async function handler(req, res) {
 
       const entry = {
         by:     cleanBy(by),
-        ovr:    Math.max(0, Math.min(120, parseInt(ovr) || 0)),  // chem can push a squad over 100
+        ovr:    Math.max(0, Math.min(110, parseInt(ovr) || 0)),  // chem tops out ~107; cap blocks absurd forged scores
         chem:   Math.max(0, Math.min(99, parseInt(chem) || 0)),
         mode:   sanitize(mode, 16).toUpperCase() || 'CLASSIC',
         lineup: sanitize(lineup, 320),

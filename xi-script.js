@@ -1894,6 +1894,7 @@ function showCompleteModal() {
 
   // Compute and render tournament awards (pool = entire tournament, Captain = your XI)
   const awards = computeAwards();
+  if (state.lastResult) state.lastResult.awards = awards;   // share card reuses these (computeAwards is random)
   const awardsContainer = document.getElementById('xiAwards');
   if (awardsContainer && awards) {
     const live = isTournamentLive();
@@ -2218,7 +2219,11 @@ async function shareXICardImage(opts = {}) {
         : { label: '', opponent: null, score: null, result: null });
   const grade = (r && r.grade) ? r.grade
     : ((typeof gradeFromOVR === 'function') ? gradeFromOVR(ovr, chem) : { letter: '?', color: '#fff', blurb: '' });
-  const awards = (typeof computeAwards === 'function') ? computeAwards() : null;
+  // Reuse the result screen's awards (computeAwards has random tie-breaks, so
+  // recomputing here could show different winners on the posted card).
+  const awards = (state.lastResult && state.lastResult.awards)
+    ? state.lastResult.awards
+    : ((typeof computeAwards === 'function') ? computeAwards() : null);
 
   // === Background ===
   const bg = ctx.createLinearGradient(0, 0, 0, H);
@@ -2308,7 +2313,7 @@ async function shareXICardImage(opts = {}) {
     ctx.fillText(String(p.rating), cx, y + 86);
 
     // Chemistry dots (top-right) — green = same-league link, like the pitch
-    const pchem = (typeof chemistryForPlayer === 'function') ? chemistryForPlayer(i) : 0;
+    const pchem = (typeof chemistryForPlayer === 'function') ? chemistryForPlayer(String(i)) : 0;
     for (let d = 0; d < 3; d++) {
       ctx.beginPath();
       ctx.arc(x + CARD_W - 34 + d * 12, y + 14, 3.5, 0, Math.PI * 2);
@@ -2542,8 +2547,10 @@ async function shareXICardImage(opts = {}) {
 // Combine the NAME + CITY boxes into one display string ("NAME · CITY"),
 // shared by the leaderboard submit and the share-card footer.
 function getBuiltByName() {
-  let name = ($('lineupName')?.value || '').trim();
-  let city = ($('lineupCity')?.value || '').trim();
+  // Strip angle brackets so a name can't inject markup into the (innerHTML-rendered)
+  // local/offline leaderboard. The server also strips, but defend the client too.
+  let name = ($('lineupName')?.value || '').replace(/[<>]/g, '').trim();
+  let city = ($('lineupCity')?.value || '').replace(/[<>]/g, '').trim();
   // No name → ANONYMOUS, no city → EARTH. Same fallback if either is a slur.
   const bad = (s) => typeof hasProfanity === 'function' && hasProfanity(s);
   if (!name || bad(name)) name = 'ANONYMOUS';
