@@ -38,6 +38,9 @@ body {
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  /* Reserve room for the always-docked sponsor ticker so it never hides the
+     last content (footer / bottom leaderboard rows). */
+  padding-bottom: 56px;
 }
 img { max-width: 100%; display: block; }
 a { color: inherit; text-decoration: none; }

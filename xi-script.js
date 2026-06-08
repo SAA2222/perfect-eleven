@@ -1146,17 +1146,16 @@ function refreshStickySpin() {
   // mid-spin regardless, so scrolling doesn't hide the flags.
   const show = showingSpin || (!_spinBtnOnScreen && _pitchInView && filled < 11);
   sticky.hidden = !show;
-  // Dock the sponsor ticker BENEATH the spin bar (stacked) while the bar shows —
-  // MOBILE ONLY (≤1024px). On desktop the bar is display:none, so the sponsor
-  // must NOT dock there (it would float alone over content). Height is cached so
+  // The sponsor ticker is ALWAYS docked at the bottom — sit the spin bar flush
+  // above it when it shows. Measure the height only once the bar is showing (by
+  // then the marquee has populated and the height is correct), then cache it so
   // the scroll path never reads layout.
   if (!_sponsorEl) _sponsorEl = document.querySelector('.sponsor-ticker');
-  if (_sponsorEl) {
-    const dock = show && window.innerWidth <= 1024;
-    _sponsorEl.classList.toggle('sponsor-ticker--docked', dock);
-    if (dock && !_sponsorH) _sponsorH = Math.round(_sponsorEl.getBoundingClientRect().height) || 44;
-    sticky.style.bottom = dock ? `${_sponsorH}px` : '0px';
+  if (show && _sponsorEl && !_sponsorH) {
+    const h = Math.round(_sponsorEl.getBoundingClientRect().height);
+    if (h >= 28) _sponsorH = h;   // ignore the pre-populated (label-only) height
   }
+  sticky.style.bottom = `${_sponsorH || 44}px`;
   // Mirror the main button's label + disabled state
   $('stickyRound') && ($('stickyRound').textContent = filled);
   const inline = $('spinBtn'), sBtn = $('stickySpinBtn'), sLbl = $('stickySpinLabel');
