@@ -1133,8 +1133,12 @@ let _spinBtnOnScreen = true;
 function refreshStickySpin() {
   const sticky = $('stickySpin');
   if (!sticky) return;
+  const view = $('stickySpinView');
+  const showingSpin = !!(view && !view.hidden);   // the flash/result is on screen here
   const filled = Object.keys(state.roster).length;
-  sticky.hidden = !(!_spinBtnOnScreen && filled < 11);
+  // Keep the bar pinned while it's showing the spin — otherwise scrolling (which
+  // fires the IntersectionObserver) would hide the flags mid-spin.
+  sticky.hidden = !(showingSpin || (!_spinBtnOnScreen && filled < 11));
   // Mirror the main button's label + disabled state
   $('stickyRound') && ($('stickyRound').textContent = filled);
   const inline = $('spinBtn'), sBtn = $('stickySpinBtn'), sLbl = $('stickySpinLabel');
