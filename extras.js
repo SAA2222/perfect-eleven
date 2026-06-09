@@ -287,8 +287,9 @@ async function renderLeaderboard() {
     _leaderboardIsGlobal = false;
   }
 
-  // Skip corrupted-Unicode + dev test entries, then one best per person/mode.
-  _lbRows = dedupeByPerson(rows.filter(e => isEntryClean(e) && !isTestEntry(e)));
+  // Skip corrupted-Unicode + dev test entries. NO per-person de-dupe — multiple
+  // entries per player are welcome (every win counts).
+  _lbRows = rows.filter(e => isEntryClean(e) && !isTestEntry(e));
   paintLeaderboard();
 }
 
