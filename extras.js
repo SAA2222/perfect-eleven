@@ -265,7 +265,8 @@ function ovrColor(ovr) {
   if (n >= 100) return '#ffd24a';  // gold — elite
   if (n >= 95)  return '#16a34a';  // dark green
   if (n >= 90)  return '#4ade80';  // bright green
-  return '#a3e635';                // lime
+  if (n >= 84)  return '#a3e635';  // lime
+  return '#8a96a0';                // below 84 — muted
 }
 
 // This squad's would-be position on the ALL-TIME, all-modes leaderboard (ranked
