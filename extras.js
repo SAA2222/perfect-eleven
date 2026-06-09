@@ -248,11 +248,16 @@ function finishBadge(entry) {
   return `<span class="lb-finish ${cls}">${label}</span>`;
 }
 
-// Leaderboard score — an Expert (blind) draft is worth DOUBLE.
-function lbScore(e) { return (Number(e && e.ovr) || 0) * (e && e.expert ? 2 : 1); }
+// Leaderboard score — an Expert (blind) draft earns a points MULTIPLIER (BLIND_MULT,
+// defined in xi-script.js). OVR stays raw; only the ranking points get the bonus.
+const _BLIND_MULT = (typeof BLIND_MULT === 'number') ? BLIND_MULT : 1.25;
+function lbScore(e) {
+  const ovr = Number(e && e.ovr) || 0;
+  return (e && e.expert) ? Math.round(ovr * _BLIND_MULT) : ovr;
+}
 function expertBadge(e) {
   if (!e || !e.expert) return '';
-  return `<span class="lb-expert">🎭 EXPERT · ${lbScore(e)} PTS</span>`;
+  return `<span class="lb-expert">🎭 EXPERT ×${_BLIND_MULT} · ${lbScore(e)} PTS</span>`;
 }
 
 // This squad's would-be position on the ALL-TIME, all-modes leaderboard (ranked

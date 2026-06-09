@@ -206,6 +206,7 @@ function fnv1a(s) {
 }
 let _spinRng = Math.random;   // swapped to the seeded RNG while in Daily mode
 let _submittingLineup = false;   // re-entry guard: one post per completed XI
+const BLIND_MULT = 1.25;   // Expert/blind draft → +25% leaderboard points (single source of truth)
 
 function weightedPick(pool) {
   // Build cumulative weight array
@@ -2475,7 +2476,7 @@ async function shareXICardImage(opts = {}) {
 
   // Global leaderboard rank (replaces the always-11/11 SLOTS stat). Falls back
   // to SLOTS if the leaderboard hasn't loaded yet. Expert drafts count 2×.
-  const userScore = (r && r.expert) ? ovr * 2 : ovr;
+  const userScore = (r && r.expert) ? Math.round(ovr * BLIND_MULT) : ovr;
   const gRank = (typeof userGlobalRank === 'function') ? userGlobalRank(userScore) : null;
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 64px Impact, "Arial Black", sans-serif';
