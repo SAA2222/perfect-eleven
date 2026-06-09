@@ -2643,6 +2643,41 @@ body { padding-bottom: 56px; }
   width: 100%;
   margin-top: 8px;
 }
+
+/* Premium share-card theme picker */
+.card-themes { margin: 6px 0 12px; width: 100%; }
+.card-themes__label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: 0.16em;
+  color: var(--mute-2, #8a96a0);
+  margin-bottom: 8px;
+}
+.card-themes__row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.card-theme {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  background: rgba(255,255,255,0.03);
+  border: 1.5px solid var(--rule);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  min-width: 58px;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+.card-theme:hover { transform: translateY(-1px); }
+.card-theme__sw {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--sw, #00c853);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.1);
+}
+.card-theme__label {
+  font-family: var(--font-mono);
+  font-size: 8px; font-weight: 800; letter-spacing: 0.05em;
+  color: var(--bone, #e8e6df);
+}
+.card-theme--active { border-color: var(--sw, #00c853); background: rgba(255,255,255,0.07); }
+.card-theme--locked { opacity: 0.72; }
+.card-theme--locked .card-theme__sw { filter: saturate(0.55); }
 .share-prompt__actions .xi-btn { width: 100%; justify-content: center; }
 .share-prompt__skip {
   margin-top: 4px;

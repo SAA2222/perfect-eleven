@@ -2328,6 +2328,54 @@ function drawTrophyIcon(ctx, cx, cy, size, color) {
   ctx.restore();
 }
 
+// ----- Premium share-card themes (cosmetic only — zero leaderboard impact) -----
+// Each theme swaps the background gradient + the single accent color; semantic
+// colors (finish/grade) are untouched.
+const CARD_THEMES = {
+  default: { label: 'PITCH',   bg: ['#0c1410', '#06090a'], accent: '#00c853', free: true },
+  gold:    { label: 'GOLD',    bg: ['#1a1408', '#0a0703'], accent: '#ffc400' },
+  crimson: { label: 'CRIMSON', bg: ['#1a0a0d', '#0a0406'], accent: '#ff4d6d' },
+  royal:   { label: 'ROYAL',   bg: ['#0a1020', '#04060c'], accent: '#5b8cff' },
+};
+let _cardTheme = 'default';
+function hexToRgba(hex, a) {
+  const h = String(hex || '').replace('#', '');
+  const f = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const n = parseInt(f, 16) || 0;
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+function loadCardTheme() { try { const t = localStorage.getItem('pe_card_theme'); if (t && CARD_THEMES[t]) _cardTheme = t; } catch (e) {} }
+// Resolve the active theme — premium themes fall back to PITCH for non-premium
+// (so a free user can't select-and-keep a paid skin).
+function resolveCardTheme() {
+  const t = CARD_THEMES[_cardTheme];
+  if (t && (t.free || (typeof isPremium === 'function' && isPremium()))) return t;
+  return CARD_THEMES.default;
+}
+// Build the swatch picker on the share prompt. Premium themes show a lock and
+// open the paywall when a non-premium user taps them.
+function buildCardThemePicker() {
+  const row = document.getElementById('cardThemesRow');
+  if (!row) return;
+  const prem = (typeof isPremium === 'function') && isPremium();
+  row.innerHTML = Object.entries(CARD_THEMES).map(([key, t]) => {
+    const locked = !t.free && !prem;
+    const active = key === _cardTheme && (t.free || prem);
+    return `<button type="button" class="card-theme${active ? ' card-theme--active' : ''}${locked ? ' card-theme--locked' : ''}" data-theme="${key}" style="--sw:${t.accent}" aria-label="${t.label}${locked ? ' (premium)' : ''}">
+      <span class="card-theme__sw"></span>
+      <span class="card-theme__label">${t.label}${locked ? ' 🔒' : ''}</span>
+    </button>`;
+  }).join('');
+  row.querySelectorAll('.card-theme').forEach(btn => btn.addEventListener('click', () => {
+    const key = btn.dataset.theme, t = CARD_THEMES[key];
+    if (!t) return;
+    if (!t.free && !((typeof isPremium === 'function') && isPremium())) { openPaywall(); return; }
+    _cardTheme = key;
+    try { localStorage.setItem('pe_card_theme', key); } catch (e) {}
+    buildCardThemePicker();
+  }));
+}
+
 async function shareXICardImage(opts = {}) {
   if (Object.keys(state.roster).length !== 11) {
     toast('FINISH THE XI FIRST');
@@ -2361,14 +2409,16 @@ async function shareXICardImage(opts = {}) {
     ? state.lastResult.awards
     : ((typeof computeAwards === 'function') ? computeAwards() : null);
 
-  // === Background ===
+  // === Theme (premium cosmetic) + Background ===
+  const theme = resolveCardTheme();
+  const ACCENT = theme.accent;
   const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#0c1410');
-  bg.addColorStop(1, '#06090a');
+  bg.addColorStop(0, theme.bg[0]);
+  bg.addColorStop(1, theme.bg[1]);
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
   // === Header (y: 0–160) ===
-  ctx.fillStyle = '#00c853';
+  ctx.fillStyle = ACCENT;
   ctx.fillRect(60, 60, 70, 70);
   ctx.fillStyle = '#0c1410';
   ctx.font = 'bold 44px Impact, "Arial Black", sans-serif';
@@ -2419,7 +2469,7 @@ async function shareXICardImage(opts = {}) {
 
     ctx.fillStyle = '#101a14';
     ctx.fillRect(x, y, CARD_W, CARD_H);
-    ctx.strokeStyle = '#00c853';
+    ctx.strokeStyle = ACCENT;
     ctx.lineWidth = 2;
     ctx.strokeRect(x, y, CARD_W, CARD_H);
 
@@ -2444,7 +2494,7 @@ async function shareXICardImage(opts = {}) {
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.fillText(shortName(p.name), cx, y + 64);
 
-    ctx.fillStyle = '#00c853';
+    ctx.fillStyle = ACCENT;
     ctx.font = 'bold 28px Impact, "Arial Black", sans-serif';
     ctx.fillText(String(p.rating), cx, y + 86);
 
@@ -2453,7 +2503,7 @@ async function shareXICardImage(opts = {}) {
     for (let d = 0; d < 3; d++) {
       ctx.beginPath();
       ctx.arc(x + CARD_W - 34 + d * 12, y + 14, 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = d < pchem ? '#00c853' : 'rgba(255,255,255,0.16)';
+      ctx.fillStyle = d < pchem ? ACCENT : 'rgba(255,255,255,0.16)';
       ctx.fill();
     }
   }
@@ -2498,7 +2548,7 @@ async function shareXICardImage(opts = {}) {
   const FY = 1220;
   ctx.fillStyle = '#101a14';
   ctx.fillRect(60, FY, W - 120, 260);
-  ctx.strokeStyle = '#00c853'; ctx.lineWidth = 2;
+  ctx.strokeStyle = ACCENT; ctx.lineWidth = 2;
   ctx.strokeRect(60, FY, W - 120, 260);
 
   ctx.fillStyle = '#7a8590';
@@ -2553,7 +2603,7 @@ async function shareXICardImage(opts = {}) {
   if (finish.opp && finish.score) {
     const verb = finish.result === 'WIN' ? 'BEAT' : finish.result === 'LOSS' ? 'LOST TO' : 'PLAYED';
     const scoreLine = `${verb} ${finish.opp} ${finish.score}`;
-    ctx.fillStyle = finish.result === 'WIN' ? '#00c853' : '#ff6b7a';
+    ctx.fillStyle = finish.result === 'WIN' ? ACCENT : '#ff6b7a';
     ctx.font = 'bold 32px Impact, "Arial Black", sans-serif';
     ctx.fillText(scoreLine, W/2, FY + 175);
   }
@@ -2595,18 +2645,18 @@ async function shareXICardImage(opts = {}) {
     const ax = 60 + col * (AW + GAP), ay = AY + 36 + row * (AH + GAP);
     const inXI = userNames.has(a.player.name);
     // card bg + border
-    ctx.fillStyle = inXI ? 'rgba(0, 200, 83, 0.10)' : '#101a14';
+    ctx.fillStyle = inXI ? hexToRgba(ACCENT, 0.10) : '#101a14';
     ctx.fillRect(ax, ay, AW, AH);
-    ctx.strokeStyle = inXI ? '#00c853' : 'rgba(0,200,83,0.35)';
+    ctx.strokeStyle = inXI ? ACCENT : hexToRgba(ACCENT, 0.35);
     ctx.lineWidth = 2;
     ctx.strokeRect(ax, ay, AW, AH);
     // label + IN YOUR XI badge
-    ctx.fillStyle = inXI ? '#00c853' : '#ffc400';
+    ctx.fillStyle = inXI ? ACCENT : '#ffc400';
     ctx.font = 'bold 14px ui-monospace, "JetBrains Mono", monospace';
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
     ctx.fillText(a.label, ax + 60, ay + 14);
     if (inXI) {
-      ctx.fillStyle = '#00c853';
+      ctx.fillStyle = ACCENT;
       ctx.font = 'bold 11px ui-monospace, "JetBrains Mono", monospace';
       ctx.fillText('★ IN YOUR XI', ax + AW - 105, ay + 14);
     }
@@ -2622,7 +2672,7 @@ async function shareXICardImage(opts = {}) {
     ctx.fillText(a.player.name.slice(0, 22), ax + 60, ay + 38);
     // stat line
     ctx.font = 'bold 18px Impact, "Arial Black", sans-serif';
-    ctx.fillStyle = inXI ? '#00c853' : '#ffc400';
+    ctx.fillStyle = inXI ? ACCENT : '#ffc400';
     ctx.fillText(a.stat || '', ax + 60, ay + 68);
     // flag + nation
     if (a.player.iso && flagImgs[a.player.iso]) {
@@ -2641,6 +2691,8 @@ async function shareXICardImage(opts = {}) {
   const builtBy = (typeof getBuiltByName === 'function') ? getBuiltByName() : 'EARTH';
   ctx.textAlign = 'right';
   ctx.fillText(`BUILT BY ${builtBy}`, W - 60, 1870);
+
+  if (opts.__test) return canvas.toDataURL('image/png');   // verification hook — no share/download
 
   // === Export ===
   const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
@@ -2760,6 +2812,7 @@ async function submitLineupToLeaderboard() {
 function showSharePrompt() {
   const sp = $('sharePrompt');
   if (sp) sp.hidden = false;
+  buildCardThemePicker();   // refresh swatches (reflects current premium state)
 }
 
 // Close out the complete flow: hide prompt + modal, reset, jump to the board.
@@ -2998,6 +3051,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('dailyCta')?.addEventListener('click', startDailyChallenge);
   updateDailyCta();
   setInterval(updateDailyCta, 60000);   // tick the "next in Xh Ym" lock countdown
+  loadCardTheme();   // restore the chosen premium share-card theme
   $('resetBtn').addEventListener('click', resetRoster);
 
   // EXPERT (blind draft) toggle — committed once the draft starts
