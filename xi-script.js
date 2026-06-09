@@ -2336,9 +2336,9 @@ const XI_CARD_SLOT_POS = {
   0:  { x:0.18, y:0.20, label:'LW'  },   // LW  (pushed forward for space above the mid)
   1:  { x:0.50, y:0.15, label:'ST'  },   // ST
   2:  { x:0.82, y:0.20, label:'RW'  },   // RW
-  3:  { x:0.30, y:0.40, label:'LCM' },   // LCM
-  4:  { x:0.70, y:0.40, label:'RCM' },   // RCM
-  5:  { x:0.50, y:0.52, label:'CDM' },   // CDM
+  3:  { x:0.30, y:0.40, label:'LCM' },   // LCM (SLOT_DEF[3])
+  4:  { x:0.50, y:0.52, label:'CDM' },   // CDM (SLOT_DEF[4]) — deeper + central
+  5:  { x:0.70, y:0.40, label:'RCM' },   // RCM (SLOT_DEF[5])
   6:  { x:0.18, y:0.74, label:'LB'  },   // LB
   7:  { x:0.39, y:0.72, label:'LCB' },   // LCB
   8:  { x:0.61, y:0.72, label:'RCB' },   // RCB
@@ -2774,7 +2774,7 @@ async function shareXICardImage(opts = {}) {
   ctx.textAlign = 'right';
   ctx.fillText(`BUILT BY ${builtBy}`, W - 60, 1870);
 
-  if (opts.__test) return canvas.toDataURL('image/png');   // verification hook — no share/download
+  if (opts.__test) return canvas;   // verification hook — no share/download
 
   // === Export ===
   const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
