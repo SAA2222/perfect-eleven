@@ -177,17 +177,27 @@ function mulberry32(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-const DAILY_EPOCH = Date.UTC(2026, 5, 8);   // 8 Jun 2026 = Daily #1
-// UTC so EVERYONE worldwide plays the same Daily #N on the same day — local date
-// would hand different timezones different 11s and make the board un-comparable.
-function dailyDayString(d) {
-  d = d || new Date();
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+const DAILY_EPOCH = Date.UTC(2026, 5, 8);   // 8 Jun 2026 (ET) = Daily #1
+// The day rolls over at MIDNIGHT EASTERN (America/New_York, DST-aware) — so the
+// challenge unlocks/resets at 12 AM ET and everyone plays the same Daily #N.
+function easternDayString(d) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(d || new Date());
 }
+function dailyDayString(d) { return easternDayString(d); }   // YYYY-MM-DD in ET
 function dailyNumber() {
-  const d = new Date();
-  const today = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-  return Math.max(1, Math.floor((today - DAILY_EPOCH) / 86400000) + 1);
+  const [y, m, d] = dailyDayString().split('-').map(Number);
+  return Math.max(1, Math.floor((Date.UTC(y, m - 1, d) - DAILY_EPOCH) / 86400000) + 1);
+}
+// ms until the next 12 AM ET (for the lock countdown). Offset trick: format now in
+// ET, reparse as a local Date, advance to its next midnight.
+function msUntilNextEasternMidnight() {
+  const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const next = new Date(nowET); next.setHours(24, 0, 0, 0);
+  return Math.max(0, next - nowET);
+}
+function fmtCountdown(ms) {
+  const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 function fnv1a(s) {
   let h = 2166136261 >>> 0;
@@ -215,13 +225,18 @@ function loadDailyState() {
   catch (e) { return {}; }
 }
 function saveDailyState(s) { try { localStorage.setItem('pe_daily', JSON.stringify(s)); } catch (e) {} }
-function dailyYesterdayString() { const d = new Date(); d.setUTCDate(d.getUTCDate() - 1); return dailyDayString(d); }
+function dailyYesterdayString() { return easternDayString(new Date(Date.now() - 86400000)); }
 function dailyPlayedToday() { return loadDailyState().lastDay === dailyDayString(); }
 function dailyStreak() { return loadDailyState().streak || 0; }
 
-// Begin today's Daily — Classic pool, but a date-seeded spin sequence (same 11
-// for everyone) and NO skips/swaps so runs are directly comparable.
+// Begin today's Daily — Classic pool, a date-seeded spin sequence (same 11 for
+// everyone), NO skips/swaps. ONE attempt per day: locked once played until 12 AM ET.
 function startDailyChallenge() {
+  if (dailyPlayedToday()) {                       // already used today's one go
+    toast(`✓ TODAY'S DAILY IS DONE — NEW ONE IN ${fmtCountdown(msUntilNextEasternMidnight())}`);
+    updateDailyCta();
+    return;
+  }
   state.mode = 'classic';
   state.daily = true;
   _spinRng = mulberry32(fnv1a('PE-DAILY-' + dailyDayString()));
@@ -265,14 +280,22 @@ function dailyShareText(ovr, finishLabel, streak) {
 }
 // Refresh the Daily CTA copy (number, streak, played-today state).
 function updateDailyCta() {
-  const title = $('dailyTitle'), sub = $('dailySub'), go = $('dailyGo');
+  const cta = $('dailyCta'), title = $('dailyTitle'), sub = $('dailySub'), go = $('dailyGo');
   if (!sub) return;
   const streak = dailyStreak();
   if (title) title.textContent = `DAILY #${dailyNumber()}`;
-  sub.textContent = streak > 0
-    ? `🔥 ${streak}-day streak · same 11 for everyone`
-    : 'Same 11 spins for everyone · no skips';
-  if (go) go.textContent = dailyPlayedToday() ? 'REPLAY →' : 'PLAY →';
+  if (dailyPlayedToday()) {
+    // One go per day — locked until the next 12 AM ET.
+    sub.textContent = `✓ Done${streak > 0 ? ` · 🔥 ${streak}` : ''} · next in ${fmtCountdown(msUntilNextEasternMidnight())}`;
+    if (go) go.textContent = '🔒';
+    if (cta) { cta.classList.add('xi-daily--locked'); cta.setAttribute('aria-disabled', 'true'); }
+  } else {
+    sub.textContent = streak > 0
+      ? `🔥 ${streak}-day streak · one attempt · same 11 for all`
+      : 'One attempt · same 11 spins for everyone · no skips';
+    if (go) go.textContent = 'PLAY →';
+    if (cta) { cta.classList.remove('xi-daily--locked'); cta.removeAttribute('aria-disabled'); }
+  }
 }
 
 // Spin button reads "SPIN POSITION" in Tactical, "SPIN THE WORLD" otherwise.
@@ -1950,6 +1973,7 @@ function showCompleteModal() {
     dailyStreakVal = recordDailyCompletion(final);
     state.lastResult.daily = true;
     state.lastResult.streak = dailyStreakVal;
+    updateDailyCta();   // lock the CTA — that was your one go for today
   }
   // Fresh result — re-arm the POST button (it gets locked to "✓ POSTED" after a post).
   _submittingLineup = false;
@@ -2972,6 +2996,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initStickySpin();   // mobile sticky SPIN bar (spin from your pitch, no scroll-up)
   $('dailyCta')?.addEventListener('click', startDailyChallenge);
   updateDailyCta();
+  setInterval(updateDailyCta, 60000);   // tick the "next in Xh Ym" lock countdown
   $('resetBtn').addEventListener('click', resetRoster);
 
   // EXPERT (blind draft) toggle — committed once the draft starts

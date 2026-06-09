@@ -305,12 +305,14 @@ function paintLeaderboard() {
 
   let rows = _lbRows.slice();
   if (_lbFilter === 'DAILY') {
-    // Today's daily only, keyed by UTC DAY (matches the UTC seed) so it's a true
-    // global apples-to-apples board. De-dupe to one BEST run per person HERE only
-    // (multiple entries are still welcome on every other board).
-    const todayUTC = new Date().toISOString().slice(0, 10);
-    const dailyRows = rows.filter(r => normalizeMode(r.mode) === 'DAILY'
-      && new Date(r.createdAt || 0).toISOString().slice(0, 10) === todayUTC);
+    // Today's daily only, keyed by EASTERN DAY (matches the seed / 12 AM ET reset)
+    // so it's a true global apples-to-apples board. De-dupe to one BEST run per
+    // person HERE only (multiple entries are still welcome on every other board).
+    const eDay = (ms) => (typeof easternDayString === 'function')
+      ? easternDayString(new Date(ms))
+      : new Date(ms).toISOString().slice(0, 10);
+    const today = eDay(Date.now());
+    const dailyRows = rows.filter(r => normalizeMode(r.mode) === 'DAILY' && eDay(r.createdAt || 0) === today);
     const best = new Map();
     for (const e of dailyRows) {
       const k = (e.by || '').trim().toLowerCase();

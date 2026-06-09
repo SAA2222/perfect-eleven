@@ -66,6 +66,19 @@
   background: var(--gold, #ffc400);
   padding: 8px 12px; border-radius: 6px; flex-shrink: 0;
 }
+/* Played today → locked until 12 AM ET. */
+.xi-daily--locked {
+  opacity: 0.62;
+  background: rgba(255,255,255,0.03);
+  border-color: var(--rule);
+  cursor: default;
+}
+.xi-daily--locked:hover { transform: none; box-shadow: none; }
+.xi-daily--locked .xi-daily__star { filter: grayscale(0.7); }
+.xi-daily--locked .xi-daily__title { color: var(--mute-2, #8a96a0); }
+.xi-daily--locked .xi-daily__go { background: transparent; color: var(--mute-2, #8a96a0); font-size: 18px; }
+/* No restart mid-attempt. */
+body.is-daily #resetBtn { display: none; }
 /* The Daily has no skips/swaps — hide those controls while in it. */
 body.is-daily .xi-resources,
 body.is-daily #swapBtnTop,
