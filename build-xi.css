@@ -3067,6 +3067,32 @@ body { padding-bottom: 56px; }
 }
 .lb-filter--daily:not(.lb-filter--active) { color: var(--gold, #ffc400); border-color: rgba(255,196,0,0.4); }
 .lb-filter--daily.lb-filter--active { background: var(--gold, #ffc400); border-color: var(--gold, #ffc400); }
+
+/* ALL-tab top-25 cap: "show all" toggle + pinned "your rank" row */
+.lb-showall {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  color: var(--bone, #e8e6df);
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 800; letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.lb-showall:hover { background: rgba(255,255,255,0.07); }
+.lb-pin-sep {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: 0.22em;
+  color: var(--mute-2, #8a96a0);
+  padding: 12px 0 4px;
+}
+.lb-row--pinned { border: 1px solid var(--gold, #ffc400); border-radius: 6px; }
+
 .lb-empty {
   text-align: center;
   padding: 40px 20px;

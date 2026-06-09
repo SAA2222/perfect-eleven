@@ -190,7 +190,9 @@ function normalizeBy(by) {
 let _lbRows = [];
 let _lbFilter = 'ALL';
 let _lbPeriod = 'ALLTIME';   // 'ALLTIME' | 'WEEK'
-const LB_TOP_N = 10;
+let _lbShowAll = false;      // ALL tab: expand past the top-25 cap
+const LB_TOP_N = 10;         // mode tabs cap
+const LB_ALL_CAP = 25;       // ALL tab default cap (then "show all")
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const LB_FILTER_LABELS = { ALL: 'ALL MODES', DAILY: "⭐ TODAY'S DAILY", CLASSIC: 'CLASSIC', TACTICAL: 'TACTICAL', TOP50: 'TOP 50', LEGENDS: 'LEGENDS' };
 
@@ -327,19 +329,29 @@ function paintLeaderboard() {
     const cutoff = Date.now() - WEEK_MS;
     rows = rows.filter(r => r.createdAt && r.createdAt >= cutoff);
   }
-  // Mode tabs (CLASSIC/TACTICAL/TOP50/LEGENDS) show TOP 10. The ALL tab shows
-  // everyone — no cap.
+  // Mode tabs cap at TOP 10. The ALL tab shows TOP 25 by default with a "show all"
+  // expander — and pins YOUR best row below the cut if you're outside the 25.
   const sorted = rows.sort((a, b) => lbScore(b) - lbScore(a));   // Expert 2× counts
+  const ranked = sorted.map((row, i) => ({ ...row, rank: i + 1 }));
   const isAll = _lbFilter === 'ALL';
-  const combined = (isAll ? sorted : sorted.slice(0, LB_TOP_N))
-    .map((row, i) => ({ ...row, rank: i + 1 }));
+
+  let combined, hiddenCount = 0, pinnedUser = null;
+  if (!isAll) {
+    combined = ranked.slice(0, LB_TOP_N);
+  } else if (_lbShowAll || ranked.length <= LB_ALL_CAP) {
+    combined = ranked;
+  } else {
+    combined = ranked.slice(0, LB_ALL_CAP);
+    hiddenCount = ranked.length - LB_ALL_CAP;
+    if (!combined.some(r => r.user)) pinnedUser = ranked.find(r => r.user) || null;  // pin your best
+  }
 
   const scope = _leaderboardIsGlobal
     ? `<span class="lb-meta--global">🌍 GLOBAL</span>`
     : `<span class="lb-meta--local">📱 LOCAL · OFFLINE</span>`;
   const periodLabel = _lbPeriod === 'WEEK' ? 'THIS WEEK' : 'ALL TIME';
   const countLabel = isAll
-    ? `${combined.length} ${combined.length === 1 ? 'PLAYER' : 'PLAYERS'}`
+    ? (hiddenCount > 0 ? `TOP ${LB_ALL_CAP} OF ${ranked.length}` : `${ranked.length} ${ranked.length === 1 ? 'PLAYER' : 'PLAYERS'}`)
     : (sorted.length > LB_TOP_N ? `TOP ${LB_TOP_N}` : `${combined.length} ${combined.length === 1 ? 'PLAYER' : 'PLAYERS'}`);
   const badge = `<div class="lb-meta">${scope} · ${LB_FILTER_LABELS[_lbFilter] || _lbFilter} · ${periodLabel} · ${countLabel}</div>`;
 
@@ -352,8 +364,8 @@ function paintLeaderboard() {
     return;
   }
 
-  grid.innerHTML = badge + combined.map(row => `
-    <article class="lb-row ${row.user ? 'lb-row--user' : ''}">
+  const rowHTML = (row, pinned) => `
+    <article class="lb-row ${row.user ? 'lb-row--user' : ''}${pinned ? ' lb-row--pinned' : ''}">
       <div class="lb-row__rank">
         <span class="lb-row__rank-num">${String(row.rank).padStart(2, '0')}</span>
         <span class="lb-row__mode">${modeDisplay(row.mode)}</span>
@@ -367,8 +379,16 @@ function paintLeaderboard() {
         <span class="lb-row__ovr-num">${row.ovr}</span>
         <span class="lb-row__ovr-label">OVR${row.chem ? ' · ' + row.chem + ' CHEM' : ''}</span>
       </div>
-    </article>
-  `).join('');
+    </article>`;
+
+  const pinnedHTML = pinnedUser ? `<div class="lb-pin-sep">⋯ YOUR RANK ⋯</div>` + rowHTML(pinnedUser, true) : '';
+  const toggle = (isAll && (hiddenCount > 0 || _lbShowAll))
+    ? `<button class="lb-showall" id="lbShowAll" type="button">${_lbShowAll ? `▲ SHOW TOP ${LB_ALL_CAP}` : `▼ SHOW ALL ${ranked.length}`}</button>`
+    : '';
+
+  grid.innerHTML = badge + combined.map(r => rowHTML(r, false)).join('') + pinnedHTML + toggle;
+  const sa = document.getElementById('lbShowAll');
+  if (sa) sa.addEventListener('click', () => { _lbShowAll = !_lbShowAll; paintLeaderboard(); });
 }
 
 function wireLeaderboardFilters() {
@@ -377,6 +397,7 @@ function wireLeaderboardFilters() {
     bar.querySelectorAll('.lb-filter').forEach(btn => {
       btn.addEventListener('click', () => {
         _lbFilter = btn.dataset.lbMode || 'ALL';
+        _lbShowAll = false;   // collapse back to the capped view on tab switch
         bar.querySelectorAll('.lb-filter').forEach(b => {
           const active = b === btn;
           b.classList.toggle('lb-filter--active', active);
