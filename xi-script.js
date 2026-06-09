@@ -195,6 +195,7 @@ function fnv1a(s) {
   return h >>> 0;
 }
 let _spinRng = Math.random;   // swapped to the seeded RNG while in Daily mode
+let _submittingLineup = false;   // re-entry guard: one post per completed XI
 
 function weightedPick(pool) {
   // Build cumulative weight array
@@ -1950,6 +1951,10 @@ function showCompleteModal() {
     state.lastResult.daily = true;
     state.lastResult.streak = dailyStreakVal;
   }
+  // Fresh result — re-arm the POST button (it gets locked to "✓ POSTED" after a post).
+  _submittingLineup = false;
+  const _postBtn = document.getElementById('submitLineupBtn');
+  if (_postBtn) { _postBtn.disabled = false; _postBtn.innerHTML = 'POST TO LEADERBOARD →'; }
 
   // Hero finish banner — the big, color-coded "how did I do?" answer up top.
   const finishHero = $('xiFinishHero');
@@ -2669,6 +2674,11 @@ async function submitLineupToLeaderboard() {
     toast('FINISH THE XI FIRST');
     return;
   }
+  // ONE post per completed XI — blocks rapid re-clicks (sync guard) AND re-posting
+  // the same result after it already went through.
+  if (_submittingLineup) return;
+  if (state.lastResult && state.lastResult.posted) { toast('✓ ALREADY POSTED THIS XI'); return; }
+  _submittingLineup = true;
   const name = getBuiltByName();
   // Use the result screen's exact OVR/chem so the board, card and rank all match.
   const final = state.lastResult ? state.lastResult.ovr : computeFinalOVR();
@@ -2700,12 +2710,18 @@ async function submitLineupToLeaderboard() {
   const result = await storeLineup(entry);  // global POST + local backup
   await renderLeaderboard();                 // re-pull global top 12
 
-  if (btn) { btn.disabled = false; btn.innerHTML = 'SUBMIT TO LEADERBOARD →'; }
-
   if (result?.status === 429) {
+    // Rate-limited — let them retry this same XI.
+    _submittingLineup = false;
+    if (btn) { btn.disabled = false; btn.innerHTML = 'POST TO LEADERBOARD →'; }
     toast('TOO MANY SUBMISSIONS — TRY AGAIN IN A MIN');
     return;   // keep the modal open so they can retry
   }
+
+  // Posted — lock this result so the button can't fire again for the same XI.
+  if (state.lastResult) state.lastResult.posted = true;
+  _submittingLineup = false;
+  if (btn) { btn.disabled = true; btn.innerHTML = '✓ POSTED'; }
 
   toast(result?.ok
     ? `✓ SUBMITTED · ${final} OVR · GLOBAL LEADERBOARD UPDATED`

@@ -60,6 +60,14 @@ function kvConfigured() {
   return kv !== null;
 }
 
+// Stable short hash for the dedup key (FNV-1a → base36).
+function hashKey(s) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
+}
+const DEDUP_WINDOW_SEC = 60;
+
 export default async function handler(req, res) {
   // Permissive CORS so the static client (and Vercel preview deploys) can call.
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -126,6 +134,17 @@ export default async function handler(req, res) {
       if (count > RL_MAX_PER_WINDOW) {
         return res.status(429).json({ error: 'Too many submissions — try again in a minute' });
       }
+
+      // Dedup backstop: drop an identical entry (same person + lineup + score +
+      // mode) within a short window — stops accidental double-posts even if the
+      // client-side guard is bypassed. Fail-open if KV hiccups.
+      try {
+        const dupKey = `pe:dup:${hashKey(`${entry.by}|${entry.lineup}|${entry.ovr}|${entry.mode}`)}`;
+        const firstTime = await kv.set(dupKey, 1, { nx: true, ex: DEDUP_WINDOW_SEC });
+        if (firstTime === null) {
+          return res.status(200).json({ ok: true, duplicate: true, entry });  // silently ignore
+        }
+      } catch (e) { /* dedup unavailable — don't block the post */ }
 
       await kv.lpush(KEY, JSON.stringify(entry));
       await kv.ltrim(KEY, 0, MAX_STORED - 1);
