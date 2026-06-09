@@ -296,7 +296,38 @@ async function renderLeaderboard() {
   _lbRows = rows
     .filter(e => isEntryClean(e) && !isTestEntry(e))
     .map(e => ({ ...e, by: normalizeBy(e.by) }));
+  annotateRankMovement(_lbRows);   // ▲/▼/NEW vs last load
   paintLeaderboard();
+}
+
+// ---- Rank movement: ▲ up / ▼ down / NEW since the last time the board loaded ----
+function lbEntryId(e) { return `${e.by}|${e.ovr}|${e.lineup}`; }
+function loadRankSnapshot() {
+  try { return JSON.parse(localStorage.getItem('pe_lb_ranks') || '{}') || {}; }
+  catch (e) { return {}; }
+}
+function annotateRankMovement(rows) {
+  const ranked = [...rows].sort((a, b) => lbScore(b) - lbScore(a));   // canonical ALL-board order
+  const prev = loadRankSnapshot();
+  const hasPrev = Object.keys(prev).length > 0;
+  const curr = {};
+  ranked.forEach((e, i) => {
+    const id = lbEntryId(e), rank = i + 1;
+    curr[id] = rank;
+    if (!hasPrev) { e._move = null; return; }          // first ever visit: no baseline
+    if (!(id in prev)) e._move = { type: 'new' };
+    else if (prev[id] > rank) e._move = { type: 'up', n: prev[id] - rank };
+    else if (prev[id] < rank) e._move = { type: 'down', n: rank - prev[id] };
+    else e._move = { type: 'same' };
+  });
+  try { localStorage.setItem('pe_lb_ranks', JSON.stringify(curr)); } catch (e) {}
+}
+function moveHTML(m) {
+  if (!m || m.type === 'same') return '<span class="lb-move lb-move--same">–</span>';
+  if (m.type === 'new')  return '<span class="lb-move lb-move--new">NEW</span>';
+  if (m.type === 'up')   return `<span class="lb-move lb-move--up">▲ ${m.n}</span>`;
+  if (m.type === 'down') return `<span class="lb-move lb-move--down">▼ ${m.n}</span>`;
+  return '';
 }
 
 // Paints from _lbRows using the active mode filter. Tab clicks call this
@@ -368,6 +399,7 @@ function paintLeaderboard() {
     <article class="lb-row ${row.user ? 'lb-row--user' : ''}${pinned ? ' lb-row--pinned' : ''}">
       <div class="lb-row__rank">
         <span class="lb-row__rank-num">${String(row.rank).padStart(2, '0')}</span>
+        ${isAll ? moveHTML(row._move) : ''}
         <span class="lb-row__mode">${modeDisplay(row.mode)}</span>
       </div>
       <div class="lb-row__body">

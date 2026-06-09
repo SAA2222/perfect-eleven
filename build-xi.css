@@ -3093,6 +3093,18 @@ body { padding-bottom: 56px; }
 }
 .lb-row--pinned { border: 1px solid var(--gold, #ffc400); border-radius: 6px; }
 
+/* Rank movement: ▲ up (green) / ▼ down (red) / NEW (gold) since last load */
+.lb-move {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9px; font-weight: 800; letter-spacing: 0.03em; line-height: 1.3;
+  margin: 1px 0;
+}
+.lb-move--up { color: #4ade80; }
+.lb-move--down { color: #f87171; }
+.lb-move--new { color: var(--gold, #ffc400); }
+.lb-move--same { color: var(--mute-2, #8a96a0); opacity: 0.45; }
+
 .lb-empty {
   text-align: center;
   padding: 40px 20px;
