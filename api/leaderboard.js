@@ -47,13 +47,15 @@ function sanitize(s, maxLen) {
 // Profanity guard for the public "by" field (the only free-text input).
 const PROFANITY_RE = /(nigg|\bfagg|\bfag\b|kike|\bspic\b|chink|\bcoon\b|trann|retard|\bcunt|fuck|\bshit|bitch|whore|\bslut|pussy|asshole|bastard|motherf|\bwank|\bkys\b|\bporn|nazi|dickhead)/i;
 function cleanBy(s) {
-  const v = sanitize(s, 40);
-  if (!v) return 'EARTH';
+  const v = sanitize(s, 48);   // room for "BUILT BY NAME · CITY"
+  if (!v) return 'BUILT BY ANONYMOUS · EARTH';
   const norm = v.toLowerCase()
     .replace(/[\s._\-*'`]+/g, '')
     .replace(/0/g, 'o').replace(/[1!|]/g, 'i').replace(/3/g, 'e')
     .replace(/4/g, 'a').replace(/@/g, 'a').replace(/[$5]/g, 's').replace(/7/g, 't');
-  return (PROFANITY_RE.test(norm) || PROFANITY_RE.test(v.toLowerCase())) ? 'EARTH' : v;
+  if (PROFANITY_RE.test(norm) || PROFANITY_RE.test(v.toLowerCase())) return 'BUILT BY ANONYMOUS · EARTH';
+  // Guarantee a city — every stored entry reads NAME · CITY.
+  return /·/.test(v) ? v : `${v} · EARTH`;
 }
 
 function kvConfigured() {

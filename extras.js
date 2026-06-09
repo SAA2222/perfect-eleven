@@ -167,6 +167,23 @@ function isTestEntry(e) {
   const by = (e && e.by) || '';
   return /\b(test|vercel|deploy|utf8|localhost|debug|asdf|qwerty)\b/i.test(by);
 }
+
+// Every row must read "BUILT BY NAME · CITY". Backfills old / odd entries:
+// missing (or profane) name → ANONYMOUS, missing (or profane) city → EARTH.
+function normalizeBy(by) {
+  const bad = (s) => typeof hasProfanity === 'function' && hasProfanity(s);
+  let s = String(by || '').trim();
+  // Demo-seed "BUILT IN <city>" carries a city but no name.
+  const inCity = /^BUILT IN\s+(.+)$/i.exec(s);
+  if (inCity) { const c = inCity[1].trim(); return `BUILT BY ANONYMOUS · ${(bad(c) ? 'EARTH' : c).toUpperCase()}`; }
+  s = s.replace(/^BUILT BY\s*/i, '').trim();
+  const parts = s.split('·').map(x => x.trim()).filter(Boolean);
+  let name = parts[0] || '';
+  let city = parts.slice(1).join(' · ');
+  if (!name || /^EARTH$/i.test(name) || bad(name)) name = 'ANONYMOUS';
+  if (!city || bad(city)) city = 'EARTH';
+  return `BUILT BY ${name.toUpperCase()} · ${city.toUpperCase()}`;
+}
 // Mode filter state + cache of the last-merged rows, so switching tabs
 // re-paints instantly without refetching. Mode strings stored by the app:
 // 'CLASSIC', 'TOP50', 'LEGENDS' (see xi-script submit path).
@@ -272,8 +289,11 @@ async function renderLeaderboard() {
   }
 
   // Skip corrupted-Unicode + dev test entries. NO per-person de-dupe — multiple
-  // entries per player are welcome (every win counts).
-  _lbRows = rows.filter(e => isEntryClean(e) && !isTestEntry(e));
+  // entries per player are welcome (every win counts). Normalize every "by" to
+  // "BUILT BY NAME · CITY" (backfills old entries → ANONYMOUS / EARTH).
+  _lbRows = rows
+    .filter(e => isEntryClean(e) && !isTestEntry(e))
+    .map(e => ({ ...e, by: normalizeBy(e.by) }));
   paintLeaderboard();
 }
 
@@ -338,7 +358,7 @@ function paintLeaderboard() {
       </div>
       <div class="lb-row__body">
         <p class="lb-row__lineup">${row.lineup}</p>
-        <span class="lb-row__by">${(typeof hasProfanity === 'function' && hasProfanity(row.by)) ? 'EARTH' : row.by}${row.user ? ' · <span style="color:var(--pitch);">YOU</span>' : ''}</span>
+        <span class="lb-row__by">${row.by}${row.user ? ' · <span style="color:var(--pitch);">YOU</span>' : ''}</span>
         <span class="lb-badges">${finishBadge(row)}${expertBadge(row)}</span>
       </div>
       <div class="lb-row__ovr">
