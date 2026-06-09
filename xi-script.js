@@ -178,13 +178,15 @@ function mulberry32(seed) {
   };
 }
 const DAILY_EPOCH = Date.UTC(2026, 5, 8);   // 8 Jun 2026 = Daily #1
+// UTC so EVERYONE worldwide plays the same Daily #N on the same day — local date
+// would hand different timezones different 11s and make the board un-comparable.
 function dailyDayString(d) {
   d = d || new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
 }
 function dailyNumber() {
   const d = new Date();
-  const today = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const today = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
   return Math.max(1, Math.floor((today - DAILY_EPOCH) / 86400000) + 1);
 }
 function fnv1a(s) {
@@ -212,7 +214,7 @@ function loadDailyState() {
   catch (e) { return {}; }
 }
 function saveDailyState(s) { try { localStorage.setItem('pe_daily', JSON.stringify(s)); } catch (e) {} }
-function dailyYesterdayString() { const d = new Date(); d.setDate(d.getDate() - 1); return dailyDayString(d); }
+function dailyYesterdayString() { const d = new Date(); d.setUTCDate(d.getUTCDate() - 1); return dailyDayString(d); }
 function dailyPlayedToday() { return loadDailyState().lastDay === dailyDayString(); }
 function dailyStreak() { return loadDailyState().streak || 0; }
 

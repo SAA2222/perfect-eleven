@@ -167,22 +167,6 @@ function isTestEntry(e) {
   const by = (e && e.by) || '';
   return /\b(test|vercel|deploy|utf8|localhost|debug|asdf|qwerty)\b/i.test(by);
 }
-// Keep one best entry per person, per mode (highest score) — so one grinder's
-// many submissions (e.g. Kyle's 20) don't flood the board.
-function dedupeByPerson(rows) {
-  const best = new Map();
-  for (const e of rows) {
-    const mode = normalizeMode(e.mode);
-    // Daily entries are mode DAILY every day — tag by day so each day's challenge
-    // keeps its own per-person best (otherwise one good day hides all the rest).
-    const dayTag = mode === 'DAILY' ? '|' + new Date(e.createdAt || 0).toDateString() : '';
-    const key = `${(e.by || '').trim().toLowerCase()}|${mode}${dayTag}`;
-    const cur = best.get(key);
-    if (!cur || lbScore(e) > lbScore(cur)) best.set(key, e);
-  }
-  return [...best.values()];
-}
-
 // Mode filter state + cache of the last-merged rows, so switching tabs
 // re-paints instantly without refetching. Mode strings stored by the app:
 // 'CLASSIC', 'TOP50', 'LEGENDS' (see xi-script submit path).
@@ -301,9 +285,19 @@ function paintLeaderboard() {
 
   let rows = _lbRows.slice();
   if (_lbFilter === 'DAILY') {
-    // Today's daily only — everyone faced the identical 11, so it's truly comparable.
-    const today = new Date().toDateString();
-    rows = rows.filter(r => normalizeMode(r.mode) === 'DAILY' && new Date(r.createdAt || 0).toDateString() === today);
+    // Today's daily only, keyed by UTC DAY (matches the UTC seed) so it's a true
+    // global apples-to-apples board. De-dupe to one BEST run per person HERE only
+    // (multiple entries are still welcome on every other board).
+    const todayUTC = new Date().toISOString().slice(0, 10);
+    const dailyRows = rows.filter(r => normalizeMode(r.mode) === 'DAILY'
+      && new Date(r.createdAt || 0).toISOString().slice(0, 10) === todayUTC);
+    const best = new Map();
+    for (const e of dailyRows) {
+      const k = (e.by || '').trim().toLowerCase();
+      const cur = best.get(k);
+      if (!cur || lbScore(e) > lbScore(cur)) best.set(k, e);
+    }
+    rows = [...best.values()];
   } else if (_lbFilter !== 'ALL') {
     rows = rows.filter(r => normalizeMode(r.mode) === _lbFilter);
   }
