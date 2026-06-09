@@ -259,15 +259,13 @@ function expertBadge(e) {
   if (!e || !e.expert) return '';
   return `<span class="lb-expert">🎭 EXPERT ×${_BLIND_MULT} · ${lbScore(e)} PTS</span>`;
 }
-// Color-code the overall score by tier — hot (elite gold/green) → cool (orange/red).
+// Color-code the overall score by tier (ascending): lime → bright green → dark green → gold.
 function ovrColor(ovr) {
   const n = Number(ovr) || 0;
   if (n >= 100) return '#ffd24a';  // gold — elite
-  if (n >= 95)  return '#4ade80';  // bright green
-  if (n >= 90)  return '#a3e635';  // lime
-  if (n >= 84)  return '#fbbf24';  // amber
-  if (n >= 78)  return '#fb923c';  // orange
-  return '#f87171';                // red
+  if (n >= 95)  return '#16a34a';  // dark green
+  if (n >= 90)  return '#4ade80';  // bright green
+  return '#a3e635';                // lime
 }
 
 // This squad's would-be position on the ALL-TIME, all-modes leaderboard (ranked
