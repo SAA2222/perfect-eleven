@@ -259,6 +259,16 @@ function expertBadge(e) {
   if (!e || !e.expert) return '';
   return `<span class="lb-expert">🎭 EXPERT ×${_BLIND_MULT} · ${lbScore(e)} PTS</span>`;
 }
+// Color-code the overall score by tier — hot (elite gold/green) → cool (orange/red).
+function ovrColor(ovr) {
+  const n = Number(ovr) || 0;
+  if (n >= 100) return '#ffd24a';  // gold — elite
+  if (n >= 95)  return '#4ade80';  // bright green
+  if (n >= 90)  return '#a3e635';  // lime
+  if (n >= 84)  return '#fbbf24';  // amber
+  if (n >= 78)  return '#fb923c';  // orange
+  return '#f87171';                // red
+}
 
 // This squad's would-be position on the ALL-TIME, all-modes leaderboard (ranked
 // by lbScore so Expert 2× counts) — used on the share card. Returns null if the
@@ -413,7 +423,7 @@ function paintLeaderboard() {
         <span class="lb-badges">${finishBadge(row)}${expertBadge(row)}</span>
       </div>
       <div class="lb-row__ovr">
-        <span class="lb-row__ovr-num">${row.ovr}</span>
+        <span class="lb-row__ovr-num" style="color:${ovrColor(row.ovr)}">${row.ovr}</span>
         <span class="lb-row__ovr-label">OVR${row.chem ? ' · ' + row.chem + ' CHEM' : ''}</span>
       </div>
     </article>`;
