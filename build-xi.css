@@ -83,6 +83,29 @@ body.is-daily #resetBtn { display: none; }
 body.is-daily .xi-resources,
 body.is-daily #swapBtnTop,
 body.is-daily .xi-expert { display: none; }
+
+/* Head-to-head CTA (crimson, to distinguish from the gold Daily) */
+.xi-daily--h2h { border-color: #ff4d6d; background: linear-gradient(135deg, rgba(255,77,109,0.16), rgba(255,77,109,0.05)); }
+.xi-daily--h2h .xi-daily__title { color: #ff4d6d; }
+.xi-daily--h2h .xi-daily__go { background: #ff4d6d; color: #fff; }
+.xi-daily--h2h:hover { box-shadow: 0 6px 18px rgba(255,77,109,0.18); }
+/* H2H verdict + challenge-link row on the complete screen */
+.h2h-row {
+  width: 100%;
+  margin: 4px auto 14px;
+  padding: 14px;
+  background: rgba(255,77,109,0.08);
+  border: 1px solid rgba(255,77,109,0.4);
+  border-radius: 10px;
+  text-align: center;
+}
+.h2h-row__verdict {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 15px; line-height: 1.3;
+  color: var(--bone, #e8e6df);
+}
+.h2h-row .xi-btn { width: 100%; }
 .xi-mode {
   background: transparent;
   border: none;

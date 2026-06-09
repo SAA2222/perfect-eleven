@@ -251,10 +251,87 @@ function startDailyChallenge() {
   toast(`⭐ DAILY #${dailyNumber()} — same 11 for everyone`);
   document.getElementById('spinner')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
-function exitDaily() {   // leaving Daily for a normal mode
+function exitDaily() {   // leaving Daily / H2H for a normal mode
   state.daily = false;
+  state.h2h = null;
   _spinRng = Math.random;
-  document.body.classList.remove('is-daily');
+  document.body.classList.remove('is-daily', 'is-h2h');
+}
+
+// ----- Head-to-head challenge (async): same 11 for you AND your friend -----
+// opponent = {name, score} when you're ANSWERING a challenge; null when creating one.
+function startH2HChallenge(seed, opponent) {
+  state.mode = 'classic';
+  state.daily = false;
+  state.h2h = { seed: (seed >>> 0), opponent: opponent || null };
+  _spinRng = mulberry32(state.h2h.seed);
+  document.querySelectorAll('.xi-mode').forEach(b => b.classList.toggle('xi-mode--active', b.dataset.mode === 'classic'));
+  resetRoster();                       // re-seeds + zeroes skips/swaps (h2h branch)
+  state.skipsLeft = 0; state.swapsLeft = 0;
+  updateResources();
+  buildSpinnerCards();
+  updateSpinButtonLabel();
+  document.body.classList.add('is-daily', 'is-h2h');   // reuse the no-skip/swap/reset UI
+  toast(opponent ? `⚔️ BEAT ${opponent.name} — they got ${opponent.score}` : '⚔️ CHALLENGE — same 11 for you both');
+  document.getElementById('spinner')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+// Just the NAME part of "NAME · CITY".
+function shortByName() {
+  const full = (typeof getBuiltByName === 'function') ? getBuiltByName() : 'A FRIEND';
+  return ((full.split('·')[0] || '').trim() || 'A FRIEND');
+}
+function h2hLink(score) {
+  const seed = state.h2h ? state.h2h.seed : 0;
+  const params = new URLSearchParams({ h2h: String(seed), n: shortByName(), s: String(score) });
+  return `https://perfect-eleven.vercel.app/?${params.toString()}`;
+}
+// On load: if ?h2h= is present, auto-start the challenge vs the sender.
+function handleH2HReturn() {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    const seedStr = p.get('h2h');
+    if (seedStr == null) return false;
+    const seed = parseInt(seedStr, 10);
+    if (!Number.isFinite(seed)) return false;
+    const opponent = { name: (p.get('n') || 'A FRIEND').slice(0, 24), score: parseInt(p.get('s'), 10) || 0 };
+    window.history.replaceState({}, '', window.location.pathname);   // refresh won't re-trigger
+    startH2HChallenge(seed, opponent);
+    return true;
+  } catch (e) { return false; }
+}
+function h2hKickerText(myScore) {
+  const opp = state.h2h && state.h2h.opponent;
+  if (!opp) return '⚔️ CHALLENGE READY — SEND IT TO A FRIEND';
+  if (myScore > opp.score) return `⚔️ YOU WIN! ${myScore} vs ${opp.name} ${opp.score}`;
+  if (myScore < opp.score) return `⚔️ ${opp.name} WINS — ${opp.score} vs YOUR ${myScore}`;
+  return `🤝 DEAD HEAT — ${myScore} vs ${opp.name}`;
+}
+function copyH2HLink(score) {
+  const link = h2hLink(score);
+  const text = `⚔️ Beat my Perfect Eleven — I got ${score}. You get the SAME 11 spins: ${link}`;
+  if (navigator.share) { navigator.share({ title: 'Beat my XI', text, url: link }).catch(() => {}); return; }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(() => toast('⚔️ CHALLENGE LINK COPIED — SEND IT!'), () => toast(link));
+    return;
+  }
+  toast(link);
+}
+function renderH2HResult(myScore) {
+  const row = document.getElementById('h2hRow');
+  if (!row) return;
+  if (!state.h2h) { row.hidden = true; return; }
+  row.hidden = false;
+  const opp = state.h2h.opponent;
+  const verdict = opp
+    ? (myScore > opp.score ? `🏆 You beat ${opp.name}! ${myScore} vs ${opp.score}`
+      : myScore < opp.score ? `${opp.name} got you — ${opp.score} vs ${myScore}. Rematch a friend?`
+      : `Dead heat with ${opp.name} — ${myScore} apiece.`)
+    : `Send these exact 11 to a friend — can they beat ${myScore}?`;
+  row.innerHTML = `
+    <p class="h2h-row__verdict">${verdict}</p>
+    <button class="xi-btn xi-btn--gold" id="h2hCopyBtn">⚔️ ${opp ? 'CHALLENGE SOMEONE ELSE' : 'COPY CHALLENGE LINK'}</button>`;
+  const btn = document.getElementById('h2hCopyBtn');
+  if (btn) btn.addEventListener('click', () => copyH2HLink(myScore));
 }
 // Update + return the streak after completing today's Daily.
 function recordDailyCompletion(ovr) {
@@ -1994,10 +2071,15 @@ function showCompleteModal() {
     `;
   }
 
+  if (state.h2h) renderH2HResult(final);
+  else { const hr = document.getElementById('h2hRow'); if (hr) hr.hidden = true; }
+
   const kicker = document.getElementById('completeKicker');
-  if (kicker) kicker.textContent = state.daily
-    ? `⭐ DAILY #${dailyNumber()} · 🔥 ${dailyStreakVal}-DAY STREAK`
-    : (wasBlind ? '🎭 THE BIG REVEAL — YOU DRAFTED BLIND' : 'YOUR ELEVEN IS COMPLETE');
+  if (kicker) kicker.textContent = state.h2h
+    ? h2hKickerText(final)
+    : (state.daily
+      ? `⭐ DAILY #${dailyNumber()} · 🔥 ${dailyStreakVal}-DAY STREAK`
+      : (wasBlind ? '🎭 THE BIG REVEAL — YOU DRAFTED BLIND' : 'YOUR ELEVEN IS COMPLETE'));
 
   const oopNote = oop > 0 ? ` ${oop} OOP (−${oop} OVR).` : '';
   const injuryNote = injuryLoss > 0 ? ` 🚑 ${injuries.length} injuries (−${injuryLoss} OVR).` : '';
@@ -2881,10 +2963,13 @@ function resetRoster() {
   state.currentSlot = null;
   state.tacticalDraw = null;
   applyModeResources();            // per-mode skips/swaps (Tactical = 2/1)
-  // Daily: no skips/swaps, and re-seed so a reset restarts the SAME 11 spins.
+  // Daily / H2H: no skips/swaps, and re-seed so a reset restarts the SAME 11 spins.
   if (state.daily) {
     state.skipsLeft = 0; state.swapsLeft = 0;
     _spinRng = mulberry32(fnv1a('PE-DAILY-' + dailyDayString()));
+  } else if (state.h2h) {
+    state.skipsLeft = 0; state.swapsLeft = 0;
+    _spinRng = mulberry32(state.h2h.seed);
   }
   renderResourcePips();            // rebuild pip dots to match the mode's max
   state.swapMode = false;
@@ -3049,6 +3134,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('spinBtn').addEventListener('click', spin);
   initStickySpin();   // mobile sticky SPIN bar (spin from your pitch, no scroll-up)
   $('dailyCta')?.addEventListener('click', startDailyChallenge);
+  $('h2hCta')?.addEventListener('click', () => startH2HChallenge(Math.floor(Math.random() * 0xffffffff), null));
   updateDailyCta();
   setInterval(updateDailyCta, 60000);   // tick the "next in Xh Ym" lock countdown
   loadCardTheme();   // restore the chosen premium share-card theme
@@ -3136,4 +3222,5 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(enterSwapMode, 250);
   });
   updateResources();
+  handleH2HReturn();   // arrived via a ?h2h= challenge link → auto-start it vs the sender
 });
