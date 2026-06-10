@@ -7,7 +7,7 @@ const KICKOFF = new Date('2026-06-11T20:00:00Z').getTime();
 const TICKER_ITEMS = [
   { type: 'live',  text: 'BUILD THE PERFECT ELEVEN · TOOL LIVE NOW' },
   { type: 'news',  text: '⚽ 48 NATIONS · 120 PLAYERS · ONE STARTING XI' },
-  { type: 'news',  text: '🏆 OPENING MATCH · MEX vs TBD · JUN 11 · ESTADIO AZTECA' },
+  { type: 'news',  text: '🏆 OPENING MATCH · MEX vs RSA · JUN 11 · ESTADIO AZTECA' },
   { type: 'live',  text: 'NEW · LEGENDS MODE DROPS NEXT WEEK' },
   { type: 'news',  text: '🇧🇷 BRA · 🇦🇷 ARG · 🇫🇷 FRA · 🇪🇸 ESP · 🏴 ENG · TOP-RATED POOLS' },
   { type: 'news',  text: 'WORLD CUP 2026 · USA · CAN · MEX · 16 CITIES · 39 DAYS' },
@@ -245,7 +245,9 @@ function finishBadge(entry) {
             : tier === 'RUNNERS_UP' ? 'lb-finish--runner'
             : (tier === 'THIRD' || tier === 'FOURTH') ? 'lb-finish--podium'
             : 'lb-finish--ko';
-  return `<span class="lb-finish ${cls}">${label}</span>`;
+  // title clarifies this is THEIR tournament result, not their board position
+  // (a #2-ranked entry can legitimately wear 🥉 THIRD — different things).
+  return `<span class="lb-finish ${cls}" title="How this XI finished its simulated World Cup — not its leaderboard position">${label}</span>`;
 }
 
 // Leaderboard score — an Expert (blind) draft earns a points MULTIPLIER (BLIND_MULT,

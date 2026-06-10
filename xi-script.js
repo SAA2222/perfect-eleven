@@ -458,11 +458,14 @@ function updateKickoffPill() {
   const el = document.getElementById('kickoffPill');
   if (!el) return;
   const now = Date.now();
-  const kickoff = Date.UTC(2026, 5, 11, 16, 0);   // first match ~noon ET Jun 11
+  const kickoff = Date.UTC(2026, 5, 11, 19, 0);   // MEX vs RSA — 3 PM ET Jun 11 (API-confirmed)
   const final_  = Date.UTC(2026, 6, 19, 23, 59);  // final Jul 19
   if (now < kickoff) {
-    const days = Math.ceil((kickoff - now) / 86400000);
-    el.textContent = days <= 1 ? '⚽ KICKS OFF TOMORROW' : `⚽ KICKS OFF IN ${days} DAYS`;
+    // ET calendar days so "TODAY"/"TOMORROW" flip at the right midnight.
+    const dayNow = easternDayString();
+    el.textContent = dayNow === '2026-06-11' ? '⚽ KICKS OFF TODAY · 3PM ET'
+      : dayNow === '2026-06-10' ? '⚽ KICKS OFF TOMORROW'
+      : `⚽ KICKS OFF IN ${Math.ceil((kickoff - now) / 86400000)} DAYS`;
     el.hidden = false;
   } else if (now <= final_) {
     el.textContent = '🔴 THE WORLD CUP IS LIVE';
@@ -1310,7 +1313,7 @@ function updateResources() {
   if (pickSwap) pickSwap.disabled = swapDisabled;
   // sync all swap counter spans
   document.querySelectorAll('.swap-count-num').forEach(el => {
-    el.textContent = state.swapsLeft;
+    el.textContent = String(Math.max(0, state.swapsLeft | 0));   // never blank/NaN
   });
 }
 

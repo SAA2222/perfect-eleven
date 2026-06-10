@@ -150,7 +150,7 @@ const SCHEDULE = [
 // TICKER ITEMS
 // ============================================================
 const TICKER_ITEMS = [
-  { type: 'live',  text: 'TOURNAMENT KICKOFF · MEX vs TBD · ESTADIO AZTECA' },
+  { type: 'live',  text: 'TOURNAMENT KICKOFF · MEX vs RSA · ESTADIO AZTECA' },
   { type: 'news',  text: 'BRACKET BUILDER NOW OPEN · LOCK YOUR PICKS BY JUN 11' },
   { type: 'news',  text: '🇲🇽 OPENER · 🇺🇸 11 CITIES · 🇨🇦 2 CITIES · 16 VENUES TOTAL' },
   { type: 'live',  text: 'NEW · GROUP F PREVIEW DROPS THU · "GROUP OF DEATH"' },
