@@ -2923,7 +2923,8 @@ function finishCompleteFlow() {
   const sp = $('sharePrompt');
   if (sp) sp.hidden = true;
   $('completeModal').hidden = true;
-  resetRoster();
+  exitDaily();      // leaving a Daily/H2H run — next build is a normal one
+  resetRoster();    // (otherwise resetRoster would re-seed today's daily, bypassing the one-shot lock)
   document.getElementById('leaderboard')?.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -3191,7 +3192,9 @@ document.addEventListener('DOMContentLoaded', () => {
   $('swapBtn').onclick = enterSwapMode;
   $('playAgainBtn').addEventListener('click', () => {
     $('completeModal').hidden = true;
+    exitDaily();    // PLAY AGAIN = a fresh normal run, never a daily/h2h replay
     resetRoster();
+    updateDailyCta();
   });
   $('copyBtn')?.addEventListener('click', copyToClipboard);  // COPY LINEUP removed (redundant w/ SHARE AS IMAGE)
   const shareXBtn = document.getElementById('shareXBtn');
