@@ -312,6 +312,8 @@ async function renderLeaderboard() {
     .map(e => ({ ...e, by: normalizeBy(e.by) }));
   annotateRankMovement(_lbRows);   // ▲/▼/NEW vs last load
   paintLeaderboard();
+  // Board data just arrived → refresh the Daily CTA's "🌍 N played" social proof.
+  if (typeof updateDailyCta === 'function') updateDailyCta();
 }
 
 // ---- Rank movement: ▲ up / ▼ down / NEW since the last time the board loaded ----

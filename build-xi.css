@@ -128,6 +128,9 @@ body.is-daily .xi-expert { display: none; }
   color: var(--bone, #e8e6df);
 }
 .h2h-row .xi-btn { width: 100%; }
+.h2h-row .xi-btn + .xi-btn { margin-top: 8px; }
+.xi-btn--crimson { background: #ff4d6d; color: #fff; border-color: #ff4d6d; }
+.xi-btn--crimson:hover { background: #ff6580; }
 .xi-mode {
   background: transparent;
   border: none;
@@ -1837,6 +1840,48 @@ body.swap-mode .xi-pitch::after {
   letter-spacing: 0.04em;
   color: #aeb8c2;
 }
+/* Trophy case — badge unlocks on the complete screen */
+.xi-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 2px auto 12px;
+}
+.xi-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, rgba(255,196,0,0.18), rgba(255,196,0,0.05));
+  border: 1.5px solid var(--gold, #ffc400);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 360px;
+}
+.xi-badge--new { animation: badgePop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes badgePop { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.xi-badge__icon { font-size: 24px; flex-shrink: 0; }
+.xi-badge__name {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 800; letter-spacing: 0.1em;
+  color: var(--gold, #ffc400);
+  white-space: nowrap;
+}
+.xi-badge__how {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--mute-2, #8a96a0);
+  margin-left: auto;
+  text-align: right;
+}
+.xi-badges__count {
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 800; letter-spacing: 0.14em;
+  color: var(--mute-2, #8a96a0);
+}
+
 /* Retention hooks under the finish: personal best + near-miss */
 .xi-finish-hero__pb {
   display: block;

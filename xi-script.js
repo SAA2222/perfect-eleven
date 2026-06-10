@@ -329,34 +329,112 @@ function copyH2HLink(score) {
   }
   toast(link);
 }
+// Rematch: lose (or tie) → one tap starts a FRESH seeded run; when you finish it,
+// the share copy is aimed back at the person who beat you. Ping-pong loop.
+function startH2HRematch(name) {
+  startH2HChallenge(Math.floor(Math.random() * 0xffffffff), null);
+  state.h2h.rematchVs = name;   // remembered for the share copy after this run
+  $('completeModal').hidden = true;
+  toast(`🔁 REMATCH — new 11. Beat your score, then send it to ${name}`);
+}
 function renderH2HResult(myScore) {
   const row = document.getElementById('h2hRow');
   if (!row) return;
   if (!state.h2h) { row.hidden = true; return; }
   row.hidden = false;
   const opp = state.h2h.opponent;
+  const vs = state.h2h.rematchVs;
   const verdict = opp
     ? (myScore > opp.score ? `🏆 You beat ${opp.name}! ${myScore} vs ${opp.score}`
-      : myScore < opp.score ? `${opp.name} got you — ${opp.score} vs ${myScore}. Rematch a friend?`
+      : myScore < opp.score ? `${opp.name} got you — ${opp.score} vs ${myScore}.`
       : `Dead heat with ${opp.name} — ${myScore} apiece.`)
-    : `Send these exact 11 to a friend — can they beat ${myScore}?`;
+    : (vs ? `Rematch ready — send it to ${vs}. Can they beat ${myScore}?`
+          : `Send these exact 11 to a friend — can they beat ${myScore}?`);
+  const rematchBtn = (opp && myScore <= opp.score)
+    ? `<button class="xi-btn xi-btn--crimson" id="h2hRematchBtn">🔁 GET REVENGE — REMATCH ${opp.name}</button>`
+    : '';
   row.innerHTML = `
     <p class="h2h-row__verdict">${verdict}</p>
+    ${rematchBtn}
     <button class="xi-btn xi-btn--gold" id="h2hCopyBtn">⚔️ ${opp ? 'CHALLENGE SOMEONE ELSE' : 'COPY CHALLENGE LINK'}</button>`;
   const btn = document.getElementById('h2hCopyBtn');
   if (btn) btn.addEventListener('click', () => copyH2HLink(myScore));
+  const rb = document.getElementById('h2hRematchBtn');
+  if (rb) rb.addEventListener('click', () => startH2HRematch(opp.name));
 }
 // Update + return the streak after completing today's Daily.
+// Premium perk: STREAK FREEZE — missing exactly ONE day doesn't reset the streak
+// (auto-applied, once per calendar month).
 function recordDailyCompletion(ovr) {
   const today = dailyDayString();
   const st = loadDailyState();
   if (st.lastDay === today) return st.streak || 1;        // already counted today
-  st.streak = (st.lastDay === dailyYesterdayString()) ? (st.streak || 0) + 1 : 1;
+  if (st.lastDay === dailyYesterdayString()) {
+    st.streak = (st.streak || 0) + 1;                     // consecutive day
+  } else {
+    const twoDaysAgo = easternDayString(new Date(Date.now() - 2 * 86400000));
+    const month = today.slice(0, 7);                      // YYYY-MM (ET)
+    const prem = (typeof isPremium === 'function') && isPremium();
+    if (st.lastDay === twoDaysAgo && prem && st.freezeMonth !== month && (st.streak || 0) > 0) {
+      st.streak = (st.streak || 0) + 1;                   // 🧊 freeze covers the missed day
+      st.freezeMonth = month;
+      toast('🧊 STREAK FREEZE used — your streak survived the missed day');
+    } else {
+      st.streak = 1;                                      // broken — start over
+    }
+  }
   st.lastDay = today;
   st.bestOvr = Math.max(st.bestOvr || 0, ovr || 0);
   saveDailyState(st);
   return st.streak;
 }
+// ----- Trophy case: unlockable badges (localStorage pe_badges) -----
+const BADGES = {
+  first_xi: { icon: '⚽', name: 'FIRST ELEVEN',   how: 'Complete your first XI' },
+  champion: { icon: '🏆', name: 'WORLD CHAMPION', how: 'Win the World Cup' },
+  ovr_100:  { icon: '💯', name: 'CENTURION',      how: 'Hit 100+ overall' },
+  chem_30:  { icon: '🧪', name: 'CHEMISTRY LAB',  how: 'Reach 30+ chemistry' },
+  blind_ace:{ icon: '🎭', name: 'BLIND MAESTRO',  how: 'Grade A+ or S drafting blind' },
+  h2h_win:  { icon: '⚔️', name: 'DUEL WINNER',    how: 'Win a head-to-head' },
+  streak_3: { icon: '🔥', name: 'HAT-TRICK',      how: '3-day daily streak' },
+  streak_7: { icon: '🗓️', name: 'PERFECT WEEK',  how: '7-day daily streak' },
+};
+function loadBadges() { try { return JSON.parse(localStorage.getItem('pe_badges') || '{}') || {}; } catch (e) { return {}; } }
+// Evaluate this run against every badge → returns the NEWLY unlocked ones.
+function checkBadges(ctx) {
+  const have = loadBadges();
+  const earned = [];
+  const award = (id, cond) => { if (cond && !have[id]) { have[id] = true; earned.push(id); } };
+  award('first_xi',  true);
+  award('champion',  ctx.finishTier === 'CHAMPIONS');
+  award('ovr_100',   ctx.final >= 100);
+  award('chem_30',   ctx.chem >= 30);
+  award('blind_ace', ctx.wasBlind && (ctx.grade === 'S' || ctx.grade === 'A+'));
+  award('h2h_win',   !!ctx.h2hWin);
+  award('streak_3',  ctx.streak >= 3);
+  award('streak_7',  ctx.streak >= 7);
+  if (earned.length) { try { localStorage.setItem('pe_badges', JSON.stringify(have)); } catch (e) {} }
+  return { earned, total: Object.keys(BADGES).length, count: Object.keys(have).length };
+}
+// Render the unlock moment (+ running trophy count) on the complete screen.
+function renderBadgeRow(res) {
+  const row = document.getElementById('xiBadgeRow');
+  if (!row) return;
+  if (!res.earned.length) {
+    // No new unlocks — show the quiet trophy-case count only once they have some.
+    if (res.count > 0) {
+      row.hidden = false;
+      row.innerHTML = `<span class="xi-badges__count">🏅 TROPHY CASE ${res.count}/${res.total}</span>`;
+    } else row.hidden = true;
+    return;
+  }
+  row.hidden = false;
+  row.innerHTML = res.earned.map(id => {
+    const b = BADGES[id];
+    return `<span class="xi-badge xi-badge--new"><span class="xi-badge__icon">${b.icon}</span><span class="xi-badge__name">UNLOCKED: ${b.name}</span><span class="xi-badge__how">${b.how}</span></span>`;
+  }).join('') + `<span class="xi-badges__count">🏅 TROPHY CASE ${res.count}/${res.total}</span>`;
+}
+
 // 2-letter ISO → flag emoji (renders as the OS flag on the share text).
 function flagEmoji(iso) {
   if (!iso || iso.length !== 2) return '⚽';
@@ -391,20 +469,33 @@ function updateKickoffPill() {
 }
 
 // Refresh the Daily CTA copy (number, streak, played-today state).
+// How many people have posted TODAY'S daily to the global board (social proof).
+// Reads the already-fetched leaderboard rows — no extra network.
+function dailyPlayedCount() {
+  try {
+    if (typeof _lbRows === 'undefined' || !Array.isArray(_lbRows)) return 0;
+    const today = dailyDayString();
+    return _lbRows.filter(r =>
+      String(r.mode || '').toUpperCase().replace(/\s+/g, '') === 'DAILY' &&
+      easternDayString(new Date(r.createdAt || 0)) === today).length;
+  } catch (e) { return 0; }
+}
 function updateDailyCta() {
   const cta = $('dailyCta'), title = $('dailyTitle'), sub = $('dailySub'), go = $('dailyGo');
   if (!sub) return;
   const streak = dailyStreak();
   if (title) title.textContent = `DAILY #${dailyNumber()}`;
+  const played = dailyPlayedCount();
+  const crowd = played >= 3 ? ` · 🌍 ${played} played` : '';
   if (dailyPlayedToday()) {
     // One go per day — locked until the next 12 AM ET.
-    sub.textContent = `✓ Done${streak > 0 ? ` · 🔥 ${streak}` : ''} · next in ${fmtCountdown(msUntilNextEasternMidnight())}`;
+    sub.textContent = `✓ Done${streak > 0 ? ` · 🔥 ${streak}` : ''} · next in ${fmtCountdown(msUntilNextEasternMidnight())}${crowd}`;
     if (go) go.textContent = '🔒';
     if (cta) { cta.classList.add('xi-daily--locked'); cta.setAttribute('aria-disabled', 'true'); }
   } else {
-    sub.textContent = streak > 0
+    sub.textContent = (streak > 0
       ? `🔥 ${streak}-day streak · one attempt · same 11 for all`
-      : 'One attempt · same 11 spins for everyone · no skips';
+      : 'One attempt · same 11 spins for everyone · no skips') + crowd;
     if (go) go.textContent = 'PLAY →';
     if (cta) { cta.classList.remove('xi-daily--locked'); cta.removeAttribute('aria-disabled'); }
   }
@@ -2091,6 +2182,16 @@ function showCompleteModal() {
   _submittingLineup = false;
   const _postBtn = document.getElementById('submitLineupBtn');
   if (_postBtn) { _postBtn.disabled = false; _postBtn.innerHTML = 'POST TO LEADERBOARD →'; }
+
+  // — Trophy case: evaluate this run, show any unlocks (peak-dopamine moment) —
+  renderBadgeRow(checkBadges({
+    final, chem,
+    finishTier: finish.tier,
+    grade: grade.letter,
+    wasBlind,
+    streak: dailyStreakVal || dailyStreak(),
+    h2hWin: !!(state.h2h && state.h2h.opponent && final > state.h2h.opponent.score),
+  }));
 
   // — Retention hooks: personal best + near-miss ("one more go" psychology) —
   const fam = state.daily ? 'daily' : (state.h2h ? 'h2h' : state.mode);
