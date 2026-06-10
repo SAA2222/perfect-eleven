@@ -416,23 +416,28 @@ function checkBadges(ctx) {
   if (earned.length) { try { localStorage.setItem('pe_badges', JSON.stringify(have)); } catch (e) {} }
   return { earned, total: Object.keys(BADGES).length, count: Object.keys(have).length };
 }
-// Render the unlock moment (+ running trophy count) on the complete screen.
+// Render the unlock moment (+ tappable trophy count) on the complete screen.
+let _badgeCaseOpen = false;
+function badgeCaseListHTML() {
+  const have = loadBadges();
+  return `<div class="xi-badges__list">` + Object.keys(BADGES).map(id => {
+    const b = BADGES[id], owned = !!have[id];
+    return `<span class="xi-badge ${owned ? '' : 'xi-badge--locked'}"><span class="xi-badge__icon">${owned ? b.icon : '🔒'}</span><span class="xi-badge__name">${b.name}</span><span class="xi-badge__how">${b.how}</span></span>`;
+  }).join('') + `</div>`;
+}
 function renderBadgeRow(res) {
   const row = document.getElementById('xiBadgeRow');
   if (!row) return;
-  if (!res.earned.length) {
-    // No new unlocks — show the quiet trophy-case count only once they have some.
-    if (res.count > 0) {
-      row.hidden = false;
-      row.innerHTML = `<span class="xi-badges__count">🏅 TROPHY CASE ${res.count}/${res.total}</span>`;
-    } else row.hidden = true;
-    return;
-  }
+  if (!res.earned.length && res.count === 0) { row.hidden = true; return; }
   row.hidden = false;
-  row.innerHTML = res.earned.map(id => {
+  const newBits = res.earned.map(id => {
     const b = BADGES[id];
     return `<span class="xi-badge xi-badge--new"><span class="xi-badge__icon">${b.icon}</span><span class="xi-badge__name">UNLOCKED: ${b.name}</span><span class="xi-badge__how">${b.how}</span></span>`;
-  }).join('') + `<span class="xi-badges__count">🏅 TROPHY CASE ${res.count}/${res.total}</span>`;
+  }).join('');
+  const countBtn = `<button type="button" class="xi-badges__count" id="badgeCaseBtn">🏅 TROPHY CASE ${res.count}/${res.total} ${_badgeCaseOpen ? '▴' : '▾'}</button>`;
+  row.innerHTML = newBits + countBtn + (_badgeCaseOpen ? badgeCaseListHTML() : '');
+  const btn = document.getElementById('badgeCaseBtn');
+  if (btn) btn.addEventListener('click', () => { _badgeCaseOpen = !_badgeCaseOpen; renderBadgeRow(res); });
 }
 
 // 2-letter ISO → flag emoji (renders as the OS flag on the share text).
@@ -2219,12 +2224,21 @@ function showCompleteModal() {
     const matchBit = finish.opp ? `<span class="xi-finish-hero__match">${finish.scoreLine} vs ${finish.opp}</span>` : '';
     const pbBit = (isPB && prevBest > 0) ? `<span class="xi-finish-hero__pb">🏆 NEW PERSONAL BEST — ${final} OVR <s>${prevBest}</s></span>` : '';
     const missBit = nearMiss ? `<span class="xi-finish-hero__miss">SO CLOSE — ${nearMiss.pts} OVR FROM ${nearMiss.label}</span>` : '';
+    // During the real tournament: how many ACTUAL World Cup goals has this XI scored?
+    let realBit = '';
+    try {
+      if (typeof liveStatFor === 'function') {
+        const rg = Object.values(state.roster).reduce((s, p) => { const t = liveStatFor(p); return s + ((t && t.g) || 0); }, 0);
+        if (rg > 0) realBit = `<span class="xi-finish-hero__real">⚽ YOUR XI HAS ${rg} REAL WORLD CUP GOAL${rg > 1 ? 'S' : ''} SO FAR</span>`;
+      }
+    } catch (e) {}
     finishHero.innerHTML = `
       <span class="xi-finish-hero__kicker">YOUR TOURNAMENT FINISH</span>
       <span class="xi-finish-hero__result" style="color:${c};">${finish.label}</span>
       ${matchBit}
       ${pbBit}
       ${missBit}
+      ${realBit}
     `;
   }
 

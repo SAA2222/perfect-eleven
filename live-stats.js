@@ -139,12 +139,31 @@ function renderMatchdayStrip(matches) {
   return anyLive;
 }
 
+// Map real match progress → LIVE_STATS.status, which flips the app's whole live
+// pipeline (topbar badge, real award overrides, live injuries) on automatically.
+const _STAGE_PHASE = {
+  'Group Stage': 'GROUP', 'Round of 32': 'RO32', 'Round of 16': 'RO16',
+  'Quarter-finals': 'QF', 'Quarter-final': 'QF', 'Semi-finals': 'SF',
+  'Semi-final': 'SF', 'Third place play-off': 'SF', 'Final': 'FINAL',
+};
+function updateTournamentPhase(matches) {
+  const started = (matches || []).filter(m => m.status === 'in_progress' || m.status === 'completed');
+  if (!started.length || !window.LIVE_STATS) return;
+  started.sort((a, b) => Date.parse(b.dt) - Date.parse(a.dt));
+  window.LIVE_STATS.status = _STAGE_PHASE[started[0].stage] || 'GROUP';
+  window.LIVE_STATS.updatedAt = new Date().toISOString().slice(0, 10);
+  if (typeof initLiveBadge === 'function' && !document.querySelector('.topbar__livebadge')) {
+    try { initLiveBadge(); } catch (e) {}
+  }
+}
+
 async function refreshLiveMode() {
   try {
     const r = await fetch('/api/live?view=today');
     const data = await r.json();
     if (!data || !data.ok) { const s = document.getElementById('matchdayStrip'); if (s) s.hidden = true; return; }
     const anyLive = renderMatchdayStrip(data.matches);
+    updateTournamentPhase(data.matches);
     // Poll faster while matches are live, slower around kickoff windows.
     if (_livePollTimer) clearTimeout(_livePollTimer);
     _livePollTimer = setTimeout(refreshLiveMode, anyLive ? 90000 : 600000);
@@ -157,6 +176,20 @@ async function loadLiveStats() {
     if (data && data.ok && data.players) {
       _liveGoals = data.players;
       _liveIdx = _buildLiveIdx(_liveGoals);
+      // Feed the app's existing LIVE_STATS consumers (real award overrides on the
+      // complete screen, ⚽/🎯 badges on pick cards) — keyed by EXACT xi-data names.
+      try {
+        if (typeof NATIONS !== 'undefined' && window.LIVE_STATS) {
+          const map = {};
+          for (const n of NATIONS) {
+            for (const p of (n.players || [])) {
+              const s = liveStatFor({ code: n.code, name: p.name });
+              if (s && (s.g || s.a)) map[p.name] = { G: s.g, A: s.a, MOTM: 0, redCards: 0 };
+            }
+          }
+          window.LIVE_STATS.players = map;
+        }
+      } catch (e) { /* keep chips working even if the feed fails */ }
       // Repaint filled slots so ⚽ chips appear on players who have really scored.
       if (typeof state !== 'undefined' && state.roster && typeof fillSlot === 'function') {
         Object.keys(state.roster).forEach(k => { try { fillSlot(k); } catch (e) {} });
