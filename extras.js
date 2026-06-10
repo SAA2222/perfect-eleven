@@ -337,31 +337,44 @@ function _loadMoveRec() {
   return { day: null, prev: {}, cur: {} };
 }
 // Annotate `ranked` (already sorted + rank-numbered for the CURRENT tab) in place.
+// Returns the comparison frame used: 'yesterday' | 'today' | 'armed' (baseline
+// just set — movement shows as soon as the board changes) — used for the legend.
 function annotateMovementFor(bucket, ranked) {
   const today = _lbDayET();
   let rec = _loadMoveRec();
   if (rec.day !== today) rec = { day: today, prev: rec.cur || {}, cur: {} };   // midnight-ET rollover
   const isDaily = bucket === 'DAILY';
-  const baseline = isDaily ? rec.cur[bucket] : rec.prev[bucket];
+  let baseline = isDaily ? rec.cur[bucket] : rec.prev[bucket];
+  let frame = isDaily ? 'today' : 'yesterday';
+  // No yesterday yet (first day on this device / new tab bucket) → fall back to
+  // "since your first look today" so numbers appear immediately, not tomorrow.
+  if (!isDaily && !(baseline && Object.keys(baseline).length)) {
+    baseline = rec.cur[bucket];
+    frame = 'today';
+  }
   const hasBase = !!(baseline && Object.keys(baseline).length);
   const snap = {};
   ranked.forEach(e => {
     const id = lbEntryId(e);
     snap[id] = e.rank;
-    if (!hasBase) { e._move = null; return; }          // no baseline yet → quiet dash
+    if (!hasBase) { e._move = null; return; }          // baseline arming on this paint
     if (!(id in baseline)) e._move = { type: 'new' };
     else if (baseline[id] > e.rank) e._move = { type: 'up', n: baseline[id] - e.rank };
     else if (baseline[id] < e.rank) e._move = { type: 'down', n: e.rank - baseline[id] };
     else e._move = { type: 'same' };
   });
-  if (!isDaily || !rec.cur[bucket]) rec.cur[bucket] = snap;   // DAILY: freeze first sight of the day
+  // cur tracking: continuous when comparing vs yesterday (so tomorrow's baseline
+  // is today's final state); FROZEN while cur itself is the comparison baseline.
+  const curIsBaseline = frame === 'today';
+  if (!curIsBaseline || !(rec.cur[bucket] && Object.keys(rec.cur[bucket]).length)) rec.cur[bucket] = snap;
   try { localStorage.setItem('pe_lb_ranks2', JSON.stringify(rec)); } catch (e) {}
+  return hasBase ? frame : 'armed';
 }
 function moveHTML(m) {
-  if (!m || m.type === 'same') return '<span class="lb-move lb-move--same">–</span>';
+  if (!m || m.type === 'same') return '<span class="lb-move lb-move--same">0</span>';
   if (m.type === 'new')  return '<span class="lb-move lb-move--new">NEW</span>';
-  if (m.type === 'up')   return `<span class="lb-move lb-move--up">▲ ${m.n}</span>`;
-  if (m.type === 'down') return `<span class="lb-move lb-move--down">▼ ${m.n}</span>`;
+  if (m.type === 'up')   return `<span class="lb-move lb-move--up">▲+${m.n}</span>`;
+  if (m.type === 'down') return `<span class="lb-move lb-move--down">▼-${m.n}</span>`;
   return '';
 }
 
@@ -403,7 +416,8 @@ function paintLeaderboard() {
 
   // ▲/▼/NEW vs yesterday, per tab. Skip under THIS WEEK (different ranking frame)
   // and when showing the offline/demo fallback (junk ids would pollute the baseline).
-  if (_lbPeriod !== 'WEEK' && _leaderboardIsGlobal) annotateMovementFor(_lbFilter, ranked);
+  let moveFrame = null;
+  if (_lbPeriod !== 'WEEK' && _leaderboardIsGlobal) moveFrame = annotateMovementFor(_lbFilter, ranked);
 
   let combined, hiddenCount = 0, pinnedUser = null;
   if (!isAll) {
@@ -424,6 +438,19 @@ function paintLeaderboard() {
     ? (hiddenCount > 0 ? `TOP ${LB_ALL_CAP} OF ${ranked.length}` : `${ranked.length} ${ranked.length === 1 ? 'PLAYER' : 'PLAYERS'}`)
     : (sorted.length > LB_TOP_N ? `TOP ${LB_TOP_N}` : `${combined.length} ${combined.length === 1 ? 'PLAYER' : 'PLAYERS'}`);
   const badge = `<div class="lb-meta">${scope} · ${LB_FILTER_LABELS[_lbFilter] || _lbFilter} · ${periodLabel} · ${countLabel}</div>`;
+  // Movement legend — defines the symbols + says what they're measured against.
+  const FRAME_LABEL = {
+    yesterday: 'MOVEMENT VS YESTERDAY',
+    today: 'MOVEMENT SINCE YOUR FIRST LOOK TODAY',
+    armed: 'MOVEMENT TRACKING ARMED — SHOWS AS THE BOARD CHANGES',
+  };
+  const legend = moveFrame ? `<div class="lb-legend">
+      <span class="lb-move lb-move--up">▲+N</span> CLIMBED N SPOTS ·
+      <span class="lb-move lb-move--down">▼-N</span> DROPPED N ·
+      <span class="lb-move lb-move--new">NEW</span> NEW ENTRY ·
+      <span class="lb-move lb-move--same">0</span> HELD —
+      ${FRAME_LABEL[moveFrame] || ''}
+    </div>` : '';
 
   if (!combined.length) {
     grid.innerHTML = badge + `
@@ -457,7 +484,7 @@ function paintLeaderboard() {
     ? `<button class="lb-showall" id="lbShowAll" type="button">${_lbShowAll ? `▲ SHOW TOP ${LB_ALL_CAP}` : `▼ SHOW ALL ${ranked.length}`}</button>`
     : '';
 
-  grid.innerHTML = badge + combined.map(r => rowHTML(r, false)).join('') + pinnedHTML + toggle;
+  grid.innerHTML = badge + legend + combined.map(r => rowHTML(r, false)).join('') + pinnedHTML + toggle;
   const sa = document.getElementById('lbShowAll');
   if (sa) sa.addEventListener('click', () => { _lbShowAll = !_lbShowAll; paintLeaderboard(); });
 }

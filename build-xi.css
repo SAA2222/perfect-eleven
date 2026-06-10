@@ -3319,6 +3319,16 @@ body { padding-bottom: 56px; }
 .lb-move--down { color: #f87171; }
 .lb-move--new { color: var(--gold, #ffc400); }
 .lb-move--same { color: var(--mute-2, #8a96a0); opacity: 0.45; }
+/* Legend defining the movement symbols (shown above the rows when tracking) */
+.lb-legend {
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: 0.08em;
+  color: var(--mute-2, #8a96a0);
+  text-align: center;
+  padding: 6px 8px 10px;
+  line-height: 1.7;
+}
+.lb-legend .lb-move { display: inline; margin: 0; font-size: 9px; }
 
 .lb-empty {
   text-align: center;
