@@ -1341,6 +1341,7 @@ function fillSlot(slotIdx) {
     <span class="slot__filled-name">${shortName(p.name)}</span>
     <span class="slot__filled-rating">${maskRating(p.rating)}</span>
     <span class="slot__filled-chem" data-slot-chem="${slotIdx}"></span>
+    ${(typeof liveChipFor === 'function') ? liveChipFor(p) : ''}
   `;
   updateChemistryViz();
 }

@@ -1840,6 +1840,68 @@ body.swap-mode .xi-pitch::after {
   letter-spacing: 0.04em;
   color: #aeb8c2;
 }
+/* ---------- MATCHDAY strip (real fixtures + live scores) ---------- */
+.matchday {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.02);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  overflow: hidden;
+}
+.matchday__label {
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 800; letter-spacing: 0.16em;
+  color: var(--gold, #ffc400);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.matchday__track {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.matchday__track::-webkit-scrollbar { display: none; }
+.matchday__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--bone, #e8e6df);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.matchday__chip--live { border-color: #ff4d6d; background: rgba(255,77,109,0.08); }
+.matchday__chip b { font-weight: 800; }
+.matchday__score { color: var(--gold, #ffc400); font-weight: 800; }
+.matchday__time { color: var(--mute-2, #8a96a0); font-size: 10px; }
+.matchday__chip--live .matchday__time { color: #ff4d6d; font-weight: 800; }
+
+/* ⚽ real-tournament-goals chip on filled slots */
+.slot__live-chip {
+  position: absolute;
+  top: 2px; left: 2px;
+  font-family: var(--font-mono);
+  font-size: 9px; font-weight: 800;
+  color: #fff;
+  background: rgba(255,77,109,0.92);
+  border-radius: 6px;
+  padding: 1px 4px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
 /* Trophy case — badge unlocks on the complete screen */
 .xi-badges {
   display: flex;
