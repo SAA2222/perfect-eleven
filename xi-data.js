@@ -1068,6 +1068,7 @@ const LEGENDS = [
     { name:'Dwayne De Rosario',pos:'FWD',role:'ST',club:'TORONTO',     rating:80 },
     { name:'Tomasz Radzinski',pos:'FWD',role:'ST', club:'EVERTON',     rating:80 },
     { name:'Will Johnson',   pos:'MID', role:'CM',  club:'TORONTO',     rating:76 },
+    { name:'Craig Forrest',  pos:'GK',  role:'GK',  club:'IPSWICH TOWN',rating:80 },
   ]},
   { code:'MAR', iso:'ma', name:'MOROCCO', flag:'🇲🇦', group:'LGD', players:[
     { name:'Hakimi (peak)',  pos:'DEF', role:'RB',  club:'PSG',         rating:88 },
@@ -1077,6 +1078,7 @@ const LEGENDS = [
     { name:'M. Chamakh',     pos:'FWD', role:'ST',  club:'ARSENAL',     rating:80 },
     { name:'Salaheddine Bassir',pos:'FWD',role:'LW',club:'AJAX',        rating:80 },
     { name:'M. Hadji',       pos:'MID', role:'CAM', club:'COVENTRY CITY',rating:86 },
+    { name:'Badou Zaki',     pos:'GK',  role:'GK',  club:'MALLORCA',    rating:86 },
   ]},
   { code:'JPN', iso:'jp', name:'JAPAN', flag:'🇯🇵', group:'LGD', players:[
     { name:'Hidetoshi Nakata',pos:'MID',role:'CM',  club:'ROMA',        rating:88 },
@@ -1134,6 +1136,7 @@ const LEGENDS = [
     { name:'Ronny Johnsen',  pos:'DEF', role:'CB',  club:'MAN UNITED',  rating:84 },
     { name:'J. A. Riise',    pos:'DEF', role:'LB',  club:'LIVERPOOL',   rating:86 },
     { name:'M. Ødegaard (peak)',pos:'MID',role:'CAM',club:'ARSENAL',    rating:88 },
+    { name:'Erik Thorstvedt',pos:'GK',  role:'GK',  club:'TOTTENHAM',   rating:84 },
   ]},
   { code:'SUI', iso:'ch', name:'SWITZERLAND', flag:'🇨🇭', group:'LGD', players:[
     { name:'S. Chapuisat',   pos:'FWD', role:'ST',  club:'DORTMUND',    rating:86 },
@@ -1153,6 +1156,7 @@ const LEGENDS = [
     { name:'Kevin-Prince Boateng',pos:'MID',role:'CAM',club:'AC MILAN', rating:84 },
     { name:'André Ayew (peak)',pos:'FWD',role:'RW',club:'MARSEILLE',    rating:85 },
     { name:'John Mensah',    pos:'DEF', role:'CB',  club:'LYON',        rating:82 },
+    { name:'Richard Kingson',pos:'GK',  role:'GK',  club:'BLACKPOOL',   rating:80 },
   ]},
   { code:'EGY', iso:'eg', name:'EGYPT', flag:'🇪🇬', group:'LGD', players:[
     { name:'Mohamed Aboutrika',pos:'MID',role:'CAM',club:'AL AHLY',     rating:90 },
@@ -1161,6 +1165,8 @@ const LEGENDS = [
     { name:'Ahmed Hassan',   pos:'MID', role:'CAM', club:'AL AHLY',     rating:85 },
     { name:'Hossam Hassan',  pos:'FWD', role:'ST',  club:'AL AHLY',     rating:84 },
     { name:'Mahmoud El Khatib',pos:'FWD',role:'ST',club:'AL AHLY',     rating:88 },
+    { name:'Wael Gomaa',     pos:'DEF', role:'CB',  club:'AL AHLY',     rating:84 },
+    { name:'Hany Ramzy',     pos:'DEF', role:'CB',  club:'KAISERSLAUTERN',rating:82 },
   ]},
   { code:'IRN', iso:'ir', name:'IRAN', flag:'🇮🇷', group:'LGD', players:[
     { name:'Ali Daei',       pos:'FWD', role:'ST',  club:'BAYERN',      rating:90 },
@@ -1169,6 +1175,9 @@ const LEGENDS = [
     { name:'Javad Nekounam', pos:'MID', role:'CM',  club:'OSASUNA',     rating:84 },
     { name:'Ali Karimi',     pos:'MID', role:'CAM', club:'BAYERN',      rating:88 },
     { name:'Mehdi Taremi (peak)',pos:'FWD',role:'ST',club:'PORTO',      rating:84 },
+    { name:'A. Abedzadeh',   pos:'GK',  role:'GK',  club:'PERSEPOLIS',  rating:84 },
+    { name:'Ali Parvin',     pos:'MID', role:'CAM', club:'PERSEPOLIS',  rating:85 },
+    { name:'Khodadad Azizi', pos:'FWD', role:'ST',  club:'KÖLN',        rating:84 },
   ]},
   { code:'CIV', iso:'ci', name:'IVORY COAST', flag:'🇨🇮', group:'LGD', players:[
     { name:'Didier Drogba',  pos:'FWD', role:'ST',  club:'CHELSEA',     rating:94 },
@@ -1178,6 +1187,7 @@ const LEGENDS = [
     { name:'Gervinho',       pos:'FWD', role:'LW',  club:'ROMA',        rating:84 },
     { name:'Wilfried Zaha (peak)',pos:'FWD',role:'LW',club:'CRYSTAL PALACE',rating:84 },
     { name:'Aurier (peak)',  pos:'DEF', role:'RB',  club:'TOTTENHAM',   rating:80 },
+    { name:'Alain Gouaméné', pos:'GK',  role:'GK',  club:'ASEC MIMOSAS',rating:82 },
   ]},
   { code:'AUT', iso:'at', name:'AUSTRIA', flag:'🇦🇹', group:'LGD', players:[
     { name:'Hans Krankl',    pos:'FWD', role:'ST',  club:'BARCELONA',   rating:92 },
@@ -1185,6 +1195,9 @@ const LEGENDS = [
     { name:'Toni Polster',   pos:'FWD', role:'ST',  club:'SEVILLA',     rating:84 },
     { name:'David Alaba (peak)',pos:'DEF',role:'CB',club:'REAL MADRID', rating:88 },
     { name:'M. Arnautović (peak)',pos:'FWD',role:'ST',club:'INTER MILAN',rating:83 },
+    { name:'Michael Konsel', pos:'GK',  role:'GK',  club:'ROMA',        rating:84 },
+    { name:'H. Prohaska',    pos:'MID', role:'CM',  club:'ROMA',        rating:87 },
+    { name:'Bruno Pezzey',   pos:'DEF', role:'CB',  club:'EINTRACHT FRANKFURT',rating:85 },
   ]},
   { code:'SWE', iso:'se', name:'SWEDEN', flag:'🇸🇪', group:'LGD', players:[
     { name:'Zlatan Ibrahimović',pos:'FWD',role:'ST',club:'AC MILAN',    rating:96 },
@@ -1193,6 +1206,8 @@ const LEGENDS = [
     { name:'Patrik Andersson',pos:'DEF',role:'CB',  club:'BAYERN',      rating:86 },
     { name:'Tomas Brolin',   pos:'MID', role:'CAM', club:'PARMA',       rating:88 },
     { name:'Andreas Isaksson',pos:'GK', role:'GK',  club:'MAN CITY',    rating:84 },
+    { name:'Gunnar Nordahl', pos:'FWD', role:'ST',  club:'AC MILAN',    rating:92 },
+    { name:'F. Ljungberg',   pos:'MID', role:'RW',  club:'ARSENAL',     rating:87 },
   ]},
   { code:'TUR', iso:'tr', name:'TÜRKIYE', flag:'🇹🇷', group:'LGD', players:[
     { name:'Hakan Şükür',    pos:'FWD', role:'ST',  club:'INTER MILAN', rating:92 },
@@ -1201,6 +1216,8 @@ const LEGENDS = [
     { name:'Arda Turan',     pos:'MID', role:'CAM', club:'ATLÉTICO',    rating:88 },
     { name:'Tugay Kerimoğlu',pos:'MID', role:'CDM', club:'BLACKBURN',   rating:82 },
     { name:'Çalhanoğlu (peak)',pos:'MID',role:'CDM',club:'INTER MILAN',rating:87 },
+    { name:'Bülent Korkmaz', pos:'DEF', role:'CB',  club:'GALATASARAY', rating:84 },
+    { name:'Nihat Kahveci',  pos:'FWD', role:'ST',  club:'REAL SOCIEDAD',rating:84 },
   ]},
   { code:'AUS', iso:'au', name:'AUSTRALIA', flag:'🇦🇺', group:'LGD', players:[
     { name:'Mark Viduka',    pos:'FWD', role:'ST',  club:'LEEDS',       rating:88 },
@@ -1219,6 +1236,8 @@ const LEGENDS = [
     { name:'Andy Robertson (peak)',pos:'DEF',role:'LB',club:'LIVERPOOL',rating:88 },
     { name:'McTominay (peak)',pos:'MID',role:'CM', club:'NAPOLI',      rating:85 },
     { name:'Jim Leighton',   pos:'GK',  role:'GK',  club:'MAN UNITED',  rating:80 },
+    { name:'Jimmy Johnstone',pos:'FWD', role:'RW',  club:'CELTIC',      rating:90 },
+    { name:'Alan Hansen',    pos:'DEF', role:'CB',  club:'LIVERPOOL',   rating:87 },
   ]},
   { code:'ALG', iso:'dz', name:'ALGERIA', flag:'🇩🇿', group:'LGD', players:[
     { name:'Rabah Madjer',   pos:'FWD', role:'ST',  club:'PORTO',       rating:90 },
@@ -1226,6 +1245,9 @@ const LEGENDS = [
     { name:'Riyad Mahrez (peak)',pos:'FWD',role:'RW',club:'MAN CITY',   rating:90 },
     { name:'Bennacer (peak)',pos:'MID', role:'CM',  club:'AC MILAN',    rating:84 },
     { name:'Sofiane Feghouli',pos:'MID',role:'CAM', club:'WEST HAM',    rating:80 },
+    { name:'Mehdi Cerbah',   pos:'GK',  role:'GK',  club:'RC KOUBA',    rating:82 },
+    { name:'Salah Assad',    pos:'FWD', role:'LW',  club:'PSG',         rating:84 },
+    { name:'Madjid Bougherra',pos:'DEF',role:'CB',  club:'RANGERS',     rating:82 },
   ]},
   { code:'ECU', iso:'ec', name:'ECUADOR', flag:'🇪🇨', group:'LGD', players:[
     { name:'Antonio Valencia',pos:'FWD',role:'RW',  club:'MAN UNITED',  rating:84 },
@@ -1234,6 +1256,9 @@ const LEGENDS = [
     { name:'Edison Méndez',  pos:'MID', role:'CAM', club:'PSV',         rating:80 },
     { name:'Felipe Caicedo', pos:'FWD', role:'ST',  club:'LAZIO',       rating:80 },
     { name:'Caicedo (peak)', pos:'MID', role:'CDM', club:'CHELSEA',     rating:85 },
+    { name:'J.F. Cevallos',  pos:'GK',  role:'GK',  club:'LDU QUITO',   rating:81 },
+    { name:'Álex Aguinaga',  pos:'MID', role:'CAM', club:'NECAXA',      rating:83 },
+    { name:'Agustín Delgado',pos:'FWD', role:'ST',  club:'SOUTHAMPTON', rating:81 },
   ]},
   { code:'PAR', iso:'py', name:'PARAGUAY', flag:'🇵🇾', group:'LGD', players:[
     { name:'Roque Santa Cruz',pos:'FWD',role:'ST',  club:'BAYERN',      rating:85 },
@@ -1241,6 +1266,8 @@ const LEGENDS = [
     { name:'Carlos Gamarra', pos:'DEF', role:'CB',  club:'ATLÉTICO MINEIRO',rating:84 },
     { name:'Salvador Cabañas',pos:'FWD',role:'ST',  club:'AMÉRICA',     rating:82 },
     { name:'Almirón (peak)', pos:'FWD', role:'RW',  club:'NEWCASTLE',   rating:80 },
+    { name:'Romerito',       pos:'MID', role:'CAM', club:'FLUMINENSE',  rating:88 },
+    { name:'José S. Cardozo',pos:'FWD', role:'ST',  club:'TOLUCA',      rating:83 },
   ]},
 ];
 

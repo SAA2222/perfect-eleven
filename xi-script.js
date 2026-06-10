@@ -356,6 +356,27 @@ function dailyShareText(ovr, finishLabel, streak) {
   const fin = (finishLabel || '').replace(/[^\w\s-]/g, '').trim();
   return `Perfect Eleven · Daily #${dailyNumber()}\n${ovr} OVR${fin ? ' · ' + fin : ''}${streak > 1 ? ' · 🔥 ' + streak + ' day streak' : ''}\n${flags}\nperfect-eleven.vercel.app`;
 }
+// Hero kickoff pill: countdown before June 11, "LIVE" during the tournament
+// (Jun 11 – Jul 19), hidden after the final.
+function updateKickoffPill() {
+  const el = document.getElementById('kickoffPill');
+  if (!el) return;
+  const now = Date.now();
+  const kickoff = Date.UTC(2026, 5, 11, 16, 0);   // first match ~noon ET Jun 11
+  const final_  = Date.UTC(2026, 6, 19, 23, 59);  // final Jul 19
+  if (now < kickoff) {
+    const days = Math.ceil((kickoff - now) / 86400000);
+    el.textContent = days <= 1 ? '⚽ KICKS OFF TOMORROW' : `⚽ KICKS OFF IN ${days} DAYS`;
+    el.hidden = false;
+  } else if (now <= final_) {
+    el.textContent = '🔴 THE WORLD CUP IS LIVE';
+    el.classList.add('kickoff-pill--live');
+    el.hidden = false;
+  } else {
+    el.hidden = true;
+  }
+}
+
 // Refresh the Daily CTA copy (number, streak, played-today state).
 function updateDailyCta() {
   const cta = $('dailyCta'), title = $('dailyTitle'), sub = $('dailySub'), go = $('dailyGo');
@@ -1033,7 +1054,7 @@ function offerRewardedSkip() {
       </div>
       <h3 class="rewarded-ad__title">OUT OF SKIPS?</h3>
       <p class="rewarded-ad__body">Watch a short ad to earn <strong>+1 SKIP</strong>. Or unlock <strong>PREMIUM</strong> for unlimited modes.</p>
-      <button class="rewarded-ad__watch xi-btn xi-btn--gold">▶ WATCH AD (30s)</button>
+      <button class="rewarded-ad__watch xi-btn xi-btn--gold">▶ WATCH A QUICK AD</button>
       <button class="rewarded-ad__premium xi-btn xi-btn--ghost">UNLOCK PREMIUM $4.99</button>
       <p class="rewarded-ad__small">ADS HELP KEEP PERFECT ELEVEN FREE · ${(state.rewardedSkipsThisSession || 0)}/5 USED</p>
     </div>
@@ -3138,6 +3159,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateDailyCta();
   setInterval(updateDailyCta, 60000);   // tick the "next in Xh Ym" lock countdown
   loadCardTheme();   // restore the chosen premium share-card theme
+  updateKickoffPill();   // "kicks off in N days" → "🔴 LIVE" during the tournament
   $('resetBtn').addEventListener('click', resetRoster);
 
   // EXPERT (blind draft) toggle — committed once the draft starts

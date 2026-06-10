@@ -84,6 +84,28 @@ body.is-daily .xi-resources,
 body.is-daily #swapBtnTop,
 body.is-daily .xi-expert { display: none; }
 
+/* Hero kickoff pill — countdown to June 11, flips to LIVE during the tournament */
+.kickoff-pill {
+  display: inline-flex;
+  align-items: center;
+  margin: 12px 0 0;
+  padding: 7px 14px;
+  background: rgba(255,196,0,0.12);
+  border: 1px solid var(--gold, #ffc400);
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 800; letter-spacing: 0.14em;
+  color: var(--gold, #ffc400);
+  width: fit-content;
+}
+.kickoff-pill--live {
+  background: rgba(255,77,109,0.12);
+  border-color: #ff4d6d;
+  color: #ff4d6d;
+  animation: kickoffPulse 2s ease-in-out infinite;
+}
+@keyframes kickoffPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.65; } }
+
 /* Head-to-head CTA (crimson, to distinguish from the gold Daily) */
 .xi-daily--h2h { border-color: #ff4d6d; background: linear-gradient(135deg, rgba(255,77,109,0.16), rgba(255,77,109,0.05)); }
 .xi-daily--h2h .xi-daily__title { color: #ff4d6d; }
