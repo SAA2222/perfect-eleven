@@ -310,33 +310,52 @@ async function renderLeaderboard() {
   _lbRows = rows
     .filter(e => isEntryClean(e) && !isTestEntry(e))
     .map(e => ({ ...e, by: normalizeBy(e.by) }));
-  annotateRankMovement(_lbRows);   // ▲/▼/NEW vs last load
-  paintLeaderboard();
+  paintLeaderboard();   // movement arrows are annotated per-tab inside the paint
   // Board data just arrived → refresh the Daily CTA's "🌍 N played" social proof.
   if (typeof updateDailyCta === 'function') updateDailyCta();
 }
 
-// ---- Rank movement: ▲ up / ▼ down / NEW since the last time the board loaded ----
+// ---- Rank movement: ▲/▼/NEW vs YESTERDAY (ET) — league-table style ------------
+// The old version saved a fresh snapshot on EVERY load, so the comparison frame
+// was "since this device's previous page load" — between two visits nothing
+// moves, so users only ever saw dashes. Now: per-tab buckets, baseline = the
+// tab's state as of yesterday (frozen all day, rolls at midnight ET — same
+// rhythm as the Daily). DAILY compares within today (yesterday's daily was a
+// different challenge), baselined the first time you look each day.
 function lbEntryId(e) { return `${e.by}|${e.ovr}|${e.lineup}`; }
-function loadRankSnapshot() {
-  try { return JSON.parse(localStorage.getItem('pe_lb_ranks') || '{}') || {}; }
-  catch (e) { return {}; }
+function _lbDayET(ms) {
+  return (typeof easternDayString === 'function')
+    ? easternDayString(ms != null ? new Date(ms) : new Date())
+    : new Date(ms != null ? ms : Date.now()).toISOString().slice(0, 10);
 }
-function annotateRankMovement(rows) {
-  const ranked = [...rows].sort((a, b) => lbScore(b) - lbScore(a));   // canonical ALL-board order
-  const prev = loadRankSnapshot();
-  const hasPrev = Object.keys(prev).length > 0;
-  const curr = {};
-  ranked.forEach((e, i) => {
-    const id = lbEntryId(e), rank = i + 1;
-    curr[id] = rank;
-    if (!hasPrev) { e._move = null; return; }          // first ever visit: no baseline
-    if (!(id in prev)) e._move = { type: 'new' };
-    else if (prev[id] > rank) e._move = { type: 'up', n: prev[id] - rank };
-    else if (prev[id] < rank) e._move = { type: 'down', n: rank - prev[id] };
+function _loadMoveRec() {
+  try { localStorage.removeItem('pe_lb_ranks'); } catch (e) {}   // retire the v1 key
+  try {
+    const rec = JSON.parse(localStorage.getItem('pe_lb_ranks2') || 'null');
+    if (rec && rec.day && rec.prev && rec.cur) return rec;
+  } catch (e) {}
+  return { day: null, prev: {}, cur: {} };
+}
+// Annotate `ranked` (already sorted + rank-numbered for the CURRENT tab) in place.
+function annotateMovementFor(bucket, ranked) {
+  const today = _lbDayET();
+  let rec = _loadMoveRec();
+  if (rec.day !== today) rec = { day: today, prev: rec.cur || {}, cur: {} };   // midnight-ET rollover
+  const isDaily = bucket === 'DAILY';
+  const baseline = isDaily ? rec.cur[bucket] : rec.prev[bucket];
+  const hasBase = !!(baseline && Object.keys(baseline).length);
+  const snap = {};
+  ranked.forEach(e => {
+    const id = lbEntryId(e);
+    snap[id] = e.rank;
+    if (!hasBase) { e._move = null; return; }          // no baseline yet → quiet dash
+    if (!(id in baseline)) e._move = { type: 'new' };
+    else if (baseline[id] > e.rank) e._move = { type: 'up', n: baseline[id] - e.rank };
+    else if (baseline[id] < e.rank) e._move = { type: 'down', n: e.rank - baseline[id] };
     else e._move = { type: 'same' };
   });
-  try { localStorage.setItem('pe_lb_ranks', JSON.stringify(curr)); } catch (e) {}
+  if (!isDaily || !rec.cur[bucket]) rec.cur[bucket] = snap;   // DAILY: freeze first sight of the day
+  try { localStorage.setItem('pe_lb_ranks2', JSON.stringify(rec)); } catch (e) {}
 }
 function moveHTML(m) {
   if (!m || m.type === 'same') return '<span class="lb-move lb-move--same">–</span>';
@@ -382,6 +401,10 @@ function paintLeaderboard() {
   const ranked = sorted.map((row, i) => ({ ...row, rank: i + 1 }));
   const isAll = _lbFilter === 'ALL';
 
+  // ▲/▼/NEW vs yesterday, per tab. Skip under THIS WEEK (different ranking frame)
+  // and when showing the offline/demo fallback (junk ids would pollute the baseline).
+  if (_lbPeriod !== 'WEEK' && _leaderboardIsGlobal) annotateMovementFor(_lbFilter, ranked);
+
   let combined, hiddenCount = 0, pinnedUser = null;
   if (!isAll) {
     combined = ranked.slice(0, LB_TOP_N);
@@ -415,7 +438,7 @@ function paintLeaderboard() {
     <article class="lb-row ${row.user ? 'lb-row--user' : ''}${pinned ? ' lb-row--pinned' : ''}">
       <div class="lb-row__rank">
         <span class="lb-row__rank-num">${String(row.rank).padStart(2, '0')}</span>
-        ${(isAll && _lbPeriod !== 'WEEK') ? moveHTML(row._move) : ''}
+        ${row._move !== undefined ? moveHTML(row._move) : ''}
         <span class="lb-row__mode">${modeDisplay(row.mode)}</span>
       </div>
       <div class="lb-row__body">
