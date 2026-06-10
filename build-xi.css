@@ -3430,6 +3430,15 @@ body { padding-bottom: 56px; }
   border-radius: 999px;
   border: 1px solid currentColor;
 }
+/* Tiny "FINISH" prefix — distinguishes the tournament-result pill from board rank */
+.lb-finish__pre {
+  font-size: 7px;
+  font-weight: 700;
+  opacity: 0.65;
+  letter-spacing: 0.16em;
+  margin-right: 6px;
+  vertical-align: 1px;
+}
 .lb-finish--champ  { color: var(--gold, #ffc400); background: rgba(255,196,0,0.12); }
 .lb-finish--runner { color: #d7dde3; background: rgba(215,221,227,0.10); }
 .lb-finish--podium { color: #e0a06a; background: rgba(205,127,50,0.12); }

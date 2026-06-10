@@ -8,7 +8,7 @@ const TICKER_ITEMS = [
   { type: 'live',  text: 'BUILD THE PERFECT ELEVEN · TOOL LIVE NOW' },
   { type: 'news',  text: '⚽ 48 NATIONS · 120 PLAYERS · ONE STARTING XI' },
   { type: 'news',  text: '🏆 OPENING MATCH · MEX vs RSA · JUN 11 · ESTADIO AZTECA' },
-  { type: 'live',  text: 'NEW · LEGENDS MODE DROPS NEXT WEEK' },
+  { type: 'live',  text: '⭐ LEGENDS MODE · LIVE NOW · DRAFT THE ALL-TIME GREATS' },
   { type: 'news',  text: '🇧🇷 BRA · 🇦🇷 ARG · 🇫🇷 FRA · 🇪🇸 ESP · 🏴 ENG · TOP-RATED POOLS' },
   { type: 'news',  text: 'WORLD CUP 2026 · USA · CAN · MEX · 16 CITIES · 39 DAYS' },
   { type: 'live',  text: 'TODAY\'S HIGH SCORE · 91 OVR · BUILT IN MEXICO CITY' },
@@ -245,9 +245,10 @@ function finishBadge(entry) {
             : tier === 'RUNNERS_UP' ? 'lb-finish--runner'
             : (tier === 'THIRD' || tier === 'FOURTH') ? 'lb-finish--podium'
             : 'lb-finish--ko';
-  // title clarifies this is THEIR tournament result, not their board position
-  // (a #2-ranked entry can legitimately wear 🥉 THIRD — different things).
-  return `<span class="lb-finish ${cls}" title="How this XI finished its simulated World Cup — not its leaderboard position">${label}</span>`;
+  // The tiny FINISH prefix + title clarify this is THEIR tournament result, not
+  // their board position (a #2-ranked entry can legitimately wear 🥉 THIRD —
+  // different things; this has confused multiple reviewers without the label).
+  return `<span class="lb-finish ${cls}" title="How this XI finished its simulated World Cup — not its leaderboard position"><span class="lb-finish__pre">FINISH</span>${label}</span>`;
 }
 
 // Leaderboard score — an Expert (blind) draft earns a points MULTIPLIER (BLIND_MULT,

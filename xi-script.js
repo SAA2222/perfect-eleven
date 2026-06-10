@@ -498,7 +498,7 @@ function updateDailyCta() {
   if (dailyPlayedToday()) {
     // One go per day — locked until the next 12 AM ET.
     sub.textContent = `✓ Done${streak > 0 ? ` · 🔥 ${streak}` : ''} · next in ${fmtCountdown(msUntilNextEasternMidnight())}${crowd}`;
-    if (go) go.textContent = '🔒';
+    if (go) go.textContent = '🔒 TIL 12AM ET';   // not a paywall — the one-a-day lock
     if (cta) { cta.classList.add('xi-daily--locked'); cta.setAttribute('aria-disabled', 'true'); }
   } else {
     sub.textContent = (streak > 0
