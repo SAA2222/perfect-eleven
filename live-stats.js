@@ -40,17 +40,49 @@ window.LIVE_STATS = {
    LIVE MODE — real matches + real player stats via /api/live
    (BALLDONTLIE proxy). Fails SILENT: no key / no data → no UI.
    ============================================================ */
-let _liveGoals = {};        // "CODE|lastname" → { n, g, a, apps, r }
+let _liveGoals = {};        // "CODE|lastname" → { n, g, a, apps, r } (raw server map)
+let _liveIdx = {};          // multi-key lookup index built from _liveGoals
 let _livePollTimer = null;
 
 function _liveNorm(s) {
   return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }
-// Map an xi-data roster player → live stats (match on nation code + last name).
+const _LIVE_SUFFIX = /^(jr\.?|junior|sr\.?|senior|ii|iii|iv|filho|neto)$/;
+function _liveTokens(name) {
+  return _liveNorm(name).replace(/\s*\(peak\)\s*$/, '').split(/\s+/).filter(Boolean);
+}
+// Last meaningful token: "Vinicius Junior" → "vinicius", "Son Heung-min" → "heung-min".
+function _liveLastTok(name) {
+  const t = _liveTokens(name);
+  let i = t.length - 1;
+  while (i > 0 && _LIVE_SUFFIX.test(t[i])) i--;
+  return t[i] || '';
+}
+// Build the lookup index: each API player is reachable by CODE|last-meaningful-token
+// AND CODE|first-token (covers Brazilian first-name-known players). Keys claimed by
+// two DIFFERENT players (e.g. the Thuram brothers) are dropped as ambiguous.
+function _buildLiveIdx(players) {
+  const idx = {}, dropped = new Set();
+  for (const k of Object.keys(players || {})) {
+    const v = players[k];
+    const code = k.split('|')[0];
+    const toks = _liveTokens(v.n);
+    if (!toks.length) continue;
+    const keys = new Set([`${code}|${_liveLastTok(v.n)}`, `${code}|${toks[0]}`]);
+    for (const kk of keys) {
+      if (dropped.has(kk)) continue;
+      if (idx[kk] && idx[kk].n !== v.n) { delete idx[kk]; dropped.add(kk); continue; }
+      idx[kk] = v;
+    }
+  }
+  return idx;
+}
+// Map an xi-data roster player → live stats (last-name first, first-name fallback).
 function liveStatFor(p) {
   if (!p || !p.code || !p.name) return null;
-  const last = _liveNorm(p.name).replace(/\s*\(peak\)\s*$/, '').split(/\s+/).pop();
-  return _liveGoals[`${p.code}|${last}`] || null;
+  const toks = _liveTokens(p.name);
+  if (!toks.length) return null;
+  return _liveIdx[`${p.code}|${_liveLastTok(p.name)}`] || _liveIdx[`${p.code}|${toks[0]}`] || null;
 }
 // Small "⚽N" chip for slot cards — only once a player has REAL tournament goals.
 function liveChipFor(p) {
@@ -124,6 +156,7 @@ async function loadLiveStats() {
     const data = await r.json();
     if (data && data.ok && data.players) {
       _liveGoals = data.players;
+      _liveIdx = _buildLiveIdx(_liveGoals);
       // Repaint filled slots so ⚽ chips appear on players who have really scored.
       if (typeof state !== 'undefined' && state.roster && typeof fillSlot === 'function') {
         Object.keys(state.roster).forEach(k => { try { fillSlot(k); } catch (e) {} });

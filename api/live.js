@@ -66,26 +66,36 @@ async function getMatches(key) {
 // State and freshness are decoupled: the record lives 24h in KV (so partial
 // sweep progress is never lost to a freshness expiry — that bug cost us a
 // stuck-at-391 loop), and freshness is computed from its timestamp.
+const STATS_V = 2;   // bump to invalidate the cached sweep (key-scheme changes)
+
 async function getStats(key) {
   const rec = kv ? await kv.get('pe:live:stats') : null;   // { state, at }
-  const state = (rec && rec.state) || { players: {}, cursor: null, complete: false };
+  let state = (rec && rec.state) || null;
+  if (!state || state.v !== STATS_V) state = { v: STATS_V, players: {}, cursor: null, complete: false, teams: null };
   const age = rec ? Date.now() - (rec.at || 0) : Infinity;
   const maxAge = state.complete ? 21600000 : 120000;       // 6h once complete, 2min while sweeping
-  if (rec && age < maxAge) {
+  if (rec && rec.state && rec.state.v === STATS_V && age < maxAge) {
     return { ok: true, players: state.players, complete: state.complete, at: rec.at };
   }
   if (!state.complete) {
     try {
+      // Teams map (id → abbreviation) — the abbreviations match the game's nation
+      // codes (RSA/POR/GER…), unlike player country_code which is ISO (ZAF/PRT/DEU).
+      if (!state.teams) {
+        const t = await bdl('/teams', key);
+        state.teams = {};
+        for (const team of t.data || []) state.teams[team.id] = team.abbreviation;
+      }
       for (let page = 0; page < 8; page++) {       // 13 pages total → completes in 2 refreshes
         const q = `/rosters?seasons[]=2026&per_page=100${state.cursor ? `&cursor=${state.cursor}` : ''}`;
         const res = await bdl(q, key);
         for (const row of res.data || []) {
           const p = row.player || {};
           if (!p.name) continue;
-          // Key: TEAMCODE|normalized last name — matched client-side vs xi-data names.
+          // Key: TEAM-ABBR|normalized last name — matched client-side vs xi-data names.
           const last = String(p.name).normalize('NFD').replace(/[̀-ͯ]/g, '')
             .toLowerCase().trim().split(/\s+/).pop();
-          const code = p.country_code || '';
+          const code = state.teams[row.team_id] || p.country_code || '';
           state.players[`${code}|${last}`] = {
             n: p.name, g: row.goals || 0, a: row.assists || 0,
             apps: row.appearances || 0, r: row.avg_rating || null,
