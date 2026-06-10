@@ -328,47 +328,36 @@ function _lbDayET(ms) {
     ? easternDayString(ms != null ? new Date(ms) : new Date())
     : new Date(ms != null ? ms : Date.now()).toISOString().slice(0, 10);
 }
-function _loadMoveRec() {
-  try { localStorage.removeItem('pe_lb_ranks'); } catch (e) {}   // retire the v1 key
-  try {
-    const rec = JSON.parse(localStorage.getItem('pe_lb_ranks2') || 'null');
-    if (rec && rec.day && rec.prev && rec.cur) return rec;
-  } catch (e) {}
-  return { day: null, prev: {}, cur: {} };
-}
 // Annotate `ranked` (already sorted + rank-numbered for the CURRENT tab) in place.
-// Returns the comparison frame used: 'yesterday' | 'today' | 'armed' (baseline
-// just set — movement shows as soon as the board changes) — used for the legend.
+// EVERY row carries its CUMULATIVE movement: spots moved since the entry JOINED
+// the board (entered #20, now #3 → ▲+17). NEW = first sighting; 0 = where it
+// joined. Per-tab registries of join-ranks; DAILY resets each ET day (new
+// challenge). Returns 'joined' | 'armed' (first-ever paint of a bucket —
+// everything registers quietly at 0) for the legend.
 function annotateMovementFor(bucket, ranked) {
-  const today = _lbDayET();
-  let rec = _loadMoveRec();
-  if (rec.day !== today) rec = { day: today, prev: rec.cur || {}, cur: {} };   // midnight-ET rollover
-  const isDaily = bucket === 'DAILY';
-  let baseline = isDaily ? rec.cur[bucket] : rec.prev[bucket];
-  let frame = isDaily ? 'today' : 'yesterday';
-  // No yesterday yet (first day on this device / new tab bucket) → fall back to
-  // "since your first look today" so numbers appear immediately, not tomorrow.
-  if (!isDaily && !(baseline && Object.keys(baseline).length)) {
-    baseline = rec.cur[bucket];
-    frame = 'today';
+  let rec;
+  try { rec = JSON.parse(localStorage.getItem('pe_lb_move3') || 'null'); } catch (e) { rec = null; }
+  if (!rec || !rec.buckets) rec = { daily: null, buckets: {} };
+  try { localStorage.removeItem('pe_lb_ranks2'); localStorage.removeItem('pe_lb_ranks'); } catch (e) {}
+  if (bucket === 'DAILY') {
+    const today = _lbDayET();
+    if (rec.daily !== today) { rec.buckets.DAILY = null; rec.daily = today; }   // new challenge → fresh registry
   }
-  const hasBase = !!(baseline && Object.keys(baseline).length);
-  const snap = {};
+  const reg = rec.buckets[bucket];
+  const fresh = !reg;                                  // first time tracking this tab
+  const next = {};
   ranked.forEach(e => {
     const id = lbEntryId(e);
-    snap[id] = e.rank;
-    if (!hasBase) { e._move = null; return; }          // baseline arming on this paint
-    if (!(id in baseline)) e._move = { type: 'new' };
-    else if (baseline[id] > e.rank) e._move = { type: 'up', n: baseline[id] - e.rank };
-    else if (baseline[id] < e.rank) e._move = { type: 'down', n: e.rank - baseline[id] };
-    else e._move = { type: 'same' };
+    if (fresh) { next[id] = e.rank; e._move = { type: 'same' }; return; }      // armed at its current spot
+    if (!(id in reg)) { next[id] = e.rank; e._move = { type: 'new' }; return; } // just joined the board
+    const r0 = reg[id];
+    next[id] = r0;                                     // keep the original join rank forever
+    const d = r0 - e.rank;
+    e._move = d > 0 ? { type: 'up', n: d } : (d < 0 ? { type: 'down', n: -d } : { type: 'same' });
   });
-  // cur tracking: continuous when comparing vs yesterday (so tomorrow's baseline
-  // is today's final state); FROZEN while cur itself is the comparison baseline.
-  const curIsBaseline = frame === 'today';
-  if (!curIsBaseline || !(rec.cur[bucket] && Object.keys(rec.cur[bucket]).length)) rec.cur[bucket] = snap;
-  try { localStorage.setItem('pe_lb_ranks2', JSON.stringify(rec)); } catch (e) {}
-  return hasBase ? frame : 'armed';
+  rec.buckets[bucket] = next;                          // departed ids prune automatically
+  try { localStorage.setItem('pe_lb_move3', JSON.stringify(rec)); } catch (e) {}
+  return fresh ? 'armed' : 'joined';
 }
 function moveHTML(m) {
   if (!m || m.type === 'same') return '<span class="lb-move lb-move--same">0</span>';
@@ -440,15 +429,14 @@ function paintLeaderboard() {
   const badge = `<div class="lb-meta">${scope} · ${LB_FILTER_LABELS[_lbFilter] || _lbFilter} · ${periodLabel} · ${countLabel}</div>`;
   // Movement legend — defines the symbols + says what they're measured against.
   const FRAME_LABEL = {
-    yesterday: 'MOVEMENT VS YESTERDAY',
-    today: 'MOVEMENT SINCE YOUR FIRST LOOK TODAY',
-    armed: 'MOVEMENT TRACKING ARMED — SHOWS AS THE BOARD CHANGES',
+    joined: 'TOTAL MOVEMENT SINCE EACH ENTRY JOINED THE BOARD',
+    armed: 'TRACKING ARMED — MOVEMENT SHOWS AS THE BOARD CHANGES',
   };
   const legend = moveFrame ? `<div class="lb-legend">
       <span class="lb-move lb-move--up">▲+N</span> CLIMBED N SPOTS ·
       <span class="lb-move lb-move--down">▼-N</span> DROPPED N ·
-      <span class="lb-move lb-move--new">NEW</span> NEW ENTRY ·
-      <span class="lb-move lb-move--same">0</span> HELD —
+      <span class="lb-move lb-move--new">NEW</span> JUST JOINED ·
+      <span class="lb-move lb-move--same">0</span> AT JOIN SPOT —
       ${FRAME_LABEL[moveFrame] || ''}
     </div>` : '';
 
