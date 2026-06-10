@@ -240,6 +240,9 @@ function startDailyChallenge() {
   }
   state.mode = 'classic';
   state.daily = true;
+  state.h2h = null;                           // Daily and H2H are mutually exclusive
+  clearBlindForSeededRun();                   // fair board: no inherited hidden 1.25×
+  document.body.classList.remove('is-h2h');
   _spinRng = mulberry32(fnv1a('PE-DAILY-' + dailyDayString()));
   document.querySelectorAll('.xi-mode').forEach(b => b.classList.toggle('xi-mode--active', b.dataset.mode === 'classic'));
   resetRoster();
@@ -257,6 +260,15 @@ function exitDaily() {   // leaving Daily / H2H for a normal mode
   _spinRng = Math.random;
   document.body.classList.remove('is-daily', 'is-h2h');
 }
+// Seeded modes (Daily/H2H) hide the Expert toggle, so an inherited blind flag
+// would be an invisible 1.25× multiplier some players have and others don't.
+// Clear it and sync the (hidden) checkbox so the UI matches when it reappears.
+function clearBlindForSeededRun() {
+  state.blind = false;
+  state.revealed = false;
+  const t = document.getElementById('expertToggle');
+  if (t) t.checked = false;
+}
 
 // ----- Head-to-head challenge (async): same 11 for you AND your friend -----
 // opponent = {name, score} when you're ANSWERING a challenge; null when creating one.
@@ -264,6 +276,7 @@ function startH2HChallenge(seed, opponent) {
   state.mode = 'classic';
   state.daily = false;
   state.h2h = { seed: (seed >>> 0), opponent: opponent || null };
+  clearBlindForSeededRun();   // both sides face the same 11 on equal terms
   _spinRng = mulberry32(state.h2h.seed);
   document.querySelectorAll('.xi-mode').forEach(b => b.classList.toggle('xi-mode--active', b.dataset.mode === 'classic'));
   resetRoster();                       // re-seeds + zeroes skips/swaps (h2h branch)
@@ -2079,16 +2092,37 @@ function showCompleteModal() {
   const _postBtn = document.getElementById('submitLineupBtn');
   if (_postBtn) { _postBtn.disabled = false; _postBtn.innerHTML = 'POST TO LEADERBOARD →'; }
 
+  // — Retention hooks: personal best + near-miss ("one more go" psychology) —
+  const fam = state.daily ? 'daily' : (state.h2h ? 'h2h' : state.mode);
+  let pb = {}; try { pb = JSON.parse(localStorage.getItem('pe_pb') || '{}') || {}; } catch (e) {}
+  const prevBest = pb[fam] || 0;
+  const isPB = final > prevBest;
+  if (isPB) { pb[fam] = final; try { localStorage.setItem('pe_pb', JSON.stringify(pb)); } catch (e) {} }
+  state.lastResult.pb = isPB && prevBest > 0;
+  // Near-miss: how few OVR points away was the NEXT finish tier? (deterministic
+  // thresholds — probing with a higher basis only reads the tier, scorelines stay random)
+  let nearMiss = null;
+  if (finish.tier !== 'CHAMPIONS') {
+    for (let k = 1; k <= 4; k++) {
+      const better = projectedFinish(finishBasis + k, chem, injuryLoss);
+      if (better.tier !== finish.tier) { nearMiss = { pts: k, label: better.label }; break; }
+    }
+  }
+
   // Hero finish banner — the big, color-coded "how did I do?" answer up top.
   const finishHero = $('xiFinishHero');
   if (finishHero) {
     const tierColors = { CHAMPIONS:'#ffc400', RUNNERS_UP:'#d7dde3', THIRD:'#cd7f32', FOURTH:'#9aa7b2' };
     const c = tierColors[finish.tier] || '#ffffff';
     const matchBit = finish.opp ? `<span class="xi-finish-hero__match">${finish.scoreLine} vs ${finish.opp}</span>` : '';
+    const pbBit = (isPB && prevBest > 0) ? `<span class="xi-finish-hero__pb">🏆 NEW PERSONAL BEST — ${final} OVR <s>${prevBest}</s></span>` : '';
+    const missBit = nearMiss ? `<span class="xi-finish-hero__miss">SO CLOSE — ${nearMiss.pts} OVR FROM ${nearMiss.label}</span>` : '';
     finishHero.innerHTML = `
       <span class="xi-finish-hero__kicker">YOUR TOURNAMENT FINISH</span>
       <span class="xi-finish-hero__result" style="color:${c};">${finish.label}</span>
       ${matchBit}
+      ${pbBit}
+      ${missBit}
     `;
   }
 
@@ -2099,7 +2133,7 @@ function showCompleteModal() {
   if (kicker) kicker.textContent = state.h2h
     ? h2hKickerText(final)
     : (state.daily
-      ? `⭐ DAILY #${dailyNumber()} · 🔥 ${dailyStreakVal}-DAY STREAK`
+      ? `⭐ DAILY #${dailyNumber()} · 🔥 ${dailyStreakVal}-DAY STREAK · NEXT IN ${fmtCountdown(msUntilNextEasternMidnight())}`
       : (wasBlind ? '🎭 THE BIG REVEAL — YOU DRAFTED BLIND' : 'YOUR ELEVEN IS COMPLETE'));
 
   const oopNote = oop > 0 ? ` ${oop} OOP (−${oop} OVR).` : '';
@@ -3110,8 +3144,8 @@ function initModes() {
         openPaywall();
         return;
       }
-      if (state.mode === btn.dataset.mode && !state.daily) return;
-      exitDaily();   // a mode tab always leaves the Daily challenge
+      if (state.mode === btn.dataset.mode && !state.daily && !state.h2h) return;
+      exitDaily();   // a mode tab always leaves the Daily / H2H challenge
       document.querySelectorAll('.xi-mode').forEach(b => b.classList.remove('xi-mode--active'));
       btn.classList.add('xi-mode--active');
       state.mode = btn.dataset.mode;

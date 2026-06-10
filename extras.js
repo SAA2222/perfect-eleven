@@ -413,7 +413,7 @@ function paintLeaderboard() {
     <article class="lb-row ${row.user ? 'lb-row--user' : ''}${pinned ? ' lb-row--pinned' : ''}">
       <div class="lb-row__rank">
         <span class="lb-row__rank-num">${String(row.rank).padStart(2, '0')}</span>
-        ${isAll ? moveHTML(row._move) : ''}
+        ${(isAll && _lbPeriod !== 'WEEK') ? moveHTML(row._move) : ''}
         <span class="lb-row__mode">${modeDisplay(row.mode)}</span>
       </div>
       <div class="lb-row__body">

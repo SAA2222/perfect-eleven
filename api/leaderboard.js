@@ -139,9 +139,11 @@ export default async function handler(req, res) {
 
       // Dedup backstop: drop an identical entry (same person + lineup + score +
       // mode) within a short window — stops accidental double-posts even if the
-      // client-side guard is bypassed. Fail-open if KV hiccups.
+      // client-side guard is bypassed. Keyed by IP too: in the DAILY everyone
+      // faces the same 11, so two different ANONYMOUS players can legitimately
+      // post identical lineup+score — they must not collide. Fail-open on KV error.
       try {
-        const dupKey = `pe:dup:${hashKey(`${entry.by}|${entry.lineup}|${entry.ovr}|${entry.mode}`)}`;
+        const dupKey = `pe:dup:${hashKey(`${ip}|${entry.by}|${entry.lineup}|${entry.ovr}|${entry.mode}`)}`;
         const firstTime = await kv.set(dupKey, 1, { nx: true, ex: DEDUP_WINDOW_SEC });
         if (firstTime === null) {
           return res.status(200).json({ ok: true, duplicate: true, entry });  // silently ignore

@@ -1837,6 +1837,22 @@ body.swap-mode .xi-pitch::after {
   letter-spacing: 0.04em;
   color: #aeb8c2;
 }
+/* Retention hooks under the finish: personal best + near-miss */
+.xi-finish-hero__pb {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px; font-weight: 800; letter-spacing: 0.08em;
+  color: var(--gold, #ffc400);
+}
+.xi-finish-hero__pb s { opacity: 0.55; font-weight: 400; }
+.xi-finish-hero__miss {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.06em;
+  color: #aeb8c2;
+}
 
 .xi-stat-strip {
   display: grid;
