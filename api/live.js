@@ -63,14 +63,20 @@ async function getMatches(key) {
 }
 
 // ---- view=stats: cumulative roster stats, resume-paginated across refreshes ----
+// State and freshness are decoupled: the record lives 24h in KV (so partial
+// sweep progress is never lost to a freshness expiry — that bug cost us a
+// stuck-at-391 loop), and freshness is computed from its timestamp.
 async function getStats(key) {
-  let cached = kv ? await kv.get('pe:live:stats') : null;
-  if (cached && cached.fresh) return cached.payload;
-
-  const state = (cached && cached.state) || { players: {}, cursor: null, complete: false };
+  const rec = kv ? await kv.get('pe:live:stats') : null;   // { state, at }
+  const state = (rec && rec.state) || { players: {}, cursor: null, complete: false };
+  const age = rec ? Date.now() - (rec.at || 0) : Infinity;
+  const maxAge = state.complete ? 21600000 : 120000;       // 6h once complete, 2min while sweeping
+  if (rec && age < maxAge) {
+    return { ok: true, players: state.players, complete: state.complete, at: rec.at };
+  }
   if (!state.complete) {
     try {
-      for (let page = 0; page < 4; page++) {       // ≤4 pages per refresh (trial-safe)
+      for (let page = 0; page < 8; page++) {       // 13 pages total → completes in 2 refreshes
         const q = `/rosters?seasons[]=2026&per_page=100${state.cursor ? `&cursor=${state.cursor}` : ''}`;
         const res = await bdl(q, key);
         for (const row of res.data || []) {
@@ -92,9 +98,9 @@ async function getStats(key) {
       if (e.status !== 429) throw e;               // 429 mid-sweep: keep partial, resume next refresh
     }
   }
-  const payload = { ok: true, players: state.players, complete: state.complete, at: Date.now() };
-  if (kv) await kv.set('pe:live:stats', { payload, state, fresh: true }, { ex: state.complete ? 21600 : 120 });
-  return payload;
+  const at = Date.now();
+  if (kv) await kv.set('pe:live:stats', { state, at }, { ex: 86400 });
+  return { ok: true, players: state.players, complete: state.complete, at };
 }
 
 export default async function handler(req, res) {
