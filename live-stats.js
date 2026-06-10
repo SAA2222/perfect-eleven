@@ -63,7 +63,13 @@ function _liveTimeLabel(m) {
   if (m.status === 'in_progress') return '🔴 LIVE';
   if (m.status === 'completed') return 'FT';
   try {
-    return new Date(m.dt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const d = new Date(m.dt);
+    const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    // More than ~20h out → include the weekday ("THU 3:00 PM")
+    if (d - Date.now() > 20 * 3600000) {
+      return `${d.toLocaleDateString([], { weekday: 'short' }).toUpperCase()} ${t}`;
+    }
+    return t;
   } catch (e) { return ''; }
 }
 function _liveScore(m) {
@@ -75,12 +81,14 @@ function renderMatchdayStrip(matches) {
   const strip = document.getElementById('matchdayStrip');
   if (!strip) return;
   const now = Date.now();
-  // Today's window: live now, finished in the last 12h, or kicking off in the next 18h.
+  // Window: live now, finished in the last 12h, or kicking off in the next 48h
+  // (wide enough that tournament-eve shows the opening fixtures with day labels;
+  // during the tournament there are matches daily, so this only matters on quiet days).
   const windowed = (matches || []).filter(m => {
     const t = Date.parse(m.dt || 0);
     if (m.status === 'in_progress') return true;
     if (m.status === 'completed') return now - t < 12 * 3600000;
-    return t - now > 0 && t - now < 18 * 3600000;
+    return t - now > 0 && t - now < 48 * 3600000;
   }).slice(0, 10);
   if (!windowed.length) { strip.hidden = true; return; }
   const anyLive = windowed.some(m => m.status === 'in_progress');
