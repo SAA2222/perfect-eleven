@@ -1818,9 +1818,28 @@ function initLiveBadge() {
   badge.textContent = `LIVE · ${phase}`;
   target.appendChild(badge);
 }
-// Replace simulated award winners with real tournament leaders once available.
-// Once tournament is LIVE: prefer real data > TBD placeholder. Never falls back to
-// bias-simulated picks during tournament — that would lie about reality.
+// Compact REAL-tournament leaders strip — kept SEPARATE from the simulated
+// awards so "you won the World Cup" never collides with a 1-goal real Golden
+// Boot on day 1. Shows nothing until real goals/assists exist.
+function buildRealLeadersStrip() {
+  if (!isTournamentLive()) return '';
+  const players = (window.LIVE_STATS && window.LIVE_STATS.players) || {};
+  const top = (key) => Object.entries(players)
+    .map(([name, s]) => [name, s[key] || 0]).filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1])[0] || null;
+  const boot = top('G'), assist = top('A');
+  if (!boot && !assist) return '';
+  const done = (typeof window._liveMatchesDone === 'number') ? window._liveMatchesDone : 0;
+  const matchesBit = done > 0 ? ` — AFTER ${done} OF 104 MATCHES` : '';
+  const bits = [];
+  if (boot) bits.push(`⚽ TOP SCORER: ${boot[0]} (${boot[1]})`);
+  if (assist) bits.push(`🅰️ MOST ASSISTS: ${assist[0]} (${assist[1]})`);
+  return `<div class="xi-real-leaders">🔴 REAL WORLD CUP — ${bits.join(' · ')}${matchesBit}</div>`;
+}
+
+// RETIRED (was: replace simulated award winners with real leaders) — overriding
+// the simulation broke its narrative; see buildRealLeadersStrip above. Kept for
+// reference only; no callers.
 function applyLiveAwards(awards) {
   if (!isTournamentLive() || !awards) return awards;
   const live = window.LIVE_STATS.awards || {};
@@ -2111,7 +2130,12 @@ function computeAwards() {
   capTo('A',  'topAssister');    // Assister has the most assists
   capTo('CS', 'goldenGlove');    // Glove has the most clean sheets
 
-  return applyLiveAwards(awards);
+  // PURE SIMULATION, deliberately: these awards are the story of YOUR simulated
+  // tournament ("you won the World Cup"), so they must not be overridden by
+  // real-world data — on day 1 that produced "champions… and the Golden Boot has
+  // 1 goal". The REAL tournament leaders get their own clearly-labeled strip
+  // (buildRealLeadersStrip) rendered alongside. applyLiveAwards is retired.
+  return awards;
 }
 
 function awardCardHTML(emoji, label, awardKey, player) {
@@ -2290,12 +2314,9 @@ function showCompleteModal() {
   if (state.lastResult) state.lastResult.awards = awards;   // share card reuses these (computeAwards is random)
   const awardsContainer = document.getElementById('xiAwards');
   if (awardsContainer && awards) {
-    const live = isTournamentLive();
-    const updatedAt = window.LIVE_STATS?.updatedAt || '';
-    const phase = window.LIVE_STATS?.status || 'PRE';
-    const caption = live
-      ? `<div class="xi-awards__caption xi-awards__caption--live">● LIVE · ${phase} · UPDATED ${updatedAt}</div>`
-      : `<div class="xi-awards__caption">SIMULATED · TOURNAMENT KICKS OFF JUNE 11</div>`;
+    // The awards are always YOUR simulated tournament's story — labeled as such.
+    // The REAL World Cup leaders render separately below (no mixed realities).
+    const caption = `<div class="xi-awards__caption">SIMULATED — YOUR XI'S TOURNAMENT RUN</div>`;
     awardsContainer.innerHTML = `
       <details class="xi-awards-details">
         <summary class="xi-awards__summary">🏅 TOURNAMENT AWARDS <span class="xi-awards__chev">▾</span></summary>
@@ -2311,6 +2332,7 @@ function showCompleteModal() {
           ${awardCardHTML('⚙️', 'BEST MIDFIELDER','bestMid',      awards.bestMid)}
         </div>
       </details>
+      ${buildRealLeadersStrip()}
     `;
   }
 

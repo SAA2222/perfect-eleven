@@ -164,6 +164,7 @@ async function refreshLiveMode() {
     if (!data || !data.ok) { const s = document.getElementById('matchdayStrip'); if (s) s.hidden = true; return; }
     const anyLive = renderMatchdayStrip(data.matches);
     updateTournamentPhase(data.matches);
+    window._liveMatchesDone = (data.matches || []).filter(m => m.status === 'completed').length;
     // Feed real scores into the top news ticker (replaces the stale pre-match line).
     try {
       const hl = [];
