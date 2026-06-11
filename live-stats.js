@@ -211,6 +211,9 @@ async function loadLiveStats() {
       }
     }
   } catch (e) { /* silent */ }
+  // Goals land mid-match now — keep long-lived tabs fresh (awards on the
+  // complete screen + ⚽ chips read this data at render time).
+  setTimeout(loadLiveStats, 600000);
 }
 document.addEventListener('DOMContentLoaded', () => {
   refreshLiveMode();
