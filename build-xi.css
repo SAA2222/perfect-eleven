@@ -1299,8 +1299,10 @@ body.swap-mode .xi-pitch::after {
 .rosters__grid {
   padding: 16px 22px 22px;
   overflow-y: auto;
-  display: grid;
-  grid-template-columns: 1fr;
+  /* flex, NOT grid: <details> children collapse to ~3px rows inside a CSS grid
+     (browser quirk) — every roster card was rendering invisible. */
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 .roster__card {
@@ -1308,6 +1310,9 @@ body.swap-mode .xi-pitch::after {
   border: 1px solid var(--rule);
   border-radius: 6px;
   overflow: hidden;
+  /* overflow:hidden zeroes the automatic min-height, letting the flex column
+     SHRINK all 48 cards to ~5px to fit the pane instead of scrolling. Never shrink. */
+  flex-shrink: 0;
 }
 .roster__head {
   display: flex;
@@ -2501,6 +2506,8 @@ body { padding-bottom: 56px; }
   animation: scroll-x 100s linear infinite;
   padding-left: 140px;
 }
+.sponsor-ticker__item--link { cursor: pointer; }
+.sponsor-ticker__item--link:hover .sponsor-ticker__name { text-decoration: underline; }
 .sponsor-ticker__item {
   display: inline-flex;
   align-items: center;

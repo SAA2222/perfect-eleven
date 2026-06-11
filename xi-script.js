@@ -251,7 +251,7 @@ function startDailyChallenge() {
   buildSpinnerCards();
   updateSpinButtonLabel();
   document.body.classList.add('is-daily');
-  toast(`⭐ DAILY #${dailyNumber()} — same 11 for everyone`);
+  toast(`⭐ DAILY #${dailyNumber()} — same 11 for everyone · equal terms (no skips · no expert)`);
   document.getElementById('spinner')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 function exitDaily() {   // leaving Daily / H2H for a normal mode
@@ -285,7 +285,9 @@ function startH2HChallenge(seed, opponent) {
   buildSpinnerCards();
   updateSpinButtonLabel();
   document.body.classList.add('is-daily', 'is-h2h');   // reuse the no-skip/swap/reset UI
-  toast(opponent ? `⚔️ BEAT ${opponent.name} — they got ${opponent.score}` : '⚔️ CHALLENGE — same 11 for you both');
+  toast(opponent
+    ? `⚔️ BEAT ${opponent.name} — they got ${opponent.score} · equal terms (no skips · no expert)`
+    : '⚔️ CHALLENGE — same 11 for you both · equal terms (no skips · no expert)');
   document.getElementById('spinner')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 // Just the NAME part of "NAME · CITY".
@@ -3307,6 +3309,13 @@ document.addEventListener('DOMContentLoaded', () => {
   initLiveBadge();
 
   $('spinBtn').addEventListener('click', spin);
+  // Reel cards aren't pickable until the wheel has landed — clicking one early
+  // used to do nothing silently. Give feedback (no-ops when a spin is active).
+  $('spinnerCards')?.addEventListener('click', () => {
+    if (state.currentNation || state.currentSlot != null) return;
+    if (Object.keys(state.roster).length >= 11) return;
+    toast('🎰 HIT SPIN FIRST — THE WHEEL PICKS YOUR NATION');
+  });
   initStickySpin();   // mobile sticky SPIN bar (spin from your pitch, no scroll-up)
   $('dailyCta')?.addEventListener('click', startDailyChallenge);
   $('h2hCta')?.addEventListener('click', () => startH2HChallenge(Math.floor(Math.random() * 0xffffffff), null));

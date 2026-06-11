@@ -59,7 +59,8 @@ const SPONSORS = [
   { name: 'HYUNDAI',       tagline: 'NEW THINKING · NEW POSSIBILITIES',    accent: '#00B3A4' }, // teal
   { name: 'QATAR AIRWAYS', tagline: 'GOING PLACES TOGETHER',               accent: '#B0184B' }, // maroon
   { name: 'HUBLOT',        tagline: 'FUSION OF INNOVATION',                accent: '#C9A24A' }, // gold
-  { name: 'YOUR BRAND',    tagline: 'AVAILABLE FOR SPONSORSHIP · CONTACT', accent: '#00FF85' }, // green
+  { name: 'YOUR BRAND',    tagline: 'AVAILABLE FOR SPONSORSHIP · CONTACT →', accent: '#00FF85',
+    href: 'mailto:sportsmarketllc@gmail.com?subject=Perfect%20Eleven%20sponsorship' }, // green
   { name: '@CASUALZFC',    tagline: 'NOW ON TIKTOK',                       accent: '#B14EFF' }, // purple
   { name: '@EATOGRAPHY',   tagline: 'PLATES WORTH CHASING · NOW ON TIKTOK',accent: '#FF6B35' }, // coral
   { name: 'CASAPER CONSTRUCTION', tagline: 'BUILT IT TOGETHER',           accent: '#69C9D0' }, // cyan
@@ -69,14 +70,17 @@ function renderSponsorTicker() {
   const track = document.getElementById('sponsorTrack');
   if (!track) return;
   const items = [...SPONSORS, ...SPONSORS, ...SPONSORS];
-  track.innerHTML = items.map(s => `
-    <span class="sponsor-ticker__item">
+  track.innerHTML = items.map(s => {
+    const inner = `
       <span class="sponsor-ticker__pby">PRESENTED BY</span>
       <span class="sponsor-ticker__name" style="color: ${s.accent};">${s.name}</span>
       <span class="sponsor-ticker__tag">${s.tagline}</span>
-      <span class="sponsor-ticker__sep">◆</span>
-    </span>
-  `).join('');
+      <span class="sponsor-ticker__sep">◆</span>`;
+    // Sponsorship-slot items are real links (e.g. YOUR BRAND → contact email)
+    return s.href
+      ? `<a class="sponsor-ticker__item sponsor-ticker__item--link" href="${s.href}">${inner}</a>`
+      : `<span class="sponsor-ticker__item">${inner}</span>`;
+  }).join('');
 }
 
 // ============================================================
