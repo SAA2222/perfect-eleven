@@ -73,7 +73,8 @@ async function getStats(key) {
   let state = (rec && rec.state) || null;
   if (!state || state.v !== STATS_V) state = { v: STATS_V, players: {}, cursor: null, complete: false, teams: null };
   const age = rec ? Date.now() - (rec.at || 0) : Infinity;
-  const maxAge = state.complete ? 21600000 : 120000;       // 6h once complete, 2min while sweeping
+  const maxAge = state.complete ? 1800000 : 120000;        // 30min once complete (goals land fast
+                                                           // during the tournament), 2min mid-sweep
   if (rec && rec.state && rec.state.v === STATS_V && age < maxAge) {
     return { ok: true, players: state.players, complete: state.complete, at: rec.at };
   }
