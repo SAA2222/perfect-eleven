@@ -41,8 +41,9 @@ export default async function handler(req, res) {
 
   // ----- Owner / comp code (secret lives in server env, never in client) -----
   if (comp) {
-    const code = process.env.PREMIUM_COMP_CODE;
-    if (code && comp === code) return res.status(200).json({ premium: true, via: 'comp' });
+    // trim both sides: env values piped in can carry a stray trailing newline
+    const code = (process.env.PREMIUM_COMP_CODE || '').trim();
+    if (code && comp.trim() === code) return res.status(200).json({ premium: true, via: 'comp' });
     return res.status(200).json({ premium: false, reason: 'bad_comp' });
   }
 
