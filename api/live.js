@@ -66,15 +66,19 @@ async function getMatches(key) {
 // State and freshness are decoupled: the record lives 24h in KV (so partial
 // sweep progress is never lost to a freshness expiry — that bug cost us a
 // stuck-at-391 loop), and freshness is computed from its timestamp.
-const STATS_V = 2;   // bump to invalidate the cached sweep (key-scheme changes)
+const STATS_V = 3;   // bump to invalidate the cached sweep (v3: player-id map + live overlay)
 
 async function getStats(key) {
   const rec = kv ? await kv.get('pe:live:stats') : null;   // { state, at }
   let state = (rec && rec.state) || null;
-  if (!state || state.v !== STATS_V) state = { v: STATS_V, players: {}, cursor: null, complete: false, teams: null };
+  if (!state || state.v !== STATS_V) {
+    state = { v: STATS_V, players: {}, ids: {}, cursor: null, complete: false, teams: null,
+              doneIds: [], doneTotals: {}, hadLive: false };
+  }
   const age = rec ? Date.now() - (rec.at || 0) : Infinity;
-  const maxAge = state.complete ? 1800000 : 120000;        // 30min once complete (goals land fast
-                                                           // during the tournament), 2min mid-sweep
+  // 2.5min while a match is LIVE (goal chips mid-match), 30min on idle tournament
+  // days, 2min while the initial roster sweep is still running.
+  const maxAge = state.hadLive ? 150000 : (state.complete ? 1800000 : 120000);
   if (rec && rec.state && rec.state.v === STATS_V && age < maxAge) {
     return { ok: true, players: state.players, complete: state.complete, at: rec.at };
   }
@@ -101,6 +105,7 @@ async function getStats(key) {
             n: p.name, g: row.goals || 0, a: row.assists || 0,
             apps: row.appearances || 0, r: row.avg_rating || null,
           };
+          if (p.id != null) state.ids[p.id] = `${code}|${last}`;   // for the per-match overlay
         }
         state.cursor = res.meta && res.meta.next_cursor;
         if (!state.cursor) { state.complete = true; break; }
@@ -109,6 +114,60 @@ async function getStats(key) {
       if (e.status !== 429) throw e;               // 429 mid-sweep: keep partial, resume next refresh
     }
   }
+
+  // ---- REAL-TIME overlay: /rosters cumulative stats lag (verified: MEX 2-0 FT,
+  // rosters still all-zero an hour later) but player_match_stats is live. Sum
+  // G/A per player from started matches and override the roster numbers when
+  // bigger. Completed matches are processed ONCE (doneIds); live matches are
+  // re-read each refresh and never persisted (no double-count when they finish).
+  try {
+    const fetchTotals = async (ids) => {
+      const totals = {};
+      for (let i = 0; i < ids.length; i += 4) {
+        const chunk = ids.slice(i, i + 4);
+        let cursor = null;
+        for (let page = 0; page < 6; page++) {
+          const q = chunk.map(id => `match_ids[]=${id}`).join('&') + `&per_page=100${cursor ? `&cursor=${cursor}` : ''}`;
+          const res = await bdl(`/player_match_stats?${q}`, key);
+          for (const r of res.data || []) {
+            const t = totals[r.player_id] || (totals[r.player_id] = [0, 0]);
+            t[0] += r.goals || 0; t[1] += r.assists || 0;
+          }
+          cursor = res.meta && res.meta.next_cursor;
+          if (!cursor) break;
+        }
+      }
+      return totals;
+    };
+    const mp = await getMatches(key);
+    const started = (mp.matches || []).filter(m => m.status === 'in_progress' || m.status === 'completed');
+    const newDone = started.filter(m => m.status === 'completed' && !state.doneIds.includes(m.id)).map(m => m.id);
+    const liveIds = started.filter(m => m.status === 'in_progress').map(m => m.id);
+    if (newDone.length) {
+      const t = await fetchTotals(newDone);
+      for (const pid of Object.keys(t)) {
+        const cur = state.doneTotals[pid] || [0, 0];
+        state.doneTotals[pid] = [cur[0] + t[pid][0], cur[1] + t[pid][1]];
+      }
+      state.doneIds.push(...newDone);
+    }
+    const liveTotals = liveIds.length ? await fetchTotals(liveIds) : {};
+    state.hadLive = liveIds.length > 0;
+    const merged = {};
+    for (const pid of Object.keys(state.doneTotals)) merged[pid] = [...state.doneTotals[pid]];
+    for (const pid of Object.keys(liveTotals)) {
+      const cur = merged[pid] || [0, 0];
+      merged[pid] = [cur[0] + liveTotals[pid][0], cur[1] + liveTotals[pid][1]];
+    }
+    for (const pid of Object.keys(merged)) {
+      const k = state.ids[pid];
+      const pl = k && state.players[k];
+      if (!pl) continue;
+      if (merged[pid][0] > (pl.g || 0)) pl.g = merged[pid][0];
+      if (merged[pid][1] > (pl.a || 0)) pl.a = merged[pid][1];
+    }
+  } catch (e) { /* overlay is best-effort — the roster base still serves */ }
+
   const at = Date.now();
   if (kv) await kv.set('pe:live:stats', { state, at }, { ex: 86400 });
   return { ok: true, players: state.players, complete: state.complete, at };
