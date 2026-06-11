@@ -2,7 +2,7 @@
    EXTRAS — ticker, countdown, leaderboard
    ============================================================ */
 
-const KICKOFF = new Date('2026-06-11T20:00:00Z').getTime();
+const KICKOFF = new Date('2026-06-11T19:00:00Z').getTime();   // MEX-RSA, 3PM ET (API-confirmed)
 
 const TICKER_ITEMS = [
   { type: 'live',  text: 'BUILD THE PERFECT ELEVEN · TOOL LIVE NOW' },
@@ -31,10 +31,21 @@ function updateCountdown() {
   }
 }
 
+// Real results injected by live-stats.js once matches kick off — they replace
+// the stale pre-tournament "OPENING MATCH · MEX vs RSA" editorial line.
+let _liveTickerHeadlines = [];
+function setLiveTickerHeadlines(headlines) {
+  _liveTickerHeadlines = Array.isArray(headlines) ? headlines.slice(0, 3) : [];
+  renderTicker();
+}
 function renderTicker() {
   const track = document.getElementById('tickerTrack');
   if (!track) return;
-  const items = [...TICKER_ITEMS, ...TICKER_ITEMS];
+  const base = _liveTickerHeadlines.length
+    ? TICKER_ITEMS.filter(it => !it.text.includes('OPENING MATCH'))   // stale once real scores exist
+    : TICKER_ITEMS;
+  const merged = [..._liveTickerHeadlines.map(t => ({ type: 'live', text: t })), ...base];
+  const items = [...merged, ...merged];
   track.innerHTML = items.map(it => `
     <span class="ticker__item">
       ${it.type === 'live' ? '<span class="ticker__live">● LIVE</span>' : ''}

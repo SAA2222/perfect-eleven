@@ -164,6 +164,21 @@ async function refreshLiveMode() {
     if (!data || !data.ok) { const s = document.getElementById('matchdayStrip'); if (s) s.hidden = true; return; }
     const anyLive = renderMatchdayStrip(data.matches);
     updateTournamentPhase(data.matches);
+    // Feed real scores into the top news ticker (replaces the stale pre-match line).
+    try {
+      const hl = [];
+      const live = (data.matches || []).filter(m => m.status === 'in_progress');
+      const done = (data.matches || [])
+        .filter(m => m.status === 'completed' && Date.now() - Date.parse(m.dt) < 24 * 3600000)
+        .sort((a, b) => Date.parse(b.dt) - Date.parse(a.dt));
+      for (const m of live.slice(0, 2)) {
+        hl.push(`🔴 LIVE · ${(m.home && m.home.code) || '?'} ${m.hs ?? 0}–${m.as ?? 0} ${(m.away && m.away.code) || '?'}`);
+      }
+      for (const m of done.slice(0, 2)) {
+        hl.push(`FT · ${(m.home && m.home.code) || '?'} ${m.hs}–${m.as} ${(m.away && m.away.code) || '?'}`);
+      }
+      if (hl.length && typeof setLiveTickerHeadlines === 'function') setLiveTickerHeadlines(hl);
+    } catch (e) { /* ticker stays editorial */ }
     // Poll faster while matches are live, slower around kickoff windows.
     if (_livePollTimer) clearTimeout(_livePollTimer);
     _livePollTimer = setTimeout(refreshLiveMode, anyLive ? 90000 : 600000);
