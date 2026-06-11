@@ -1827,56 +1827,15 @@ function buildRealLeadersStrip() {
   const top = (key) => Object.entries(players)
     .map(([name, s]) => [name, s[key] || 0]).filter(([, v]) => v > 0)
     .sort((a, b) => b[1] - a[1])[0] || null;
-  const boot = top('G'), assist = top('A');
-  if (!boot && !assist) return '';
+  const boot = top('G'), assist = top('A'), motm = top('MOTM');
+  if (!boot && !assist && !motm) return '';
   const done = (typeof window._liveMatchesDone === 'number') ? window._liveMatchesDone : 0;
   const matchesBit = done > 0 ? ` — AFTER ${done} OF 104 MATCHES` : '';
   const bits = [];
   if (boot) bits.push(`⚽ TOP SCORER: ${boot[0]} (${boot[1]})`);
   if (assist) bits.push(`🅰️ MOST ASSISTS: ${assist[0]} (${assist[1]})`);
+  if (motm) bits.push(`🏆 MOTM: ${motm[0]}${motm[1] > 1 ? ` (${motm[1]})` : ''}`);
   return `<div class="xi-real-leaders">🔴 REAL WORLD CUP — ${bits.join(' · ')}${matchesBit}</div>`;
-}
-
-// RETIRED (was: replace simulated award winners with real leaders) — overriding
-// the simulation broke its narrative; see buildRealLeadersStrip above. Kept for
-// reference only; no callers.
-function applyLiveAwards(awards) {
-  if (!isTournamentLive() || !awards) return awards;
-  const live = window.LIVE_STATS.awards || {};
-  const lookup = (target) => {
-    if (!target) return null;
-    for (const n of NATIONS) {
-      const p = n.players.find(p => p.name === target.name);
-      if (p) return { ...p, nation: n.name, flag: n.flag, iso: n.iso, code: n.code, liveValue: target.value };
-    }
-    return null;
-  };
-  // Derive Golden Boot / Top Assister directly from per-player stats as backup
-  // (the scraper does this too, but this is belt-and-suspenders if awards.* is null)
-  const derive = (key) => {
-    const players = window.LIVE_STATS.players || {};
-    const entries = Object.entries(players)
-      .map(([name, s]) => [name, s[key] || 0])
-      .filter(([, v]) => v > 0)
-      .sort((a, b) => b[1] - a[1]);
-    if (!entries.length) return null;
-    return { name: entries[0][0], value: entries[0][1] };
-  };
-  const liveOrTBD = (target, derivedTarget, tbdLabel) => {
-    const real = lookup(target) || lookup(derivedTarget);
-    if (real) return real;
-    return { __tbd: true, name: 'TBD', tbdLabel: tbdLabel || 'AWAITING TOURNAMENT DATA' };
-  };
-  return {
-    ...awards,
-    goldenBall:   liveOrTBD(live.goldenBall,   null,                'NO MOTM DATA YET'),
-    goldenBoot:   liveOrTBD(live.goldenBoot,   derive('G'),         'NO GOALS SCORED YET'),
-    topAssister:  liveOrTBD(live.topAssister,  derive('A'),         'NO ASSISTS YET'),
-    goldenGlove:  liveOrTBD(live.goldenGlove,  null,                'NO CLEAN SHEETS YET'),
-    youngPlayer:  liveOrTBD(live.youngPlayer,  null,                'TBD'),
-    bestDefender: liveOrTBD(live.bestDefender, null,                'TBD'),
-    bestMid:      liveOrTBD(live.bestMidfielder, null,              'TBD'),
-  };
 }
 
 function predictMatchScore(yourRating, oppRating, result) {

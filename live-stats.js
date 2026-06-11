@@ -200,7 +200,7 @@ async function loadLiveStats() {
           for (const n of NATIONS) {
             for (const p of (n.players || [])) {
               const s = liveStatFor({ code: n.code, name: p.name });
-              if (s && (s.g || s.a)) map[p.name] = { G: s.g, A: s.a, MOTM: 0, redCards: 0 };
+              if (s && (s.g || s.a || s.m)) map[p.name] = { G: s.g || 0, A: s.a || 0, MOTM: s.m || 0, redCards: 0 };
             }
           }
           window.LIVE_STATS.players = map;

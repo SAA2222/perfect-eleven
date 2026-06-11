@@ -66,21 +66,33 @@ async function getMatches(key) {
 // State and freshness are decoupled: the record lives 24h in KV (so partial
 // sweep progress is never lost to a freshness expiry — that bug cost us a
 // stuck-at-391 loop), and freshness is computed from its timestamp.
-const STATS_V = 3;   // bump to invalidate the cached sweep (v3: player-id map + live overlay)
+const STATS_V = 4;   // bump to invalidate the cached sweep (v4: MOTM overlay + slim response)
+
+// Response payload: only players with something to SHOW (goals/assists/MOTM).
+// The full 1,200-player map lives in KV for the overlay; shipping it to every
+// client was 80KB per poll for data the UI never renders.
+function emitStats(state, at) {
+  const visible = {};
+  for (const k of Object.keys(state.players)) {
+    const p = state.players[k];
+    if ((p.g || 0) > 0 || (p.a || 0) > 0 || (p.m || 0) > 0) visible[k] = p;
+  }
+  return { ok: true, players: visible, complete: state.complete, at };
+}
 
 async function getStats(key) {
   const rec = kv ? await kv.get('pe:live:stats') : null;   // { state, at }
   let state = (rec && rec.state) || null;
   if (!state || state.v !== STATS_V) {
     state = { v: STATS_V, players: {}, ids: {}, cursor: null, complete: false, teams: null,
-              doneIds: [], doneTotals: {}, hadLive: false };
+              doneIds: [], doneTotals: {}, motmTotals: {}, hadLive: false };
   }
   const age = rec ? Date.now() - (rec.at || 0) : Infinity;
   // 2.5min while a match is LIVE (goal chips mid-match), 30min on idle tournament
   // days, 2min while the initial roster sweep is still running.
   const maxAge = state.hadLive ? 150000 : (state.complete ? 1800000 : 120000);
   if (rec && rec.state && rec.state.v === STATS_V && age < maxAge) {
-    return { ok: true, players: state.players, complete: state.complete, at: rec.at };
+    return emitStats(state, rec.at);
   }
   if (!state.complete) {
     try {
@@ -149,6 +161,23 @@ async function getStats(key) {
         const cur = state.doneTotals[pid] || [0, 0];
         state.doneTotals[pid] = [cur[0] + t[pid][0], cur[1] + t[pid][1]];
       }
+      // Official Man of the Match per finished game → real Golden Ball race.
+      try {
+        state.motmTotals = state.motmTotals || {};
+        for (let i = 0; i < newDone.length; i += 4) {
+          const chunk = newDone.slice(i, i + 4);
+          let cursor = null;
+          for (let page = 0; page < 4; page++) {
+            const q = chunk.map(id => `match_ids[]=${id}`).join('&') + `&per_page=100${cursor ? `&cursor=${cursor}` : ''}`;
+            const res = await bdl(`/match_best_players?${q}`, key);
+            for (const r of res.data || []) {
+              if (r.is_man_of_match) state.motmTotals[r.player_id] = (state.motmTotals[r.player_id] || 0) + 1;
+            }
+            cursor = res.meta && res.meta.next_cursor;
+            if (!cursor) break;
+          }
+        }
+      } catch (e) { /* MOTM is garnish — never block goals on it */ }
       state.doneIds.push(...newDone);
     }
     const liveTotals = liveIds.length ? await fetchTotals(liveIds) : {};
@@ -166,11 +195,16 @@ async function getStats(key) {
       if (merged[pid][0] > (pl.g || 0)) pl.g = merged[pid][0];
       if (merged[pid][1] > (pl.a || 0)) pl.a = merged[pid][1];
     }
+    for (const pid of Object.keys(state.motmTotals || {})) {
+      const k = state.ids[pid];
+      const pl = k && state.players[k];
+      if (pl) pl.m = state.motmTotals[pid];
+    }
   } catch (e) { /* overlay is best-effort — the roster base still serves */ }
 
   const at = Date.now();
   if (kv) await kv.set('pe:live:stats', { state, at }, { ex: 86400 });
-  return { ok: true, players: state.players, complete: state.complete, at };
+  return emitStats(state, at);
 }
 
 export default async function handler(req, res) {
