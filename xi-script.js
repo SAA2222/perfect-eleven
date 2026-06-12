@@ -2203,6 +2203,23 @@ function showCompleteModal() {
       if (better.tier !== finish.tier) { nearMiss = { pts: k, label: better.label }; break; }
     }
   }
+  // TITLE MATH — answer "why didn't an S-grade squad win?" with the actual gap
+  // to CHAMPIONS and what ate it (OOP penalties, injuries, chem left on the table).
+  let titleMath = null;
+  if (finish.tier !== 'CHAMPIONS') {
+    for (let k = 1; k <= 30; k++) {
+      if (projectedFinish(finishBasis + k, chem, injuryLoss).tier === 'CHAMPIONS') { titleMath = k; break; }
+    }
+  }
+  let whyBit = '';
+  if (titleMath != null) {
+    const costs = [];
+    if (oop) costs.push(`${oop} OOP −${oop}`);
+    if (injuryLoss) costs.push(`INJURIES −${injuryLoss}`);
+    const chemBonus = Math.floor(chem / 6);
+    if (chemBonus < 5) costs.push(`CHEM BONUS +${chemBonus} OF +5`);
+    whyBit = `<span class="xi-finish-hero__why">THE TITLE NEEDED +${titleMath} MORE${costs.length ? ' — ' + costs.join(' · ') : ''}</span>`;
+  }
 
   // Hero finish banner — the big, color-coded "how did I do?" answer up top.
   const finishHero = $('xiFinishHero');
@@ -2226,6 +2243,7 @@ function showCompleteModal() {
       ${matchBit}
       ${pbBit}
       ${missBit}
+      ${whyBit}
       ${realBit}
     `;
   }

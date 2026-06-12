@@ -77,12 +77,17 @@ function _buildLiveIdx(players) {
   }
   return idx;
 }
-// Map an xi-data roster player → live stats (last-name first, first-name fallback).
+// Map an xi-data roster player → live stats. Last-name match first; the
+// first-name fallback is for MONONYMS ONLY ("Rodrygo"): with the slim payload
+// (contributors only) the ambiguity guard can't see absent teammates, and a
+// full-name fallback let "Raúl Rangel" (GK) inherit Raúl Jiménez's goal.
 function liveStatFor(p) {
   if (!p || !p.code || !p.name) return null;
   const toks = _liveTokens(p.name);
   if (!toks.length) return null;
-  return _liveIdx[`${p.code}|${_liveLastTok(p.name)}`] || _liveIdx[`${p.code}|${toks[0]}`] || null;
+  const hit = _liveIdx[`${p.code}|${_liveLastTok(p.name)}`];
+  if (hit) return hit;
+  return toks.length === 1 ? (_liveIdx[`${p.code}|${toks[0]}`] || null) : null;
 }
 // Small "⚽N" chip for slot cards — only once a player has REAL tournament goals.
 function liveChipFor(p) {
