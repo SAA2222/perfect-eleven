@@ -365,10 +365,11 @@ function annotateMovementFor(bucket, ranked) {
   const fresh = !reg;                                  // first time tracking this tab
   const next = {};
   // NEW is DATA-driven, not paint-driven: an entry announces itself for its
-  // first 24h on the board (server createdAt), so it can't be silently
-  // consumed by a repaint. Movement, once it exists, outranks NEW. DAILY is
+  // first 48h on the board (server createdAt), so it can't be silently
+  // consumed by a repaint — "joined yesterday" still reads as new on a board
+  // with a daily rhythm. Movement, once it exists, outranks NEW. DAILY is
   // exempt — every row there joined today, NEW would be noise.
-  const NEW_WINDOW = 24 * 3600 * 1000;
+  const NEW_WINDOW = 48 * 3600 * 1000;
   const isRecent = (e) => bucket !== 'DAILY' && e.createdAt && (Date.now() - e.createdAt) < NEW_WINDOW;
   ranked.forEach(e => {
     const id = lbEntryId(e);
