@@ -686,7 +686,7 @@ function openTacticalPickModal() {
           <span class="player__pos player__pos--${p.pos.toLowerCase()}">${p.role}</span>
           <span class="player__rating">${maskRating(p.rating)}</span>
         </div>
-        <div class="player__name">${p.name}</div>
+        <div class="player__name">${p.name}${ratingsHidden() ? '' : formChipFor(p, 'roster__form')}</div>
         <div class="player__meta">
           <span class="player__club">${p.club}</span>
           <span class="player__league player__league--${league.toLowerCase()}">${league}</span>
@@ -788,7 +788,7 @@ function openPickModal() {
           <span class="player__pos player__pos--${p.pos.toLowerCase()}">${p.role}</span>
           <span class="player__rating">${maskRating(p.rating)}</span>
         </div>
-        <div class="player__name">${p.name}</div>
+        <div class="player__name">${p.name}${ratingsHidden() ? '' : formChipFor({ ...p, code: n.code }, 'roster__form')}</div>
         <div class="player__meta">
           <span class="player__club">${p.club}</span>
           <span class="player__league player__league--${league.toLowerCase()}">${league}</span>
@@ -986,7 +986,7 @@ function rerenderPickModalForSwapIn() {
           <span class="player__pos player__pos--${p.pos.toLowerCase()}">${p.role}</span>
           <span class="player__rating">${maskRating(p.rating)}</span>
         </div>
-        <div class="player__name">${p.name}</div>
+        <div class="player__name">${p.name}${ratingsHidden() ? '' : formChipFor({ ...p, code: n.code }, 'roster__form')}</div>
         <div class="player__meta">
           <span class="player__club">${p.club}</span>
           <span class="player__league player__league--${league.toLowerCase()}">${league}</span>
@@ -1449,10 +1449,12 @@ function liveFormDelta(p) {
   const s = liveStatFor(p);
   return (s && typeof s.f === 'number') ? s.f : 0;
 }
-function formChipFor(p) {
+// cls picks the placement style: slot__form-chip (absolute, pitch cards)
+// or roster__form (inline pill — rosters tab, pick/swap modal cards).
+function formChipFor(p, cls = 'slot__form-chip') {
   const f = liveFormDelta(p);
   if (!f) return '';
-  return `<span class="slot__form-chip ${f > 0 ? 'slot__form-chip--up' : 'slot__form-chip--down'}" title="Real World Cup form (match ratings + goals/assists)">${f > 0 ? '▲+' + f : '▼' + f}</span>`;
+  return `<span class="${cls} ${cls}--${f > 0 ? 'up' : 'down'}" title="Real World Cup form (match ratings + goals/assists)">${f > 0 ? '▲+' + f : '▼' + f}</span>`;
 }
 function effectiveRating(p) {
   return (p.naturalFit ? p.rating : p.rating - 1) + liveFormDelta(p);
