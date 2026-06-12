@@ -364,14 +364,21 @@ function annotateMovementFor(bucket, ranked) {
   const reg = rec.buckets[bucket];
   const fresh = !reg;                                  // first time tracking this tab
   const next = {};
+  // NEW is DATA-driven, not paint-driven: an entry announces itself for its
+  // first 24h on the board (server createdAt), so it can't be silently
+  // consumed by a repaint. Movement, once it exists, outranks NEW. DAILY is
+  // exempt — every row there joined today, NEW would be noise.
+  const NEW_WINDOW = 24 * 3600 * 1000;
+  const isRecent = (e) => bucket !== 'DAILY' && e.createdAt && (Date.now() - e.createdAt) < NEW_WINDOW;
   ranked.forEach(e => {
     const id = lbEntryId(e);
-    if (fresh) { next[id] = e.rank; e._move = { type: 'same' }; return; }      // armed at its current spot
-    if (!(id in reg)) { next[id] = e.rank; e._move = { type: 'new' }; return; } // just joined the board
-    const r0 = reg[id];
+    const joined = fresh || !(id in reg);
+    const r0 = joined ? e.rank : reg[id];
     next[id] = r0;                                     // keep the original join rank forever
     const d = r0 - e.rank;
-    e._move = d > 0 ? { type: 'up', n: d } : (d < 0 ? { type: 'down', n: -d } : { type: 'same' });
+    if (d !== 0) { e._move = d > 0 ? { type: 'up', n: d } : { type: 'down', n: -d }; return; }
+    if (isRecent(e) || (joined && !fresh)) { e._move = { type: 'new' }; return; }
+    e._move = { type: 'same' };
   });
   rec.buckets[bucket] = next;                          // departed ids prune automatically
   try { localStorage.setItem('pe_lb_move3', JSON.stringify(rec)); } catch (e) {}
