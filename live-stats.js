@@ -129,30 +129,32 @@ function renderMatchdayStrip(matches) {
   }).slice(0, 10);
   if (!windowed.length) { strip.hidden = true; return; }
   const anyLive = windowed.some(m => m.status === 'in_progress');
-  // Real tournament leaders live HERE (the live zone) — not on the complete
-  // screen, which is the simulated run's story.
-  let leadersChip = '';
+  // Real tournament leaders: a full-width SECOND ROW under the fixtures (a chip
+  // at the end of the scrolling track kept getting clipped).
+  let leadersRow = '';
   const L = window._liveLeaders;
   if (L && (L.boot || L.assist || L.motm)) {
     const bits = [];
-    if (L.boot)   bits.push(`⚽ ${L.boot[0]} ${L.boot[1]}`);
-    if (L.assist) bits.push(`🅰️ ${L.assist[0]} ${L.assist[1]}`);
-    if (L.motm)   bits.push(`🏆 ${L.motm[0]}${L.motm[1] > 1 ? ' ' + L.motm[1] : ''}`);
-    leadersChip = `<span class="matchday__chip matchday__chip--leaders"><b>LEADERS</b> ${bits.join(' · ')}</span>`;
+    if (L.boot)   bits.push(`⚽ TOP SCORER ${L.boot[0]} (${L.boot[1]})`);
+    if (L.assist) bits.push(`🅰️ ASSISTS ${L.assist[0]} (${L.assist[1]})`);
+    if (L.motm)   bits.push(`🏆 MOTM ${L.motm[0]}${L.motm[1] > 1 ? ` (${L.motm[1]})` : ''}`);
+    leadersRow = `<div class="matchday__leaders"><b>LEADERS</b> ${bits.join(' · ')}</div>`;
   }
   strip.hidden = false;
   strip.innerHTML = `
-    <span class="matchday__label">${anyLive ? '🔴 MATCHDAY — LIVE' : '⚽ MATCHDAY'}</span>
-    <div class="matchday__track">
-      ${windowed.map(m => `
-        <span class="matchday__chip${m.status === 'in_progress' ? ' matchday__chip--live' : ''}">
-          <b>${(m.home && m.home.code) || m.ph || 'TBD'}</b>
-          <span class="matchday__score">${_liveScore(m)}</span>
-          <b>${(m.away && m.away.code) || m.pa || 'TBD'}</b>
-          <span class="matchday__time">${_liveTimeLabel(m)}</span>
-        </span>`).join('')}
-      ${leadersChip}
-    </div>`;
+    <div class="matchday__row">
+      <span class="matchday__label">${anyLive ? '🔴 MATCHDAY — LIVE' : '⚽ MATCHDAY'}</span>
+      <div class="matchday__track">
+        ${windowed.map(m => `
+          <span class="matchday__chip${m.status === 'in_progress' ? ' matchday__chip--live' : ''}">
+            <b>${(m.home && m.home.code) || m.ph || 'TBD'}</b>
+            <span class="matchday__score">${_liveScore(m)}</span>
+            <b>${(m.away && m.away.code) || m.pa || 'TBD'}</b>
+            <span class="matchday__time">${_liveTimeLabel(m)}</span>
+          </span>`).join('')}
+      </div>
+    </div>
+    ${leadersRow}`;
   return anyLive;
 }
 

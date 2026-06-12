@@ -1352,6 +1352,7 @@ function fillSlot(slotIdx) {
     <span class="slot__filled-rating">${maskRating(p.rating)}</span>
     <span class="slot__filled-chem" data-slot-chem="${slotIdx}"></span>
     ${(typeof liveChipFor === 'function') ? liveChipFor(p) : ''}
+    ${formChipFor(p)}
   `;
   updateChemistryViz();
 }
@@ -1439,8 +1440,22 @@ function updateChemistryViz() {
 // ============================================================
 // PROGRESS / RATINGS — applies -1 OOP penalty per out-of-position player
 // ============================================================
+// LIVE FORM — real World Cup match ratings (avg, ≥20-min games) move a player's
+// effective rating by a bounded delta (server-computed: +3 hot … −2 cold).
+// OFF in seeded modes: the Daily and H2H stay equal-terms on base ratings.
+function liveFormDelta(p) {
+  if (state.daily || state.h2h) return 0;
+  if (typeof liveStatFor !== 'function') return 0;
+  const s = liveStatFor(p);
+  return (s && typeof s.f === 'number') ? s.f : 0;
+}
+function formChipFor(p) {
+  const f = liveFormDelta(p);
+  if (!f) return '';
+  return `<span class="slot__form-chip ${f > 0 ? 'slot__form-chip--up' : 'slot__form-chip--down'}" title="Real World Cup form (avg match rating)">${f > 0 ? '▲+' + f : '▼' + f}</span>`;
+}
 function effectiveRating(p) {
-  return p.naturalFit ? p.rating : p.rating - 1;
+  return (p.naturalFit ? p.rating : p.rating - 1) + liveFormDelta(p);
 }
 
 // Squad base rating — the average of the 11 effective player ratings (caps ~99).
@@ -2275,7 +2290,7 @@ function showCompleteModal() {
     // The REAL World Cup leaders render separately below (no mixed realities).
     const caption = `<div class="xi-awards__caption">SIMULATED — YOUR XI'S TOURNAMENT RUN</div>`;
     awardsContainer.innerHTML = `
-      <details class="xi-awards-details">
+      <details class="xi-awards-details" open>
         <summary class="xi-awards__summary">🏅 TOURNAMENT AWARDS <span class="xi-awards__chev">▾</span></summary>
         ${caption}
         <div class="xi-awards__grid">

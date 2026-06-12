@@ -66,16 +66,28 @@ async function getMatches(key) {
 // State and freshness are decoupled: the record lives 24h in KV (so partial
 // sweep progress is never lost to a freshness expiry — that bug cost us a
 // stuck-at-391 loop), and freshness is computed from its timestamp.
-const STATS_V = 4;   // bump to invalidate the cached sweep (v4: MOTM overlay + slim response)
+const STATS_V = 5;   // bump to invalidate the cached sweep (v5: real-form ratings)
 
-// Response payload: only players with something to SHOW (goals/assists/MOTM).
+// Average real match rating (0-10) → bounded FORM delta on the game OVR.
+// Only the outliers move — most players stay untouched.
+function formDelta(avg, matches) {
+  if (!matches || avg == null) return 0;
+  if (avg >= 8.5) return 3;
+  if (avg >= 8.0) return 2;
+  if (avg >= 7.5) return 1;
+  if (avg < 6.0) return -2;
+  if (avg < 6.5) return -1;
+  return 0;
+}
+
+// Response payload: only players with something to SHOW (goals/assists/MOTM/form).
 // The full 1,200-player map lives in KV for the overlay; shipping it to every
 // client was 80KB per poll for data the UI never renders.
 function emitStats(state, at) {
   const visible = {};
   for (const k of Object.keys(state.players)) {
     const p = state.players[k];
-    if ((p.g || 0) > 0 || (p.a || 0) > 0 || (p.m || 0) > 0) visible[k] = p;
+    if ((p.g || 0) > 0 || (p.a || 0) > 0 || (p.m || 0) > 0 || (p.f || 0) !== 0) visible[k] = p;
   }
   return { ok: true, players: visible, complete: state.complete, at };
 }
@@ -133,6 +145,8 @@ async function getStats(key) {
   // bigger. Completed matches are processed ONCE (doneIds); live matches are
   // re-read each refresh and never persisted (no double-count when they finish).
   try {
+    // Per player: [goals, assists, ratingSum, ratedMatches]. Match ratings only
+    // count with ≥20 minutes played — a 5-minute cameo shouldn't define form.
     const fetchTotals = async (ids) => {
       const totals = {};
       for (let i = 0; i < ids.length; i += 4) {
@@ -142,8 +156,9 @@ async function getStats(key) {
           const q = chunk.map(id => `match_ids[]=${id}`).join('&') + `&per_page=100${cursor ? `&cursor=${cursor}` : ''}`;
           const res = await bdl(`/player_match_stats?${q}`, key);
           for (const r of res.data || []) {
-            const t = totals[r.player_id] || (totals[r.player_id] = [0, 0]);
+            const t = totals[r.player_id] || (totals[r.player_id] = [0, 0, 0, 0]);
             t[0] += r.goals || 0; t[1] += r.assists || 0;
+            if (r.rating != null && (r.minutes_played || 0) >= 20) { t[2] += r.rating; t[3] += 1; }
           }
           cursor = res.meta && res.meta.next_cursor;
           if (!cursor) break;
@@ -158,8 +173,11 @@ async function getStats(key) {
     if (newDone.length) {
       const t = await fetchTotals(newDone);
       for (const pid of Object.keys(t)) {
-        const cur = state.doneTotals[pid] || [0, 0];
-        state.doneTotals[pid] = [cur[0] + t[pid][0], cur[1] + t[pid][1]];
+        const cur = state.doneTotals[pid] || [0, 0, 0, 0];
+        state.doneTotals[pid] = [
+          cur[0] + t[pid][0], cur[1] + t[pid][1],
+          (cur[2] || 0) + t[pid][2], (cur[3] || 0) + t[pid][3],
+        ];
       }
       // Official Man of the Match per finished game → real Golden Ball race.
       try {
@@ -185,8 +203,9 @@ async function getStats(key) {
     const merged = {};
     for (const pid of Object.keys(state.doneTotals)) merged[pid] = [...state.doneTotals[pid]];
     for (const pid of Object.keys(liveTotals)) {
-      const cur = merged[pid] || [0, 0];
-      merged[pid] = [cur[0] + liveTotals[pid][0], cur[1] + liveTotals[pid][1]];
+      const cur = merged[pid] || [0, 0, 0, 0];
+      const t = liveTotals[pid];
+      merged[pid] = [cur[0] + t[0], cur[1] + t[1], (cur[2] || 0) + t[2], (cur[3] || 0) + t[3]];
     }
     for (const pid of Object.keys(merged)) {
       const k = state.ids[pid];
@@ -194,6 +213,9 @@ async function getStats(key) {
       if (!pl) continue;
       if (merged[pid][0] > (pl.g || 0)) pl.g = merged[pid][0];
       if (merged[pid][1] > (pl.a || 0)) pl.a = merged[pid][1];
+      const rc = merged[pid][3] || 0;
+      const f = formDelta(rc ? merged[pid][2] / rc : null, rc);
+      if (f) pl.f = f; else delete pl.f;   // form can cool back to neutral
     }
     for (const pid of Object.keys(state.motmTotals || {})) {
       const k = state.ids[pid];

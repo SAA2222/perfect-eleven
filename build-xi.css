@@ -1848,8 +1848,8 @@ body.swap-mode .xi-pitch::after {
 /* ---------- MATCHDAY strip (real fixtures + live scores) ---------- */
 .matchday {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
   max-width: 1280px;
   margin: 0 auto;
   padding: 10px 16px;
@@ -1858,6 +1858,16 @@ body.swap-mode .xi-pitch::after {
   border-bottom: 1px solid var(--rule);
   overflow: hidden;
 }
+.matchday__row { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.matchday__leaders {
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.07em;
+  color: var(--bone, #e8e6df);
+  padding-top: 7px;
+  border-top: 1px dashed var(--rule);
+  line-height: 1.6;
+}
+.matchday__leaders b { color: var(--gold, #ffc400); letter-spacing: 0.14em; margin-right: 6px; }
 .matchday__label {
   font-family: var(--font-mono);
   font-size: 10px; font-weight: 800; letter-spacing: 0.16em;
@@ -1888,8 +1898,6 @@ body.swap-mode .xi-pitch::after {
   flex-shrink: 0;
 }
 .matchday__chip--live { border-color: #ff4d6d; background: rgba(255,77,109,0.08); }
-.matchday__chip--leaders { border-color: var(--gold, #ffc400); background: rgba(255,196,0,0.07); }
-.matchday__chip--leaders b { color: var(--gold, #ffc400); }
 .matchday__chip b { font-weight: 800; }
 .matchday__score { color: var(--gold, #ffc400); font-weight: 800; }
 .matchday__time { color: var(--mute-2, #8a96a0); font-size: 10px; }
@@ -1908,6 +1916,19 @@ body.swap-mode .xi-pitch::after {
   line-height: 1.4;
   pointer-events: none;
 }
+/* Live FORM chip (real match-rating delta) — top-right of the slot */
+.slot__form-chip {
+  position: absolute;
+  top: 2px; right: 2px;
+  font-family: var(--font-mono);
+  font-size: 9px; font-weight: 800;
+  border-radius: 6px;
+  padding: 1px 4px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+.slot__form-chip--up { color: #0c1410; background: rgba(74,222,128,0.95); }
+.slot__form-chip--down { color: #fff; background: rgba(248,113,113,0.92); }
 
 /* Trophy case — badge unlocks on the complete screen */
 .xi-badges {
