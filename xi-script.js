@@ -2459,13 +2459,15 @@ function openRostersModal() {
 }
 
 function renderRosters(query) {
-  const q = (query || '').toLowerCase().trim();
+  // Accent-insensitive: "quinones" must find "Quiñones", "mbappe" → "Mbappé".
+  const norm = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const q = norm(query).trim();
   const all = NATIONS.slice().sort((a, b) => (a.group || '').localeCompare(b.group || '') || a.name.localeCompare(b.name));
   const filtered = all.filter(n => {
     if (!q) return true;
-    if (n.name.toLowerCase().includes(q)) return true;
+    if (norm(n.name).includes(q)) return true;
     if (n.code.toLowerCase().includes(q)) return true;
-    return n.players.some(p => p.name.toLowerCase().includes(q) || (p.club || '').toLowerCase().includes(q));
+    return n.players.some(p => norm(p.name).includes(q) || norm(p.club).includes(q));
   });
 
   const countEl = document.getElementById('rostersCount');
@@ -2473,14 +2475,19 @@ function renderRosters(query) {
 
   const html = filtered.map(n => {
     const players = n.players.slice().sort((a, b) => b.rating - a.rating);
-    const playerRows = players.map(p => `
+    const playerRows = players.map(p => {
+      const s = (typeof liveStatFor === 'function') ? liveStatFor({ code: n.code, name: p.name }) : null;
+      const f = (s && typeof s.f === 'number') ? s.f : 0;
+      const form = f ? `<span class="roster__form ${f > 0 ? 'roster__form--up' : 'roster__form--down'}" title="Real World Cup form (avg match rating)">${f > 0 ? '▲+' + f : '▼' + f}</span>` : '';
+      return `
       <div class="roster__row">
         <span class="roster__pos roster__pos--${p.pos.toLowerCase()}">${p.role}</span>
-        <span class="roster__name">${p.name}</span>
+        <span class="roster__name">${p.name}${form}</span>
         <span class="roster__club">${p.club}</span>
         <span class="roster__rating">${p.rating}</span>
       </div>
-    `).join('');
+    `;
+    }).join('');
     return `
       <details class="roster__card" ${q ? 'open' : ''}>
         <summary class="roster__head">

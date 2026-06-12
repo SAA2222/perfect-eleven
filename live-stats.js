@@ -43,6 +43,9 @@ window.LIVE_STATS = {
 let _liveGoals = {};        // "CODE|lastname" → { n, g, a, apps, r } (raw server map)
 let _liveIdx = {};          // multi-key lookup index built from _liveGoals
 let _livePollTimer = null;
+// Localhost previews have no serverless functions — point at prod so the live
+// pipeline can be exercised outside Vercel. Empty string = same-origin (prod).
+const LIVE_API_BASE = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'https://perfect-eleven.vercel.app' : '';
 
 function _liveNorm(s) {
   return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -178,7 +181,7 @@ function updateTournamentPhase(matches) {
 
 async function refreshLiveMode() {
   try {
-    const r = await fetch('/api/live?view=today');
+    const r = await fetch(LIVE_API_BASE + '/api/live?view=today');
     const data = await r.json();
     if (!data || !data.ok) { const s = document.getElementById('matchdayStrip'); if (s) s.hidden = true; return; }
     window._liveMatchesCache = data.matches;   // lets the stats loader refresh the strip
@@ -206,7 +209,7 @@ async function refreshLiveMode() {
 }
 async function loadLiveStats() {
   try {
-    const r = await fetch('/api/live?view=stats');
+    const r = await fetch(LIVE_API_BASE + '/api/live?view=stats');
     const data = await r.json();
     if (data && data.ok && data.players) {
       _liveGoals = data.players;

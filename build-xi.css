@@ -1929,6 +1929,20 @@ body.swap-mode .xi-pitch::after {
 }
 .slot__form-chip--up { color: #0c1410; background: rgba(74,222,128,0.95); }
 .slot__form-chip--down { color: #fff; background: rgba(248,113,113,0.92); }
+/* Same form signal inline on ROSTERS rows (name col is 1fr; rating col is fixed 40px) */
+.roster__form {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  vertical-align: 1px;
+}
+.roster__form--up { color: #0c1410; background: rgba(74,222,128,0.95); }
+.roster__form--down { color: #fff; background: rgba(248,113,113,0.92); }
 
 /* Trophy case — badge unlocks on the complete screen */
 .xi-badges {
