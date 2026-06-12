@@ -1888,6 +1888,8 @@ body.swap-mode .xi-pitch::after {
   flex-shrink: 0;
 }
 .matchday__chip--live { border-color: #ff4d6d; background: rgba(255,77,109,0.08); }
+.matchday__chip--leaders { border-color: var(--gold, #ffc400); background: rgba(255,196,0,0.07); }
+.matchday__chip--leaders b { color: var(--gold, #ffc400); }
 .matchday__chip b { font-weight: 800; }
 .matchday__score { color: var(--gold, #ffc400); font-weight: 800; }
 .matchday__time { color: var(--mute-2, #8a96a0); font-size: 10px; }

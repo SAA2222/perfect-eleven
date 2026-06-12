@@ -129,6 +129,17 @@ function renderMatchdayStrip(matches) {
   }).slice(0, 10);
   if (!windowed.length) { strip.hidden = true; return; }
   const anyLive = windowed.some(m => m.status === 'in_progress');
+  // Real tournament leaders live HERE (the live zone) — not on the complete
+  // screen, which is the simulated run's story.
+  let leadersChip = '';
+  const L = window._liveLeaders;
+  if (L && (L.boot || L.assist || L.motm)) {
+    const bits = [];
+    if (L.boot)   bits.push(`⚽ ${L.boot[0]} ${L.boot[1]}`);
+    if (L.assist) bits.push(`🅰️ ${L.assist[0]} ${L.assist[1]}`);
+    if (L.motm)   bits.push(`🏆 ${L.motm[0]}${L.motm[1] > 1 ? ' ' + L.motm[1] : ''}`);
+    leadersChip = `<span class="matchday__chip matchday__chip--leaders"><b>LEADERS</b> ${bits.join(' · ')}</span>`;
+  }
   strip.hidden = false;
   strip.innerHTML = `
     <span class="matchday__label">${anyLive ? '🔴 MATCHDAY — LIVE' : '⚽ MATCHDAY'}</span>
@@ -140,6 +151,7 @@ function renderMatchdayStrip(matches) {
           <b>${(m.away && m.away.code) || m.pa || 'TBD'}</b>
           <span class="matchday__time">${_liveTimeLabel(m)}</span>
         </span>`).join('')}
+      ${leadersChip}
     </div>`;
   return anyLive;
 }
@@ -167,6 +179,7 @@ async function refreshLiveMode() {
     const r = await fetch('/api/live?view=today');
     const data = await r.json();
     if (!data || !data.ok) { const s = document.getElementById('matchdayStrip'); if (s) s.hidden = true; return; }
+    window._liveMatchesCache = data.matches;   // lets the stats loader refresh the strip
     const anyLive = renderMatchdayStrip(data.matches);
     updateTournamentPhase(data.matches);
     // Feed real scores into the top news ticker (replaces the stale pre-match line).
@@ -208,6 +221,13 @@ async function loadLiveStats() {
             }
           }
           window.LIVE_STATS.players = map;
+          // Tournament leaders (xi-matched names) → gold LEADERS chip on the
+          // matchday strip. Re-render the strip if it's already on screen.
+          const top = (key) => Object.entries(map)
+            .map(([name, s]) => [name, s[key] || 0]).filter(([, v]) => v > 0)
+            .sort((a, b) => b[1] - a[1])[0] || null;
+          window._liveLeaders = { boot: top('G'), assist: top('A'), motm: top('MOTM') };
+          if (window._liveMatchesCache) renderMatchdayStrip(window._liveMatchesCache);
         }
       } catch (e) { /* keep chips working even if the feed fails */ }
       // Repaint filled slots so ⚽ chips appear on players who have really scored.
