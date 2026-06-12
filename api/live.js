@@ -66,20 +66,30 @@ async function getMatches(key) {
 // State and freshness are decoupled: the record lives 24h in KV (so partial
 // sweep progress is never lost to a freshness expiry — that bug cost us a
 // stuck-at-391 loop), and freshness is computed from its timestamp.
-const STATS_V = 6;   // bump to invalidate the cached sweep (v6: unique player keys — shared
+const STATS_V = 7;   // bump to invalidate the cached sweep (v6: unique player keys — shared
                      // surnames collided: all four KOR "Lee"s merged into one record and the
                      // last writer DELETED Kang-in Lee's +2 form)
 
-// Average real match rating (0-10) → bounded FORM delta on the game OVR.
-// Only the outliers move — most players stay untouched.
-function formDelta(avg, matches) {
-  if (!matches || avg == null) return 0;
-  if (avg >= 8.5) return 3;
-  if (avg >= 8.0) return 2;
-  if (avg >= 7.5) return 1;
-  if (avg < 6.0) return -2;
-  if (avg < 6.5) return -1;
-  return 0;
+// Bounded FORM delta on the game OVR: avg real match rating (0-10) bands,
+// PLUS a goal-contribution kicker so scorers always read GREEN (a 7.1-rated
+// goalscorer in a loss is form, not neutral — user rule). Clamped to ±3.
+// Contribution rate is per RATED match, so one early goal stops carrying a
+// striker who goes quiet for the rest of the tournament.
+function formDelta(avg, matches, ga) {
+  let d = 0;
+  if (matches && avg != null) {
+    if (avg >= 8.5) d = 3;
+    else if (avg >= 8.0) d = 2;
+    else if (avg >= 7.5) d = 1;
+    else if (avg < 6.0) d = -2;
+    else if (avg < 6.5) d = -1;
+  }
+  // Ratings lag the final whistle — until they land, raw G+A drives the kicker
+  // (a scorer flips green at the goal, mid-match).
+  const rate = matches ? (ga || 0) / matches : (ga || 0);
+  if (rate >= 1.5) d += 2;
+  else if (rate >= 0.75) d += 1;
+  return Math.max(-3, Math.min(3, d));
 }
 
 // Response payload: only players with something to SHOW (goals/assists/MOTM/form).
@@ -264,7 +274,8 @@ async function getStats(key) {
       if (merged[pid][0] > (pl.g || 0)) pl.g = merged[pid][0];
       if (merged[pid][1] > (pl.a || 0)) pl.a = merged[pid][1];
       const rc = merged[pid][3] || 0;
-      const f = formDelta(rc ? merged[pid][2] / rc : null, rc);
+      const ga = (merged[pid][0] || 0) + (merged[pid][1] || 0);
+      const f = formDelta(rc ? merged[pid][2] / rc : null, rc, ga);
       if (f) pl.f = f; else delete pl.f;   // form can cool back to neutral
     }
     for (const pid of Object.keys(state.motmTotals || {})) {

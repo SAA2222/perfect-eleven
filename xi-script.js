@@ -1452,7 +1452,7 @@ function liveFormDelta(p) {
 function formChipFor(p) {
   const f = liveFormDelta(p);
   if (!f) return '';
-  return `<span class="slot__form-chip ${f > 0 ? 'slot__form-chip--up' : 'slot__form-chip--down'}" title="Real World Cup form (avg match rating)">${f > 0 ? '▲+' + f : '▼' + f}</span>`;
+  return `<span class="slot__form-chip ${f > 0 ? 'slot__form-chip--up' : 'slot__form-chip--down'}" title="Real World Cup form (match ratings + goals/assists)">${f > 0 ? '▲+' + f : '▼' + f}</span>`;
 }
 function effectiveRating(p) {
   return (p.naturalFit ? p.rating : p.rating - 1) + liveFormDelta(p);
@@ -2478,7 +2478,7 @@ function renderRosters(query) {
     const playerRows = players.map(p => {
       const s = (typeof liveStatFor === 'function') ? liveStatFor({ code: n.code, name: p.name }) : null;
       const f = (s && typeof s.f === 'number') ? s.f : 0;
-      const form = f ? `<span class="roster__form ${f > 0 ? 'roster__form--up' : 'roster__form--down'}" title="Real World Cup form (avg match rating)">${f > 0 ? '▲+' + f : '▼' + f}</span>` : '';
+      const form = f ? `<span class="roster__form ${f > 0 ? 'roster__form--up' : 'roster__form--down'}" title="Real World Cup form (match ratings + goals/assists)">${f > 0 ? '▲+' + f : '▼' + f}</span>` : '';
       return `
       <div class="roster__row">
         <span class="roster__pos roster__pos--${p.pos.toLowerCase()}">${p.role}</span>
