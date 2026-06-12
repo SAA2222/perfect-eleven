@@ -1954,20 +1954,6 @@ body.swap-mode .xi-pitch::after {
 .xi-badge--locked { opacity: 0.45; border-color: var(--rule); background: rgba(255,255,255,0.02); }
 .xi-badge--locked .xi-badge__name { color: var(--mute-2, #8a96a0); }
 
-/* Real-World-Cup leaders strip — separate from the simulated awards */
-.xi-real-leaders {
-  margin-top: 8px;
-  padding: 9px 12px;
-  background: rgba(255,77,109,0.07);
-  border: 1px solid rgba(255,77,109,0.45);
-  border-radius: 8px;
-  font-family: var(--font-mono);
-  font-size: 10px; font-weight: 800; letter-spacing: 0.07em;
-  color: #ffb3c0;
-  text-align: center;
-  line-height: 1.6;
-}
-
 /* Retention hooks under the finish: personal best + near-miss */
 .xi-finish-hero__pb {
   display: block;

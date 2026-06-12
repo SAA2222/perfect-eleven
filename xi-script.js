@@ -1818,26 +1818,6 @@ function initLiveBadge() {
   badge.textContent = `LIVE · ${phase}`;
   target.appendChild(badge);
 }
-// Compact REAL-tournament leaders strip — kept SEPARATE from the simulated
-// awards so "you won the World Cup" never collides with a 1-goal real Golden
-// Boot on day 1. Shows nothing until real goals/assists exist.
-function buildRealLeadersStrip() {
-  if (!isTournamentLive()) return '';
-  const players = (window.LIVE_STATS && window.LIVE_STATS.players) || {};
-  const top = (key) => Object.entries(players)
-    .map(([name, s]) => [name, s[key] || 0]).filter(([, v]) => v > 0)
-    .sort((a, b) => b[1] - a[1])[0] || null;
-  const boot = top('G'), assist = top('A'), motm = top('MOTM');
-  if (!boot && !assist && !motm) return '';
-  const done = (typeof window._liveMatchesDone === 'number') ? window._liveMatchesDone : 0;
-  const matchesBit = done > 0 ? ` — AFTER ${done} OF 104 MATCHES` : '';
-  const bits = [];
-  if (boot) bits.push(`⚽ TOP SCORER: ${boot[0]} (${boot[1]})`);
-  if (assist) bits.push(`🅰️ MOST ASSISTS: ${assist[0]} (${assist[1]})`);
-  if (motm) bits.push(`🏆 MOTM: ${motm[0]}${motm[1] > 1 ? ` (${motm[1]})` : ''}`);
-  return `<div class="xi-real-leaders">🔴 REAL WORLD CUP — ${bits.join(' · ')}${matchesBit}</div>`;
-}
-
 function predictMatchScore(yourRating, oppRating, result) {
   const diff = yourRating - oppRating;
   if (result === 'WIN') {
@@ -2309,7 +2289,6 @@ function showCompleteModal() {
           ${awardCardHTML('⚙️', 'BEST MIDFIELDER','bestMid',      awards.bestMid)}
         </div>
       </details>
-      ${buildRealLeadersStrip()}
     `;
   }
 
