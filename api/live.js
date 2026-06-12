@@ -66,7 +66,9 @@ async function getMatches(key) {
 // State and freshness are decoupled: the record lives 24h in KV (so partial
 // sweep progress is never lost to a freshness expiry — that bug cost us a
 // stuck-at-391 loop), and freshness is computed from its timestamp.
-const STATS_V = 5;   // bump to invalidate the cached sweep (v5: real-form ratings)
+const STATS_V = 6;   // bump to invalidate the cached sweep (v6: unique player keys — shared
+                     // surnames collided: all four KOR "Lee"s merged into one record and the
+                     // last writer DELETED Kang-in Lee's +2 form)
 
 // Average real match rating (0-10) → bounded FORM delta on the game OVR.
 // Only the outliers move — most players stay untouched.
@@ -83,11 +85,37 @@ function formDelta(avg, matches) {
 // Response payload: only players with something to SHOW (goals/assists/MOTM/form).
 // The full 1,200-player map lives in KV for the overlay; shipping it to every
 // client was 80KB per poll for data the UI never renders.
+//
+// Each visible player carries `k`: name aliases VETTED against the full squad
+// (full name always; last/first token only when unique within the team). The
+// client indexes exactly these — it can't see absent teammates in the slim
+// payload, so ambiguity must be resolved here where the whole roster lives
+// (the "Raúl Rangel inherited Jiménez's goal" class of bug).
+const _normName = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const _SUFFIX = /^(jr\.?|junior|sr\.?|senior|ii|iii|iv|filho|neto)$/;
 function emitStats(state, at) {
+  // Token usage per team across the FULL squad (one count per token per player).
+  const counts = {};
+  for (const k of Object.keys(state.players)) {
+    const code = k.split('|')[0];
+    const c = counts[code] || (counts[code] = {});
+    for (const t of new Set(_normName(state.players[k].n).split(/\s+/).filter(Boolean))) {
+      c[t] = (c[t] || 0) + 1;
+    }
+  }
   const visible = {};
   for (const k of Object.keys(state.players)) {
     const p = state.players[k];
-    if ((p.g || 0) > 0 || (p.a || 0) > 0 || (p.m || 0) > 0 || (p.f || 0) !== 0) visible[k] = p;
+    if (!((p.g || 0) > 0 || (p.a || 0) > 0 || (p.m || 0) > 0 || (p.f || 0) !== 0)) continue;
+    const code = k.split('|')[0];
+    const toks = _normName(p.n).split(/\s+/).filter(Boolean);
+    const c = counts[code] || {};
+    const aliases = new Set(toks.length ? [toks.join(' ')] : []);
+    let i = toks.length - 1;
+    while (i > 0 && _SUFFIX.test(toks[i])) i--;          // last MEANINGFUL token
+    if (c[toks[i]] === 1) aliases.add(toks[i]);
+    if (toks.length && c[toks[0]] === 1) aliases.add(toks[0]);
+    visible[k] = { ...p, k: [...aliases] };
   }
   return { ok: true, players: visible, complete: state.complete, at };
 }
@@ -120,16 +148,17 @@ async function getStats(key) {
         const res = await bdl(q, key);
         for (const row of res.data || []) {
           const p = row.player || {};
-          if (!p.name) continue;
-          // Key: TEAM-ABBR|normalized last name — matched client-side vs xi-data names.
-          const last = String(p.name).normalize('NFD').replace(/[̀-ͯ]/g, '')
-            .toLowerCase().trim().split(/\s+/).pop();
+          if (!p.name || p.id == null) continue;
+          // Key: TEAM-ABBR|player_id — UNIQUE. Keying by last name merged every
+          // shared surname into one record (KOR has four "Lee"s; the last writer
+          // deleted Kang-in Lee's form). Client matching uses the emitted alias
+          // tokens (see emitStats), never the key itself — only its code prefix.
           const code = state.teams[row.team_id] || p.country_code || '';
-          state.players[`${code}|${last}`] = {
+          state.players[`${code}|${p.id}`] = {
             n: p.name, g: row.goals || 0, a: row.assists || 0,
             apps: row.appearances || 0, r: row.avg_rating || null,
           };
-          if (p.id != null) state.ids[p.id] = `${code}|${last}`;   // for the per-match overlay
+          state.ids[p.id] = `${code}|${p.id}`;   // for the per-match overlay
         }
         state.cursor = res.meta && res.meta.next_cursor;
         if (!state.cursor) { state.complete = true; break; }
@@ -147,7 +176,9 @@ async function getStats(key) {
   try {
     // Per player: [goals, assists, ratingSum, ratedMatches]. Match ratings only
     // count with ≥20 minutes played — a 5-minute cameo shouldn't define form.
-    const fetchTotals = async (ids) => {
+    // `meta` (optional) reports rating coverage: of the rows with ≥20 minutes,
+    // how many carry a rating yet (they land minutes AFTER the final whistle).
+    const fetchTotals = async (ids, meta) => {
       const totals = {};
       for (let i = 0; i < ids.length; i += 4) {
         const chunk = ids.slice(i, i + 4);
@@ -158,7 +189,9 @@ async function getStats(key) {
           for (const r of res.data || []) {
             const t = totals[r.player_id] || (totals[r.player_id] = [0, 0, 0, 0]);
             t[0] += r.goals || 0; t[1] += r.assists || 0;
-            if (r.rating != null && (r.minutes_played || 0) >= 20) { t[2] += r.rating; t[3] += 1; }
+            const mins = r.minutes_played || 0;
+            if (mins >= 20 && meta) meta.eligible++;
+            if (r.rating != null && mins >= 20) { t[2] += r.rating; t[3] += 1; if (meta) meta.rated++; }
           }
           cursor = res.meta && res.meta.next_cursor;
           if (!cursor) break;
@@ -168,10 +201,22 @@ async function getStats(key) {
     };
     const mp = await getMatches(key);
     const started = (mp.matches || []).filter(m => m.status === 'in_progress' || m.status === 'completed');
-    const newDone = started.filter(m => m.status === 'completed' && !state.doneIds.includes(m.id)).map(m => m.id);
+    const newDone = started.filter(m => m.status === 'completed' && !state.doneIds.includes(m.id));
     const liveIds = started.filter(m => m.status === 'in_progress').map(m => m.id);
-    if (newDone.length) {
-      const t = await fetchTotals(newDone);
+    // A completed match is folded into doneTotals ONCE — but only when its
+    // ratings have actually landed (they lag the final whistle). Until then it
+    // is merged transiently like a live match, so goals show immediately and
+    // form follows a refresh or two later. After 24h we take what exists.
+    const transients = [];
+    const acceptedDone = [];
+    for (const m of newDone) {
+      const meta = { eligible: 0, rated: 0 };
+      const t = await fetchTotals([m.id], meta);
+      const stale = m.dt && (Date.now() - new Date(m.dt).getTime()) > 24 * 3600000;
+      if (!stale && (meta.eligible === 0 || meta.rated / meta.eligible < 0.5)) {
+        transients.push(t);                        // stats/ratings not in yet — don't persist
+        continue;
+      }
       for (const pid of Object.keys(t)) {
         const cur = state.doneTotals[pid] || [0, 0, 0, 0];
         state.doneTotals[pid] = [
@@ -179,11 +224,14 @@ async function getStats(key) {
           (cur[2] || 0) + t[pid][2], (cur[3] || 0) + t[pid][3],
         ];
       }
+      acceptedDone.push(m.id);
+    }
+    if (acceptedDone.length) {
       // Official Man of the Match per finished game → real Golden Ball race.
       try {
         state.motmTotals = state.motmTotals || {};
-        for (let i = 0; i < newDone.length; i += 4) {
-          const chunk = newDone.slice(i, i + 4);
+        for (let i = 0; i < acceptedDone.length; i += 4) {
+          const chunk = acceptedDone.slice(i, i + 4);
           let cursor = null;
           for (let page = 0; page < 4; page++) {
             const q = chunk.map(id => `match_ids[]=${id}`).join('&') + `&per_page=100${cursor ? `&cursor=${cursor}` : ''}`;
@@ -196,16 +244,18 @@ async function getStats(key) {
           }
         }
       } catch (e) { /* MOTM is garnish — never block goals on it */ }
-      state.doneIds.push(...newDone);
+      state.doneIds.push(...acceptedDone);
     }
     const liveTotals = liveIds.length ? await fetchTotals(liveIds) : {};
-    state.hadLive = liveIds.length > 0;
+    // Ratings-waiting matches keep the fast refresh cadence so form lands quickly.
+    state.hadLive = liveIds.length > 0 || transients.length > 0;
     const merged = {};
     for (const pid of Object.keys(state.doneTotals)) merged[pid] = [...state.doneTotals[pid]];
-    for (const pid of Object.keys(liveTotals)) {
-      const cur = merged[pid] || [0, 0, 0, 0];
-      const t = liveTotals[pid];
-      merged[pid] = [cur[0] + t[0], cur[1] + t[1], (cur[2] || 0) + t[2], (cur[3] || 0) + t[3]];
+    for (const t of [liveTotals, ...transients]) {
+      for (const pid of Object.keys(t)) {
+        const cur = merged[pid] || [0, 0, 0, 0];
+        merged[pid] = [cur[0] + t[pid][0], cur[1] + t[pid][1], (cur[2] || 0) + t[pid][2], (cur[3] || 0) + t[pid][3]];
+      }
     }
     for (const pid of Object.keys(merged)) {
       const k = state.ids[pid];

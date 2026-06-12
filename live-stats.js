@@ -61,14 +61,24 @@ function _liveLastTok(name) {
   while (i > 0 && _LIVE_SUFFIX.test(t[i])) i--;
   return t[i] || '';
 }
-// Build the lookup index: each API player is reachable by CODE|last-meaningful-token
-// AND CODE|first-token (covers Brazilian first-name-known players). Keys claimed by
-// two DIFFERENT players (e.g. the Thuram brothers) are dropped as ambiguous.
+// Build the lookup index. Servers ≥ v6 emit per-player alias tokens (`k`)
+// VETTED against the full squad (full name always; last/first token only when
+// unique within the team) — those are indexed as-is; ambiguity was resolved
+// where the whole roster lives. Legacy payloads without `k` fall back to local
+// tokenization: CODE|last-meaningful-token AND CODE|first-token, with keys
+// claimed by two DIFFERENT players (e.g. the Thuram brothers) dropped.
+let _liveIdxVetted = false;
 function _buildLiveIdx(players) {
   const idx = {}, dropped = new Set();
+  let vetted = true;
   for (const k of Object.keys(players || {})) {
     const v = players[k];
     const code = k.split('|')[0];
+    if (Array.isArray(v.k) && v.k.length) {
+      for (const alias of v.k) idx[`${code}|${alias}`] = v;
+      continue;
+    }
+    vetted = false;
     const toks = _liveTokens(v.n);
     if (!toks.length) continue;
     const keys = new Set([`${code}|${_liveLastTok(v.n)}`, `${code}|${toks[0]}`]);
@@ -78,19 +88,25 @@ function _buildLiveIdx(players) {
       idx[kk] = v;
     }
   }
+  _liveIdxVetted = vetted && Object.keys(players || {}).length > 0;
   return idx;
 }
-// Map an xi-data roster player → live stats. Last-name match first; the
-// first-name fallback is for MONONYMS ONLY ("Rodrygo"): with the slim payload
-// (contributors only) the ambiguity guard can't see absent teammates, and a
-// full-name fallback let "Raúl Rangel" (GK) inherit Raúl Jiménez's goal.
+// Map an xi-data roster player → live stats: exact full name, then last token,
+// then first token. With a VETTED index the first-token try is safe — the
+// server only emitted tokens unique within the squad, so "Raúl Rangel" can
+// never inherit Raúl Jiménez's goal (both Raúls → no 'raul' alias at all).
+// On legacy indexes the first-token fallback stays MONONYM-ONLY ("Rodrygo"):
+// the slim payload hides teammates, so local ambiguity checks can't be trusted.
 function liveStatFor(p) {
   if (!p || !p.code || !p.name) return null;
   const toks = _liveTokens(p.name);
   if (!toks.length) return null;
+  const full = _liveIdx[`${p.code}|${toks.join(' ')}`];
+  if (full) return full;
   const hit = _liveIdx[`${p.code}|${_liveLastTok(p.name)}`];
   if (hit) return hit;
-  return toks.length === 1 ? (_liveIdx[`${p.code}|${toks[0]}`] || null) : null;
+  if (_liveIdxVetted || toks.length === 1) return _liveIdx[`${p.code}|${toks[0]}`] || null;
+  return null;
 }
 // Small "⚽N" chip for slot cards — only once a player has REAL tournament goals.
 function liveChipFor(p) {
