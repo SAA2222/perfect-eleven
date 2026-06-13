@@ -3340,9 +3340,21 @@ body { padding-bottom: 56px; }
   gap: 10px;
   align-items: stretch;
 }
-/* Two-box variant: NAME + CITY + button */
+/* Two-box variant: NAME + CITY share row 1, the POST button takes its own full
+   row below. Flex + min-width:0 so the inputs shrink instead of shoving the
+   button off-screen (it was a rigid 3-col grid that overflowed on desktop). */
 .submit-row--hero .submit-row__inputrow--split {
-  grid-template-columns: 1.3fr 1fr auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.submit-row--hero .submit-row__inputrow--split .submit-row__input {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+.submit-row--hero .submit-row__inputrow--split #submitLineupBtn {
+  flex: 1 1 100%;
+  justify-content: center;
 }
 .submit-row--hero .submit-row__input--city {
   /* slightly dimmer placeholder since it's optional */
