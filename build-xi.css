@@ -786,6 +786,57 @@ body.is-daily .xi-expert { display: none; }
   color: rgba(255,255,255,0.45);
   text-transform: uppercase;
 }
+/* MANUAL PLACEMENT — open slots become tappable targets with their OOP cost */
+.slot--place-target {
+  cursor: pointer;
+  border-color: var(--gold);
+  background: rgba(255,196,0,0.10);
+}
+.slot--place-target:hover { background: rgba(255,196,0,0.2); }
+.slot--place-natural { border-color: var(--pitch); background: rgba(0,255,133,0.12); }
+.slot--place-best { animation: pulse-slot 1.6s infinite; }
+.slot--place-natural.slot--place-best {
+  animation: pulse-slot 1.6s infinite;
+}
+.slot__place-cost {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 9px; font-weight: 800; letter-spacing: 0.04em;
+}
+.slot__place-cost--0 { color: var(--pitch, #00ff85); }
+.slot__place-cost--1 { color: var(--gold, #ffc400); }
+.slot__place-cost--2 { color: #ff6d6d; }
+/* placement bar — fixed prompt while choosing a slot */
+.placement-bar {
+  position: fixed;
+  left: 50%; bottom: 70px;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px;
+  background: #0c1410;
+  border: 1px solid var(--gold, #ffc400);
+  border-radius: 10px;
+  box-shadow: 0 10px 34px rgba(0,0,0,0.5);
+  font-family: var(--font-mono);
+  font-size: 12px; letter-spacing: 0.04em;
+  color: var(--bone, #e8e6df);
+  max-width: 92vw;
+}
+.placement-bar__txt b { color: var(--gold, #ffc400); }
+.placement-bar__cancel {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 800; letter-spacing: 0.08em;
+  color: var(--bone, #e8e6df);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.placement-bar__cancel:hover { border-color: #ff6d6d; color: #ff6d6d; }
 .slot__filled-flag {
   width: 36px;
   height: 24px;

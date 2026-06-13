@@ -101,6 +101,42 @@ function orderedSlots() {
   });
 }
 
+// ----- TIERED OUT-OF-POSITION penalty -----
+// A natural fit costs 0. A SOFT move (same line, related role — e.g. a left-back
+// at right-back) costs −1. A HARD move (wrong family or wrong line — e.g. a
+// left-back at centre-back, or anyone in goal) costs −2.
+const POS_FAMILY = {
+  GK:'GK',
+  LB:'FB', RB:'FB', LWB:'FB', RWB:'FB',           // fullbacks / wing-backs
+  LCB:'CB', RCB:'CB', CCB:'CB', CB:'CB',          // centre-backs
+  CDM:'DM', LDM:'DM', RDM:'DM',                   // holders
+  LCM:'CM', RCM:'CM', CM:'CM',                    // central mids
+  LM:'WM', RM:'WM',                               // wide mids
+  CAM:'AM', LAM:'AM', RAM:'AM',                   // attacking mids
+  LW:'WF', RW:'WF',                               // wingers
+  ST:'CF', LST:'CF', RST:'CF',                    // strikers
+};
+// Families a player's own family can shift into for only −1 (everything else −2).
+const FAMILY_SOFT = {
+  GK: [],
+  FB: ['FB', 'WM', 'WF'],            // fullback → other-side fullback, wide mid, winger
+  CB: ['CB', 'DM', 'FB'],            // centre-back → holder, fullback
+  DM: ['DM', 'CM', 'CB'],
+  CM: ['CM', 'DM', 'AM', 'WM'],
+  WM: ['WM', 'WF', 'CM', 'FB'],
+  AM: ['AM', 'CM', 'WF', 'CF', 'WM'],
+  WF: ['WF', 'AM', 'CF', 'WM'],
+  CF: ['CF', 'WF', 'AM'],
+};
+// 0 = natural, 1 = soft OOP, 2 = hard OOP. Drives the per-player rating penalty.
+function oopPenalty(playerRole, slotRole) {
+  if ((ROLE_FIT[playerRole] || []).includes(slotRole)) return 0;
+  const pf = POS_FAMILY[playerRole] || 'CM';
+  const sf = POS_FAMILY[slotRole] || 'CM';
+  if (pf === sf) return 1;                                  // same family, non-natural side
+  return (FAMILY_SOFT[pf] || []).includes(sf) ? 1 : 2;
+}
+
 const POS_BLURB = {
   high: 'A genuine super-team. Bookmark this lineup.',
   mid:  'Mid-table magic. Some inspired picks; some courage.',
@@ -1017,27 +1053,104 @@ function pickPlayer(p) {
     executePickSwap(p);
     return;
   }
-  const fit = bestSlotForPlayer(p);
-  if (!fit) return;
-  const slotIdx = fit.slotIdx;
+  // Is there an OPEN slot where this player is a NATURAL fit?
+  const naturalIdx = Object.keys(SLOT_DEF).find(
+    i => !state.roster[i] && (ROLE_FIT[p.role] || []).includes(SLOT_DEF[i].role)
+  );
+  if (naturalIdx != null) {
+    placePlayerAt(p, naturalIdx);                 // clean natural fit → place it, no fuss
+    return;
+  }
+  // No natural slot open → let the user CHOOSE where to play them out of position
+  // (e.g. a left-back at right-back −1 vs centre-back −2), instead of auto-dumping
+  // them in the first open defender slot.
+  enterPlacementMode(p);
+}
+
+// Place `player` (from state.currentNation) into a specific slot with the correct
+// tiered OOP penalty. Shared by the natural-fit auto-place and manual placement.
+function placePlayerAt(player, slotIdx) {
+  if (!state.currentNation || state.roster[slotIdx]) return;
+  const oop = oopPenalty(player.role, SLOT_DEF[slotIdx].role);
   state.roster[slotIdx] = {
-    ...p,
+    ...player,
     nation: state.currentNation.name,
     flag: state.currentNation.flag,
     code: state.currentNation.code,
     iso: state.currentNation.iso,
-    league: clubToLeague(p.club),
-    naturalFit: fit.exact,
+    league: clubToLeague(player.club),
+    naturalFit: oop === 0,
+    oop,
   };
   state.usedNations.add(state.currentNation.code);
   state.currentNation = null;
+  exitPlacementMode();
   fillSlot(slotIdx);
   updateProgress();
+  updateChemistryViz();
   closePickModal();
   $('spinnerResult').classList.remove('show');
-  if (Object.keys(state.roster).length === 11) {
-    setTimeout(showCompleteModal, 400);
-  }
+  if (Object.keys(state.roster).length === 11) setTimeout(showCompleteModal, 400);
+}
+
+// ----- MANUAL PLACEMENT — tap an open slot to choose where an OOP player goes -----
+function enterPlacementMode(player) {
+  state.placing = { player };
+  closePickModal();
+  $('spinnerResult').classList.remove('show');
+  const order = ['', '−1', '−2'];   // badge by penalty
+  let cheapest = 2;
+  document.querySelectorAll('.slot').forEach(el => {
+    const i = el.dataset.slot;
+    if (state.roster[i]) return;                  // only open slots are targets
+    const pen = oopPenalty(player.role, SLOT_DEF[i].role);
+    if (pen < cheapest) cheapest = pen;
+    el.classList.add('slot--place-target');
+    el.classList.toggle('slot--place-natural', pen === 0);
+    const tag = pen === 0 ? '✓ NATURAL' : order[pen];
+    el.innerHTML = `<span class="slot__open">OPEN</span><span class="slot__place-cost slot__place-cost--${pen}">${tag}</span>`;
+    el.addEventListener('click', onPlaceSlotClick);
+  });
+  // mark the cheapest open slots as recommended
+  document.querySelectorAll('.slot--place-target').forEach(el => {
+    const i = el.dataset.slot;
+    if (oopPenalty(player.role, SLOT_DEF[i].role) === cheapest) el.classList.add('slot--place-best');
+  });
+  showPlacementBar(player, cheapest);
+  document.getElementById('pitch')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function onPlaceSlotClick(e) {
+  const i = e.currentTarget.dataset.slot;
+  if (!state.placing || state.roster[i]) return;
+  placePlayerAt(state.placing.player, i);
+}
+function exitPlacementMode() {
+  document.querySelectorAll('.slot--place-target').forEach(el => {
+    el.classList.remove('slot--place-target', 'slot--place-natural', 'slot--place-best');
+    el.removeEventListener('click', onPlaceSlotClick);
+    if (!state.roster[el.dataset.slot]) el.innerHTML = '<span class="slot__open">OPEN</span>';
+  });
+  const bar = document.getElementById('placementBar');
+  if (bar) bar.remove();
+  state.placing = null;
+}
+function showPlacementBar(player, cheapest) {
+  const old = document.getElementById('placementBar');
+  if (old) old.remove();
+  const costTxt = cheapest === 0 ? 'NATURAL FITS OPEN' : `BEST FIT IS −${cheapest}`;
+  const bar = document.createElement('div');
+  bar.id = 'placementBar';
+  bar.className = 'placement-bar';
+  bar.innerHTML = `
+    <span class="placement-bar__txt">⤵ TAP A SLOT FOR <b>${shortName(player.name)}</b> · ${costTxt}</span>
+    <button class="placement-bar__cancel" type="button">CANCEL</button>`;
+  bar.querySelector('.placement-bar__cancel').addEventListener('click', cancelPlacement);
+  document.body.appendChild(bar);
+}
+function cancelPlacement() {
+  // Put the spun nation back in play and re-open its pick list.
+  exitPlacementMode();
+  if (state.currentNation) openPickModal();
 }
 
 // ============================================================
@@ -1471,7 +1584,7 @@ function updateResources() {
 function highlightOpenSlots(playersOfCurrentNation) {
   // highlight every slot a player from this nation could fill
   const openRoles = new Set();
-  playersOfCurrentNation.forEach(p => {
+  (playersOfCurrentNation || []).forEach(p => {
     const fit = bestSlotForPlayer(p);
     if (fit) openRoles.add(fit.slotIdx);
   });
@@ -1605,7 +1718,16 @@ function formChipFor(p, cls = 'slot__form-chip') {
   return `<span class="${cls} ${cls}--${f > 0 ? 'up' : 'down'}" title="Real World Cup form (match ratings + goals/assists)">${f > 0 ? '▲+' + f : '▼' + f}</span>`;
 }
 function effectiveRating(p) {
-  return (p.naturalFit ? p.rating : p.rating - 1) + liveFormDelta(p);
+  // p.oop is the tiered penalty (0/1/2). Legacy entries without it fall back to
+  // the old flat −1 for any non-natural placement.
+  const oop = (typeof p.oop === 'number') ? p.oop : (p.naturalFit ? 0 : 1);
+  return p.rating - oop + liveFormDelta(p);
+}
+// Total OOP penalty across the XI (sum of tiered penalties, not just a count).
+function totalOOPPenalty() {
+  return Object.values(state.roster).reduce((s, p) => {
+    return s + ((typeof p.oop === 'number') ? p.oop : (p.naturalFit ? 0 : 1));
+  }, 0);
 }
 
 // Squad base rating — the average of the 11 effective player ratings (caps ~99).
@@ -1767,7 +1889,8 @@ function updateProgress() {
     const final = computeFinalOVR();
     const chem = teamChemistry();
     const oop = countOOP();
-    const oopNote = oop > 0 ? ` · <span style="color:var(--gold);font-size:.55em;">${oop} OOP −${oop}</span>` : '';
+    const oopPen = totalOOPPenalty();
+    const oopNote = oop > 0 ? ` · <span style="color:var(--gold);font-size:.55em;">${oop} OOP −${oopPen}</span>` : '';
     $('overallRating').innerHTML = `${final} <span style="color:var(--mute);font-size:.6em;">OVR</span> · ${chem} <span style="color:var(--mute);font-size:.6em;">CHEM</span>${oopNote}`;
   } else {
     $('overallRating').innerHTML = `— <span style="color:var(--mute);font-size:.6em;">OVR</span>`;
@@ -2578,7 +2701,7 @@ function showCompleteModal() {
   let whyBit = '';
   if (titleMath != null) {
     const costs = [];
-    if (oop) costs.push(`${oop} OOP −${oop}`);
+    if (oop) costs.push(`${oop} OOP −${totalOOPPenalty()}`);
     if (injuryLoss) costs.push(`INJURIES −${injuryLoss}`);
     const chemBonus = Math.floor(chem / 6);
     if (chemBonus < 5) costs.push(`CHEM BONUS +${chemBonus} OF +5`);
@@ -2622,7 +2745,7 @@ function showCompleteModal() {
       ? `⭐ DAILY #${dailyNumber()} · 🔥 ${dailyStreakVal}-DAY STREAK · NEXT IN ${fmtCountdown(msUntilNextEasternMidnight())}`
       : (wasBlind ? '🎭 THE BIG REVEAL — YOU DRAFTED BLIND' : 'YOUR ELEVEN IS COMPLETE'));
 
-  const oopNote = oop > 0 ? ` ${oop} OOP (−${oop} OVR).` : '';
+  const oopNote = oop > 0 ? ` ${oop} OOP (−${totalOOPPenalty()} OVR).` : '';
   const injuryNote = injuryLoss > 0 ? ` 🚑 ${injuries.length} injuries (−${injuryLoss} OVR).` : '';
   $('finalBlurb').textContent = `${grade.blurb}${oopNote}${injuryNote}`;
 
@@ -3512,6 +3635,7 @@ function toast(msg) {
 // RESET
 // ============================================================
 function resetRoster() {
+  if (typeof exitPlacementMode === 'function') exitPlacementMode();   // clear any pending placement
   state.roster = {};
   state.usedNations = new Set();
   state.usedPlayers = new Set();   // TACTICAL — clear drafted players
