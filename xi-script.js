@@ -1859,6 +1859,99 @@ function liveStatsBadge(name) {
   if (!bits.length) return '';
   return `<div class="player__livestrip">${bits.join('')}</div>`;
 }
+// ============================================================
+// YOUR XI TODAY — your last built XI comes alive on matchday: who plays today,
+// their real goals/assists, and a celebration the moment one scores for real.
+// Reuses the live pipeline (matches cache + liveStatFor). Tab-open only (no push).
+// ============================================================
+function saveLastXI() {
+  try {
+    const ids = Object.keys(state.roster);
+    if (ids.length !== 11) return;
+    const players = ids.map(k => {
+      const p = state.roster[k];
+      return { name: p.name, code: p.code, iso: p.iso, nation: p.nation };
+    });
+    localStorage.setItem('pe_last_xi', JSON.stringify({ at: Date.now(), players }));
+  } catch (e) {}
+}
+function loadLastXI() {
+  try { const x = JSON.parse(localStorage.getItem('pe_last_xi') || 'null'); return (x && x.players && x.players.length === 11) ? x : null; }
+  catch (e) { return null; }
+}
+// Codes whose nation has a match TODAY (ET) or is live right now.
+function _xiTodayCodes() {
+  const set = new Set();
+  const etDay = (typeof _etDayStr === 'function') ? _etDayStr : (ms) => new Date(ms).toISOString().slice(0, 10);
+  const today = etDay(Date.now());
+  for (const m of (window._liveMatchesCache || [])) {
+    const isToday = m.status === 'in_progress'
+      || (m.dt && !isNaN(Date.parse(m.dt)) && etDay(Date.parse(m.dt)) === today);
+    if (!isToday) continue;
+    if (m.home && m.home.code) set.add(m.home.code);
+    if (m.away && m.away.code) set.add(m.away.code);
+  }
+  return set;
+}
+function xiPlayersToday() {
+  const xi = loadLastXI();
+  if (!xi) return [];
+  const codes = _xiTodayCodes();
+  return xi.players.filter(p => codes.has(p.code)).map(p => {
+    const s = (typeof liveStatFor === 'function') ? liveStatFor({ code: p.code, name: p.name }) : null;
+    return Object.assign({}, p, { g: (s && s.g) || 0, a: (s && s.a) || 0 });
+  });
+}
+function renderXITodayPanel() {
+  const el = document.getElementById('xiTodayPanel');
+  if (!el) return;
+  if (!isTournamentLive() || !loadLastXI()) { el.hidden = true; return; }
+  const players = xiPlayersToday();
+  if (!players.length) { el.hidden = true; return; }
+  const anyLive = (window._liveMatchesCache || []).some(m => m.status === 'in_progress');
+  const totG = players.reduce((s, p) => s + p.g, 0);
+  const totA = players.reduce((s, p) => s + p.a, 0);
+  const chips = players.map(p => {
+    const stat = (p.g || p.a)
+      ? ` <b class="xitoday__stat">${p.g ? '⚽' + p.g : ''}${p.a ? ' 🅰️' + p.a : ''}</b>` : '';
+    return `<span class="xitoday__chip${p.g ? ' xitoday__chip--scored' : ''}">`
+      + `<img src="${flagURL(p.iso, 40)}" alt="${p.nation}" />${shortName(p.name)}${stat}</span>`;
+  }).join('');
+  el.hidden = false;
+  el.innerHTML = `
+    <div class="xitoday__head">
+      <span class="xitoday__label">${anyLive ? '🔴 YOUR XI — LIVE NOW' : '⚡ YOUR XI TODAY'}</span>
+      <span class="xitoday__tally">${players.length} PLAYING${(totG || totA) ? ` · ⚽${totG} 🅰️${totA}` : ''}</span>
+    </div>
+    <div class="xitoday__track">${chips}</div>`;
+}
+// Toast the moment a drafted player's REAL goal count ticks up. Baselines on a
+// new XI (no alert flood) and persists last-seen so a reload mid-match is quiet.
+function checkXIGoalAlerts() {
+  const xi = loadLastXI();
+  if (!xi || typeof liveStatFor !== 'function') return;
+  const sig = xi.players.map(p => p.code + '|' + p.name).join(',');
+  let rec; try { rec = JSON.parse(localStorage.getItem('pe_xi_goalseen') || 'null'); } catch (e) { rec = null; }
+  const cur = {};
+  for (const p of xi.players) { const s = liveStatFor({ code: p.code, name: p.name }); cur[p.code + '|' + p.name] = (s && s.g) || 0; }
+  if (!rec || rec.sig !== sig) {                       // new/changed XI → baseline silently
+    try { localStorage.setItem('pe_xi_goalseen', JSON.stringify({ sig, seen: cur })); } catch (e) {}
+    return;
+  }
+  for (const p of xi.players) {
+    const k = p.code + '|' + p.name;
+    if ((cur[k] || 0) > (rec.seen[k] || 0)) xiGoalToast(`⚽ ${shortName(p.name)} JUST SCORED FOR YOUR XI!`);
+  }
+  try { localStorage.setItem('pe_xi_goalseen', JSON.stringify({ sig, seen: cur })); } catch (e) {}
+}
+function xiGoalToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast toast--goal';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4200);
+}
+
 function initLiveBadge() {
   if (!isTournamentLive()) return;
   const target = document.querySelector('.topbar__inner') || document.querySelector('.topbar');
@@ -2167,6 +2260,8 @@ function awardCardHTML(emoji, label, awardKey, player) {
 }
 
 function showCompleteModal() {
+  saveLastXI();                       // remember this XI so it can come alive on matchday
+  if (typeof renderXITodayPanel === 'function') { try { renderXITodayPanel(); } catch (e) {} }
   // 🎭 THE REVEAL — if this was an EXPERT/blind draft, flip everything visible
   // now and re-paint the pitch behind the modal so the numbers appear.
   const wasBlind = state.blind && !state.revealed;

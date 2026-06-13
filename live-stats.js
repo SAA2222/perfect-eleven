@@ -242,6 +242,7 @@ async function refreshLiveMode() {
     buildMatchdayBonus(data.matches);          // tilt the spin wheel toward the live slate
     const anyLive = renderMatchdayStrip(data.matches);
     updateTournamentPhase(data.matches);
+    if (typeof renderXITodayPanel === 'function') { try { renderXITodayPanel(); } catch (e) {} }
     // Feed real scores into the top news ticker (replaces the stale pre-match line).
     try {
       const hl = [];
@@ -297,11 +298,18 @@ async function loadLiveStats() {
       // If a pick/swap modal is open, refresh it so form chips appear even when
       // it was opened before this fetch resolved (scroll position preserved).
       if (typeof rerenderOpenPickModal === 'function') { try { rerenderOpenPickModal(); } catch (e) {} }
+      // YOUR XI TODAY — alert on a drafted player's new real goal, then repaint
+      // the matchday "your XI" panel with fresh goals/assists.
+      if (typeof checkXIGoalAlerts === 'function') { try { checkXIGoalAlerts(); } catch (e) {} }
+      if (typeof renderXITodayPanel === 'function') { try { renderXITodayPanel(); } catch (e) {} }
     }
   } catch (e) { /* silent */ }
-  // Goals land mid-match now — keep long-lived tabs fresh (awards on the
-  // complete screen + ⚽ chips read this data at render time).
-  setTimeout(loadLiveStats, 600000);
+  // Goals land mid-match now — keep long-lived tabs fresh (awards on the complete
+  // screen + ⚽ chips + the YOUR-XI goal alerts read this at render time). Poll
+  // every 2.5min while a match is live (matches the server cache TTL) so a
+  // drafted player's goal surfaces within a few minutes; 10min when idle.
+  const anyLiveNow = (window._liveMatchesCache || []).some(m => m.status === 'in_progress');
+  setTimeout(loadLiveStats, anyLiveNow ? 150000 : 600000);
 }
 document.addEventListener('DOMContentLoaded', () => {
   refreshLiveMode();

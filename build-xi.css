@@ -1915,6 +1915,69 @@ body.swap-mode .xi-pitch::after {
 .matchday__time { color: var(--mute-2, #8a96a0); font-size: 10px; }
 .matchday__chip--live .matchday__time { color: #ff4d6d; font-weight: 800; }
 
+/* YOUR XI TODAY — your drafted players in real action, under the matchday strip */
+.xitoday {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 10px 16px;
+  background: rgba(74,222,128,0.05);
+  border-bottom: 1px solid var(--rule);
+}
+.xitoday__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.xitoday__label {
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 800; letter-spacing: 0.16em;
+  color: rgba(74,222,128,0.95);
+  white-space: nowrap;
+}
+.xitoday__tally {
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 800; letter-spacing: 0.08em;
+  color: var(--bone, #e8e6df);
+  white-space: nowrap;
+}
+.xitoday__track {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.xitoday__track::-webkit-scrollbar { display: none; }
+.xitoday__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 700;
+  color: var(--bone, #e8e6df);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.xitoday__chip img { width: 18px; height: 12px; object-fit: cover; border-radius: 2px; }
+.xitoday__chip--scored { border-color: rgba(74,222,128,0.6); background: rgba(74,222,128,0.1); }
+.xitoday__stat { color: var(--gold, #ffc400); font-weight: 800; }
+
+/* Celebration toast when a drafted player scores for real */
+.toast--goal {
+  background: linear-gradient(135deg, #0c1410, #143a24) !important;
+  border: 1px solid rgba(74,222,128,0.8) !important;
+  color: #eafff1 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em;
+  box-shadow: 0 8px 30px rgba(74,222,128,0.25) !important;
+}
+
 /* ⚽ real-tournament-goals chip on filled slots */
 .slot__live-chip {
   position: absolute;
