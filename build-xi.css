@@ -544,6 +544,18 @@ body.is-daily .xi-expert { display: none; }
   color: var(--mute);
   margin-top: 2px;
 }
+/* Matchday boost tag on the spin result — signals why live-slate teams land more */
+.result-matchday {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #0c1410;
+  background: rgba(74,222,128,0.95);
+  vertical-align: 1px;
+}
 
 /* CONTROLS */
 .xi-controls { display: flex; flex-direction: column; gap: 10px; }

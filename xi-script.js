@@ -209,8 +209,12 @@ let _submittingLineup = false;   // re-entry guard: one post per completed XI
 const BLIND_MULT = 1.25;   // Expert/blind draft → +25% leaderboard points (single source of truth)
 
 function weightedPick(pool) {
-  // Build cumulative weight array
-  const weights = pool.map(n => NATION_TIER[n.code] || 2);
+  // Base tier (1=minnow … 6=elite) + LIVE matchday bonus (playing today/just
+  // played/about to play spins more — see buildMatchdayBonus in live-stats.js).
+  // The bonus is SKIPPED in seeded modes (Daily/H2H): those reproduce the same
+  // 11 for everyone from the seed alone, and live fixtures drift through the day.
+  const bonus = (!state.daily && !state.h2h) ? window._matchdayBonus : null;
+  const weights = pool.map(n => (NATION_TIER[n.code] || 2) + (bonus ? (bonus[n.code] || 0) : 0));
   const total = weights.reduce((a, b) => a + b, 0);
   let r = _spinRng() * total;
   for (let i = 0; i < pool.length; i++) {
@@ -218,6 +222,14 @@ function weightedPick(pool) {
     if (r <= 0) return pool[i];
   }
   return pool[pool.length - 1];
+}
+// Matchday tag for the spin RESULT screen, so the boost is legible ("why did I
+// keep landing on teams playing today?"). Empty in seeded modes / no live data.
+function matchdayNoteFor(code) {
+  if (state.daily || state.h2h) return '';
+  const b = window._matchdayBonus;
+  if (!b || !b[code]) return '';
+  return b[code] >= 3 ? '⚡ PLAYING TODAY' : (b[code] === 2 ? '⚡ PLAYED YESTERDAY' : '⚡ PLAYS TOMORROW');
 }
 
 // ----- Daily challenge state + helpers -----
@@ -600,9 +612,13 @@ function showResult(nation) {
   $('resultFlag').innerHTML = `<img src="${flagURL(nation.iso, 160)}" srcset="${flagURL2x(nation.iso, 160)} 2x" alt="${nation.name}" class="result-flag-img" />`;
   $('resultName').textContent = nation.name;
   const r = (typeof fifaRank === 'function') ? fifaRank(nation.code) : null;
-  $('resultGroup').textContent = ((state.mode === 'classic' || state.mode === 'top50') && r)
+  const baseLabel = ((state.mode === 'classic' || state.mode === 'top50') && r)
     ? `FIFA WORLD RANK #${r}`
     : nation.group;
+  const md = matchdayNoteFor(nation.code);
+  $('resultGroup').innerHTML = md
+    ? `${baseLabel} <span class="result-matchday">${md}</span>`
+    : baseLabel;
   $('spinnerResult').classList.add('show');
   if (typeof landStickySpin === 'function') landStickySpin(nation);   // mirror the result in the sticky bar
 }

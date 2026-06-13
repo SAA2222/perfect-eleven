@@ -195,12 +195,51 @@ function updateTournamentPhase(matches) {
   }
 }
 
+// MATCHDAY SPIN BOOST — nations playing around *now* are more fun to draft, so
+// the spin wheel tilts toward them. ADDITIVE bonus on the base spin tier (1=minnow
+// … 6=elite): playing TODAY +3, played YESTERDAY +2, plays TOMORROW +1. A nudge,
+// not a takeover — a minnow playing today (1→4) still spins less than an idle
+// ELITE side (6): "more likely, but not as often as the big teams." Days are
+// keyed to EASTERN (matches the rest of the app's day math). Seeded modes
+// (Daily/H2H) ignore this entirely — they must reproduce from the seed alone,
+// and live fixtures drift through the day. window._matchdayBonus = { CODE: pts }.
+const MATCHDAY_BONUS = { today: 3, yesterday: 2, tomorrow: 1 };
+function _etDayStr(ms) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(ms));
+}
+function buildMatchdayBonus(matches) {
+  try {
+    const today = _etDayStr(Date.now());
+    const yest  = _etDayStr(Date.now() - 86400000);
+    const tom   = _etDayStr(Date.now() + 86400000);
+    const bonus = {};
+    const bump = (code, pts) => { if (code && pts) bonus[code] = Math.max(bonus[code] || 0, pts); };
+    for (const m of (matches || [])) {
+      let pts = 0;
+      if (m.status === 'in_progress') {
+        pts = MATCHDAY_BONUS.today;                 // live right now = most salient
+      } else {
+        const t = m.dt ? Date.parse(m.dt) : NaN;
+        if (!isNaN(t)) {
+          const d = _etDayStr(t);
+          pts = d === today ? MATCHDAY_BONUS.today
+              : d === yest  ? MATCHDAY_BONUS.yesterday
+              : d === tom   ? MATCHDAY_BONUS.tomorrow : 0;
+        }
+      }
+      if (pts) { bump(m.home && m.home.code, pts); bump(m.away && m.away.code, pts); }
+    }
+    window._matchdayBonus = bonus;
+  } catch (e) { /* keep any prior map — spin falls back to base tiers on its own */ }
+}
+
 async function refreshLiveMode() {
   try {
     const r = await fetch(LIVE_API_BASE + '/api/live?view=today');
     const data = await r.json();
     if (!data || !data.ok) { const s = document.getElementById('matchdayStrip'); if (s) s.hidden = true; return; }
     window._liveMatchesCache = data.matches;   // lets the stats loader refresh the strip
+    buildMatchdayBonus(data.matches);          // tilt the spin wheel toward the live slate
     const anyLive = renderMatchdayStrip(data.matches);
     updateTournamentPhase(data.matches);
     // Feed real scores into the top news ticker (replaces the stale pre-match line).
