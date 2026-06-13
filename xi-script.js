@@ -3,41 +3,103 @@
    Specific roles + league chemistry
    ============================================================ */
 
-// slot index → { pos (group), role (specific) }
-const SLOT_DEF = {
-  0:  { pos: 'FWD', role: 'LW'  },
-  1:  { pos: 'FWD', role: 'ST'  },
-  2:  { pos: 'FWD', role: 'RW'  },
-  3:  { pos: 'MID', role: 'LCM' },
-  4:  { pos: 'MID', role: 'CDM' },
-  5:  { pos: 'MID', role: 'RCM' },
-  6:  { pos: 'DEF', role: 'LB'  },
-  7:  { pos: 'DEF', role: 'LCB' },
-  8:  { pos: 'DEF', role: 'RCB' },
-  9:  { pos: 'DEF', role: 'RB'  },
-  10: { pos: 'GK',  role: 'GK'  },
+// ============================================================
+// FORMATIONS — each is 11 slots (index 0-10, GK always index 10) with a role and
+// a pitch position (top/left %). Chemistry is league-link based (position-agnostic)
+// so a formation only changes WHICH roles you're drafting for + where they sit.
+// ============================================================
+const FORMATIONS = {
+  '4-3-3': [
+    { pos:'FWD', role:'LW',  top:14, left:20 },
+    { pos:'FWD', role:'ST',  top:9,  left:50 },
+    { pos:'FWD', role:'RW',  top:14, left:80 },
+    { pos:'MID', role:'LCM', top:32, left:28 },
+    { pos:'MID', role:'CDM', top:46, left:50 },
+    { pos:'MID', role:'RCM', top:32, left:72 },
+    { pos:'DEF', role:'LB',  top:74, left:18 },
+    { pos:'DEF', role:'LCB', top:72, left:39 },
+    { pos:'DEF', role:'RCB', top:72, left:61 },
+    { pos:'DEF', role:'RB',  top:74, left:82 },
+    { pos:'GK',  role:'GK',  top:91, left:50 },
+  ],
+  '4-4-2': [
+    { pos:'FWD', role:'LST', top:11, left:40 },
+    { pos:'FWD', role:'RST', top:11, left:60 },
+    { pos:'MID', role:'LM',  top:38, left:14 },
+    { pos:'MID', role:'LCM', top:41, left:40 },
+    { pos:'MID', role:'RCM', top:41, left:60 },
+    { pos:'MID', role:'RM',  top:38, left:86 },
+    { pos:'DEF', role:'LB',  top:74, left:16 },
+    { pos:'DEF', role:'LCB', top:72, left:39 },
+    { pos:'DEF', role:'RCB', top:72, left:61 },
+    { pos:'DEF', role:'RB',  top:74, left:84 },
+    { pos:'GK',  role:'GK',  top:91, left:50 },
+  ],
+  '4-2-3-1': [
+    { pos:'FWD', role:'ST',  top:10, left:50 },
+    { pos:'MID', role:'LAM', top:29, left:22 },
+    { pos:'MID', role:'CAM', top:26, left:50 },
+    { pos:'MID', role:'RAM', top:29, left:78 },
+    { pos:'MID', role:'LDM', top:49, left:38 },
+    { pos:'MID', role:'RDM', top:49, left:62 },
+    { pos:'DEF', role:'LB',  top:74, left:16 },
+    { pos:'DEF', role:'LCB', top:72, left:39 },
+    { pos:'DEF', role:'RCB', top:72, left:61 },
+    { pos:'DEF', role:'RB',  top:74, left:84 },
+    { pos:'GK',  role:'GK',  top:91, left:50 },
+  ],
+  '3-5-2': [
+    { pos:'FWD', role:'LST', top:11, left:40 },
+    { pos:'FWD', role:'RST', top:11, left:60 },
+    { pos:'MID', role:'LWB', top:40, left:11 },
+    { pos:'MID', role:'LCM', top:38, left:34 },
+    { pos:'MID', role:'CDM', top:47, left:50 },
+    { pos:'MID', role:'RCM', top:38, left:66 },
+    { pos:'MID', role:'RWB', top:40, left:89 },
+    { pos:'DEF', role:'LCB', top:74, left:30 },
+    { pos:'DEF', role:'CCB', top:76, left:50 },
+    { pos:'DEF', role:'RCB', top:74, left:70 },
+    { pos:'GK',  role:'GK',  top:91, left:50 },
+  ],
 };
+const DEFAULT_FORMATION = '4-3-3';
+function buildSlotDef(name) {
+  const f = FORMATIONS[name] || FORMATIONS[DEFAULT_FORMATION];
+  const def = {};
+  f.forEach((s, i) => { def[i] = { pos: s.pos, role: s.role }; });
+  return def;
+}
+// slot index → { pos (group), role (specific) } — MUTABLE, swapped per formation.
+let SLOT_DEF = buildSlotDef(DEFAULT_FORMATION);
 
 // player role → slot roles that count as a NATURAL fit (exact, no penalty).
 // Anything else falls back to "same line, OUT OF POSITION" (-1 rating).
-// Each role has its natural zone:
-//   · CDM (holder) — the holding 6 only
-//   · CM  (box-to-box) — natural across ALL three central slots: CDM, LCM, RCM
-//   · CAM (#10 / advanced 8) — the two central-mid slots (LCM, RCM), never the 6
-//   · wingers (LW/RW) are never natural through the middle, and a striker (ST)
-//     is never natural out wide — and vice-versa
+//   · CDM (holder) — any holding slot (CDM / LDM / RDM)
+//   · CM  (box-to-box) — every central + wide-mid slot
+//   · CAM (#10 / advanced 8) — the attacking-mid + 8 slots, never a holder
+//   · wide players cover wide-mid + wing-back + wide-AM; strikers cover any ST slot
 const ROLE_FIT = {
   GK:  ['GK'],
-  CB:  ['LCB', 'RCB'],
-  LB:  ['LB'],
-  RB:  ['RB'],
-  CDM: ['CDM'],                 // holding 6 only
-  CM:  ['CDM', 'LCM', 'RCM'],   // box-to-box — natural at all three central slots
-  CAM: ['LCM', 'RCM'],          // advanced 8 / #10 — the 8 slots, never the 6
-  LW:  ['LW'],
-  ST:  ['ST'],
-  RW:  ['RW'],
+  CB:  ['LCB', 'RCB', 'CCB'],
+  LB:  ['LB', 'LWB'],
+  RB:  ['RB', 'RWB'],
+  CDM: ['CDM', 'LDM', 'RDM'],
+  CM:  ['CDM', 'LCM', 'RCM', 'LDM', 'RDM', 'LM', 'RM', 'CAM', 'LAM', 'RAM'],
+  CAM: ['LCM', 'RCM', 'CAM', 'LAM', 'RAM'],
+  LW:  ['LW', 'LM', 'LWB', 'LAM'],
+  ST:  ['ST', 'LST', 'RST'],
+  RW:  ['RW', 'RM', 'RWB', 'RAM'],
 };
+// GK, then defenders → mids → forwards, left-to-right within each line. Used for
+// the lineup string + structured xi so any formation reads naturally.
+function orderedSlots() {
+  const lineRank = { GK: 0, DEF: 1, MID: 2, FWD: 3 };
+  const f = FORMATIONS[state.formation] || FORMATIONS[DEFAULT_FORMATION];
+  return Object.keys(SLOT_DEF).map(Number).sort((a, b) => {
+    const lr = (lineRank[SLOT_DEF[a].pos] || 0) - (lineRank[SLOT_DEF[b].pos] || 0);
+    return lr !== 0 ? lr : ((f[a] ? f[a].left : 0) - (f[b] ? f[b].left : 0));
+  });
+}
 
 const POS_BLURB = {
   high: 'A genuine super-team. Bookmark this lineup.',
@@ -94,9 +156,52 @@ function renderResourcePips() {
 
 // Full position names for the Tactical spinner / result.
 const POS_FULL = {
-  GK:'GOALKEEPER', LB:'LEFT-BACK', RB:'RIGHT-BACK', LCB:'CENTRE-BACK', RCB:'CENTRE-BACK',
-  CDM:'DEF. MIDFIELD', LCM:'CENTRE MID', RCM:'CENTRE MID', LW:'LEFT WING', RW:'RIGHT WING', ST:'STRIKER',
+  GK:'GOALKEEPER', LB:'LEFT-BACK', RB:'RIGHT-BACK', LCB:'CENTRE-BACK', RCB:'CENTRE-BACK', CCB:'CENTRE-BACK',
+  LWB:'LEFT WING-BACK', RWB:'RIGHT WING-BACK',
+  CDM:'DEF. MIDFIELD', LDM:'DEF. MIDFIELD', RDM:'DEF. MIDFIELD',
+  LCM:'CENTRE MID', RCM:'CENTRE MID', LM:'LEFT MID', RM:'RIGHT MID',
+  CAM:'ATTACK MID', LAM:'ATTACK MID', RAM:'ATTACK MID',
+  LW:'LEFT WING', RW:'RIGHT WING', ST:'STRIKER', LST:'STRIKER', RST:'STRIKER',
 };
+
+// ----- FORMATION switching -----
+// Swap the active formation: re-roles + repositions the 11 pitch slots and the
+// SLOT_DEF the whole game reads. Locked once a build is underway (changing roles
+// mid-draft would scramble fits) — re-enabled on reset. Persisted across sessions.
+function applyFormation(name, opts = {}) {
+  if (!FORMATIONS[name]) name = DEFAULT_FORMATION;
+  if (!opts.force && Object.keys(state.roster).length > 0) {
+    toast('RESET TO CHANGE FORMATION');
+    syncFormationPicker();
+    return;
+  }
+  state.formation = name;
+  SLOT_DEF = buildSlotDef(name);
+  try { localStorage.setItem('pe_formation', name); } catch (e) {}
+  FORMATIONS[name].forEach((s, i) => {
+    const el = document.querySelector(`.slot[data-slot="${i}"]`);
+    if (!el) return;
+    el.dataset.pos = s.pos;
+    el.dataset.role = s.role;       // .slot::before { content: attr(data-role) } relabels for free
+    el.style.top = s.top + '%';
+    el.style.left = s.left + '%';
+    el.classList.toggle('slot--gk', s.pos === 'GK');
+  });
+  syncFormationPicker();
+}
+function syncFormationPicker() {
+  const sel = document.getElementById('formationPicker');
+  if (!sel) return;
+  sel.value = state.formation || DEFAULT_FORMATION;
+  sel.disabled = Object.keys(state.roster).length > 0;   // lock once building starts
+}
+// Share-card slot position — derived from the ACTIVE formation so the exported
+// card matches whatever shape you built in.
+function cardSlotPos(i) {
+  const f = FORMATIONS[state.formation] || FORMATIONS[DEFAULT_FORMATION];
+  const s = f[i];
+  return s ? { x: s.left / 100, y: s.top / 100, label: s.role } : { x: 0.5, y: 0.5, label: '' };
+}
 
 // EXPERT / BLIND draft: hide every rating + chem number until the final reveal.
 // Pure display gate — game logic (OVR/chem/finish) is unchanged. One predicate
@@ -468,7 +573,7 @@ function flagEmoji(iso) {
   return String.fromCodePoint(A + iso.toLowerCase().charCodeAt(0) - 97, A + iso.toLowerCase().charCodeAt(1) - 97);
 }
 function dailyShareText(ovr, finishLabel, streak) {
-  const order = [10, 6, 7, 8, 9, 3, 4, 5, 0, 1, 2];
+  const order = orderedSlots();
   const flags = order.map(i => flagEmoji((state.roster[i] || {}).iso)).join('');
   const fin = (finishLabel || '').replace(/[^\w\s-]/g, '').trim();
   return `Perfect Eleven · Daily #${dailyNumber()}\n${ovr} OVR${fin ? ' · ' + fin : ''}${streak > 1 ? ' · 🔥 ' + streak + ' day streak' : ''}\n${flags}\nperfect-eleven.vercel.app`;
@@ -1669,6 +1774,7 @@ function updateProgress() {
   }
   $('shareBtn').disabled = filled < 11;
   updateBlindToggleLock();   // lock the expert toggle once the draft is underway
+  if (typeof syncFormationPicker === 'function') syncFormationPicker();   // lock formation too
   updateResources();
 }
 
@@ -2652,7 +2758,7 @@ function showCompleteModal() {
 
 function rosterAsText() {
   const labels = SLOT_DEF;
-  const ordered = [10, 6, 7, 8, 9, 3, 4, 5, 0, 1, 2];
+  const ordered = orderedSlots();
   const ratings = Object.values(state.roster).map(p => p.rating);
   const avg = Math.round(ratings.reduce((a, b) => a + b, 0) / ratings.length);
   const chem = teamChemistry();
@@ -2983,7 +3089,7 @@ async function shareXICardImage(opts = {}) {
   const CARD_W = 168, CARD_H = 120;
   for (let i = 0; i < 11; i++) {
     const p = state.roster[i];
-    const pos = XI_CARD_SLOT_POS[i];
+    const pos = cardSlotPos(i);          // derived from the active formation
     const cx = PITCH_X + PITCH_W * pos.x;
     const cy = PITCH_Y + PITCH_H * pos.y;
     const x = cx - CARD_W/2, y = cy - CARD_H/2;
@@ -3282,7 +3388,7 @@ async function submitLineupToLeaderboard() {
   const final = state.lastResult ? state.lastResult.ovr : computeFinalOVR();
   const chem = state.lastResult ? state.lastResult.chem : teamChemistry();
 
-  const ordered = [10, 6, 7, 8, 9, 3, 4, 5, 0, 1, 2];
+  const ordered = orderedSlots();
   const lineup = ordered.map(i => {
     const p = state.roster[i];
     return shortName(p.name);
@@ -3425,6 +3531,7 @@ function resetRoster() {
   state.swapMode = false;
   state.revealed = false;          // new draft → numbers hidden again if blind is on
   updateBlindToggleLock();         // empty roster → re-enable the expert toggle
+  if (typeof syncFormationPicker === 'function') syncFormationPicker();   // re-enable formation picker
   document.body.classList.remove('swap-mode');
   $('roundNum').textContent = '0';
   $('progressFill').style.width = '0%';
@@ -3577,6 +3684,12 @@ function initModes() {
 document.addEventListener('DOMContentLoaded', () => {
   handlePremiumReturn();  // verify + unlock if Stripe redirected back with ?session_id=
   initSlots();
+  // Restore the saved formation + wire the picker (locked once a build starts).
+  let savedFormation = DEFAULT_FORMATION;
+  try { savedFormation = localStorage.getItem('pe_formation') || DEFAULT_FORMATION; } catch (e) {}
+  applyFormation(savedFormation, { force: true });
+  const fp = document.getElementById('formationPicker');
+  if (fp) fp.addEventListener('change', () => applyFormation(fp.value));
   initModes();
   buildSpinnerCards();
   initLiveBadge();

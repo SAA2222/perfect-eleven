@@ -652,9 +652,24 @@ body.is-daily .xi-expert { display: none; }
 .xi-pitch-head__formation {
   font-family: var(--font-mono);
   font-size: 12px;
+  font-weight: 700;
   letter-spacing: 0.16em;
-  color: var(--mute);
+  color: var(--bone, #e8e6df);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  padding: 5px 26px 5px 10px;
+  cursor: pointer;
+  -webkit-appearance: none; -moz-appearance: none; appearance: none;
+  /* chevron */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238a96a0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  transition: border-color 0.15s, color 0.15s;
 }
+.xi-pitch-head__formation:hover:not(:disabled) { border-color: var(--pitch); color: #fff; }
+.xi-pitch-head__formation:disabled { opacity: 0.5; cursor: not-allowed; }
+.xi-pitch-head__formation option { background: #0c1410; color: #e8e6df; }
 .xi-pitch-head__overall {
   font-family: var(--font-display);
   font-size: 28px;
