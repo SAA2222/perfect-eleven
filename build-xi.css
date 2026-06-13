@@ -1507,6 +1507,69 @@ body.swap-mode .xi-pitch::after {
 }
 
 /* ============================================================
+   GUIDE — visible, readable content section (SEO + AdSense)
+   ============================================================ */
+.guide {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 64px 22px 24px;
+}
+.guide__inner { }
+.guide__block {
+  margin-top: 34px;
+  padding-top: 28px;
+  border-top: 1px solid var(--rule);
+}
+.guide__block:first-of-type { border-top: 0; padding-top: 12px; }
+.guide__block h3 {
+  font-family: var(--font-display, Anton);
+  font-size: clamp(20px, 4vw, 28px);
+  letter-spacing: 0.01em;
+  color: var(--paper, #fff);
+  margin: 0 0 14px;
+}
+.guide__block p,
+.guide__steps li,
+.guide__faq dd {
+  font-family: var(--font-body, 'Space Grotesk', sans-serif);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--bone, #c9cdd2);
+  margin: 0 0 12px;
+}
+.guide__block strong { color: var(--paper, #fff); font-weight: 600; }
+.guide__steps { margin: 0; padding-left: 22px; }
+.guide__steps li { margin-bottom: 10px; }
+.guide__faq dt {
+  font-family: var(--font-body, 'Space Grotesk', sans-serif);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--pitch, #00ff85);
+  margin: 18px 0 6px;
+}
+.guide__faq dd { margin-left: 0; }
+.guide a { color: var(--pitch, #00ff85); }
+
+/* Footer site links */
+.footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+  padding: 18px 16px;
+  border-top: 1px solid var(--rule);
+}
+.footer__links a {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mute, #8a96a0);
+  text-decoration: none;
+}
+.footer__links a:hover { color: var(--pitch, #00ff85); }
+
+/* ============================================================
    MONETIZATION — rewarded ad modal, AdSense slot
    ============================================================ */
 /* Rewarded video modal */
