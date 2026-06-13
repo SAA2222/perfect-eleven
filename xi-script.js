@@ -1872,12 +1872,52 @@ function saveLastXI() {
       const p = state.roster[k];
       return { name: p.name, code: p.code, iso: p.iso, nation: p.nation };
     });
-    localStorage.setItem('pe_last_xi', JSON.stringify({ at: Date.now(), players }));
+    // Default captain = your highest-rated player; preserve a manual pick if the
+    // very same 11 are being re-saved (re-opening the complete modal shouldn't
+    // reset the armband).
+    let cap = null, best = -1;
+    for (const k of ids) {
+      const p = state.roster[k];
+      const r = (typeof effectiveRating === 'function' ? effectiveRating(p) : p.rating) || p.rating || 0;
+      if (r > best) { best = r; cap = p.code + '|' + p.name; }
+    }
+    const sig = players.map(p => p.code + '|' + p.name).sort().join(',');
+    const prev = loadLastXI();
+    const prevSig = prev ? prev.players.map(p => p.code + '|' + p.name).sort().join(',') : null;
+    const captain = (prev && prevSig === sig && prev.captain) ? prev.captain : cap;
+    localStorage.setItem('pe_last_xi', JSON.stringify({ at: Date.now(), players, captain }));
   } catch (e) {}
 }
 function loadLastXI() {
   try { const x = JSON.parse(localStorage.getItem('pe_last_xi') || 'null'); return (x && x.players && x.players.length === 11) ? x : null; }
   catch (e) { return null; }
+}
+function getCaptain() { const xi = loadLastXI(); return xi ? (xi.captain || null) : null; }
+function setCaptain(key) {
+  const xi = loadLastXI();
+  if (!xi || !xi.players.some(p => p.code + '|' + p.name === key)) return;
+  xi.captain = key;
+  try { localStorage.setItem('pe_last_xi', JSON.stringify(xi)); } catch (e) {}
+  renderCaptainPicker();
+  if (typeof renderXITodayPanel === 'function') { try { renderXITodayPanel(); } catch (e) {} }
+}
+// Captain picker on the complete screen — your bet on who'll deliver in real life.
+function renderCaptainPicker() {
+  const el = document.getElementById('xiCaptain');
+  if (!el) return;
+  const xi = loadLastXI();
+  if (!xi || !isTournamentLive()) { el.hidden = true; return; }   // only meaningful once the WC is live
+  const cap = xi.captain;
+  const opts = xi.players.map(p => {
+    const k = p.code + '|' + p.name;
+    return `<option value="${k}"${k === cap ? ' selected' : ''}>${p.name} · ${p.nation}</option>`;
+  }).join('');
+  el.hidden = false;
+  el.innerHTML = `
+    <div class="xi-captain__label">🅒 CAPTAIN <span class="xi-captain__hint">— their real World Cup goals &amp; assists count DOUBLE on your live tally</span></div>
+    <select class="xi-captain__select" id="xiCaptainSelect" aria-label="Pick your captain">${opts}</select>`;
+  const sel = document.getElementById('xiCaptainSelect');
+  if (sel) sel.onchange = () => setCaptain(sel.value);
 }
 // Codes whose nation has a match TODAY (ET) or is live right now.
 function _xiTodayCodes() {
@@ -1967,13 +2007,16 @@ function renderXITodayPanel() {
     return;
   }
   const anyLive = (window._liveMatchesCache || []).some(m => m.status === 'in_progress');
-  const totG = players.reduce((s, p) => s + p.g, 0);
-  const totA = players.reduce((s, p) => s + p.a, 0);
+  const cap = getCaptain();   // captain's real goals + assists count DOUBLE on the tally
+  const wt = (p) => ((p.code + '|' + p.name) === cap ? 2 : 1);
+  const totG = players.reduce((s, p) => s + p.g * wt(p), 0);
+  const totA = players.reduce((s, p) => s + p.a * wt(p), 0);
   const chips = players.map(p => {
+    const isCap = (p.code + '|' + p.name) === cap;
     const stat = (p.g || p.a)
-      ? ` <b class="xitoday__stat">${p.g ? '⚽' + p.g : ''}${p.a ? ' 🅰️' + p.a : ''}</b>` : '';
-    return `<span class="xitoday__chip${p.g ? ' xitoday__chip--scored' : ''}">`
-      + `<img src="${flagURL(p.iso, 40)}" alt="${p.nation}" />${shortName(p.name)}${stat}</span>`;
+      ? ` <b class="xitoday__stat">${p.g ? '⚽' + p.g : ''}${p.a ? ' 🅰️' + p.a : ''}${isCap ? ' ×2' : ''}</b>` : '';
+    return `<span class="xitoday__chip${p.g ? ' xitoday__chip--scored' : ''}${isCap ? ' xitoday__chip--cap' : ''}">`
+      + `${isCap ? '<b class="xitoday__armband">🅒</b>' : ''}<img src="${flagURL(p.iso, 40)}" alt="${p.nation}" />${shortName(p.name)}${stat}</span>`;
   }).join('');
   el.hidden = false;
   el.innerHTML = `
@@ -2016,7 +2059,10 @@ function checkXIGoalAlerts() {
   }
   for (const p of xi.players) {
     const k = p.code + '|' + p.name;
-    if ((cur[k] || 0) > (rec.seen[k] || 0)) xiGoalToast(`⚽ ${shortName(p.name)} JUST SCORED FOR YOUR XI!`);
+    if ((cur[k] || 0) > (rec.seen[k] || 0)) {
+      if (k === xi.captain) xiGoalToast(`🅒🔥 CAPTAIN ${shortName(p.name)} SCORED — COUNTS DOUBLE!`, 'cap');
+      else xiGoalToast(`⚽ ${shortName(p.name)} JUST SCORED FOR YOUR XI!`);
+    }
   }
   try { localStorage.setItem('pe_xi_goalseen', JSON.stringify({ sig, seen: cur })); } catch (e) {}
 }
@@ -2338,6 +2384,7 @@ function awardCardHTML(emoji, label, awardKey, player) {
 function showCompleteModal() {
   saveLastXI();                       // remember this XI so it can come alive on matchday
   if (typeof renderXITodayPanel === 'function') { try { renderXITodayPanel(); } catch (e) {} }
+  if (typeof renderCaptainPicker === 'function') { try { renderCaptainPicker(); } catch (e) {} }
   // 🎭 THE REVEAL — if this was an EXPERT/blind draft, flip everything visible
   // now and re-paint the pitch behind the modal so the numbers appear.
   const wasBlind = state.blind && !state.revealed;

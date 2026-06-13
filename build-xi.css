@@ -1966,7 +1966,36 @@ body.swap-mode .xi-pitch::after {
 }
 .xitoday__chip img { width: 18px; height: 12px; object-fit: cover; border-radius: 2px; }
 .xitoday__chip--scored { border-color: rgba(74,222,128,0.6); background: rgba(74,222,128,0.1); }
+.xitoday__chip--cap { border-color: rgba(255,196,0,0.7); background: rgba(255,196,0,0.08); }
+.xitoday__armband { color: var(--gold, #ffc400); font-weight: 900; }
 .xitoday__stat { color: var(--gold, #ffc400); font-weight: 800; }
+
+/* Captain picker on the complete screen */
+.xi-captain {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(255,196,0,0.35);
+  border-radius: 10px;
+  background: rgba(255,196,0,0.05);
+}
+.xi-captain__label {
+  font-family: var(--font-mono);
+  font-size: 12px; font-weight: 800; letter-spacing: 0.1em;
+  color: var(--ink, #0c1410);
+  margin-bottom: 8px;
+}
+.xi-captain__hint { font-weight: 600; letter-spacing: 0.02em; opacity: 0.7; text-transform: none; }
+.xi-captain__select {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 13px; font-weight: 700;
+  color: var(--ink, #0c1410);
+  background: #fff;
+  border: 1px solid rgba(12,20,16,0.25);
+  border-radius: 8px;
+  cursor: pointer;
+}
 /* SURVIVOR — your XI's nations still alive in the real bracket */
 .xitoday__survive {
   margin-top: 8px;
@@ -1996,6 +2025,15 @@ body.swap-mode .xi-pitch::after {
   font-weight: 800 !important;
   letter-spacing: 0.03em;
   box-shadow: 0 8px 30px rgba(255,77,109,0.25) !important;
+}
+/* 🅒 Captain goal toast — double points, gold fireworks */
+.toast--cap {
+  background: linear-gradient(135deg, #2a2200, #4a3a00) !important;
+  border: 1px solid rgba(255,196,0,0.9) !important;
+  color: #fff7e0 !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.03em;
+  box-shadow: 0 8px 34px rgba(255,196,0,0.35) !important;
 }
 
 /* ⚽ real-tournament-goals chip on filled slots */
