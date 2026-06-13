@@ -1902,12 +1902,70 @@ function xiPlayersToday() {
     return Object.assign({}, p, { g: (s && s.g) || 0, a: (s && s.a) || 0 });
   });
 }
+// ---- SURVIVOR — your XI's nations live or die with the real bracket ----
+// "Alive" = the nation still has a scheduled or in-progress match (i.e. it's
+// still in the tournament). This is the SAFE direction: a team with a future
+// fixture is unambiguously still in it, so we never falsely eliminate anyone.
+const _STAGE_RANK = {
+  'Group Stage': 0, 'Round of 32': 1, 'Round of 16': 2,
+  'Quarter-finals': 3, 'Quarter-final': 3, 'Semi-finals': 4, 'Semi-final': 4,
+  'Third place play-off': 4, 'Final': 5,
+};
+const _STAGE_SHORT = ['GROUP', 'R32', 'R16', 'QF', 'SF', 'FINAL'];
+function nationStatusMap() {
+  const map = {};
+  const etDay = (typeof _etDayStr === 'function') ? _etDayStr : (ms) => new Date(ms).toISOString().slice(0, 10);
+  const today = etDay(Date.now());
+  const touch = (c) => (map[c] || (map[c] = { alive: false, today: false, live: false, played: false, stage: -1 }));
+  for (const m of (window._liveMatchesCache || [])) {
+    const rank = _STAGE_RANK[m.stage] != null ? _STAGE_RANK[m.stage] : -1;
+    for (const side of [m.home, m.away]) {
+      if (!side || !side.code) continue;
+      const s = touch(side.code);
+      if (rank > s.stage) s.stage = rank;
+      if (m.status === 'in_progress') { s.alive = true; s.live = true; s.today = true; }
+      else if (m.status === 'completed') { s.played = true; }
+      else {                                              // scheduled = a future game = still in it
+        s.alive = true;
+        const t = m.dt ? Date.parse(m.dt) : NaN;
+        if (!isNaN(t) && etDay(t) === today) s.today = true;
+      }
+    }
+  }
+  return map;
+}
+function xiSurvivalSummary() {
+  const xi = loadLastXI();
+  if (!xi) return null;
+  const map = nationStatusMap();
+  let alive = 0, deepest = -1;
+  const outCodes = [];
+  for (const p of xi.players) {
+    const s = map[p.code];
+    const isAlive = s ? s.alive : true;                   // unknown nation → assume alive (safe)
+    if (isAlive) { alive++; if (s && s.stage > deepest) deepest = s.stage; }
+    else if (s && s.played) outCodes.push(p.code);
+  }
+  return { alive, total: xi.players.length, deepest, outCodes };
+}
+
 function renderXITodayPanel() {
   const el = document.getElementById('xiTodayPanel');
   if (!el) return;
   if (!isTournamentLive() || !loadLastXI()) { el.hidden = true; return; }
+  const surv = xiSurvivalSummary();
+  const stageTxt = (surv && surv.deepest > 0) ? ` · DEEPEST ${_STAGE_SHORT[surv.deepest]}` : '';
+  const survHit = surv && surv.alive < surv.total ? ' xitoday__survive--hit' : '';
+  const survLine = surv
+    ? `<div class="xitoday__survive${survHit}">🛡️ <b>${surv.alive}/${surv.total}</b> STILL ALIVE${stageTxt}</div>`
+    : '';
+
   const players = xiPlayersToday();
-  if (!players.length) { el.hidden = true; return; }
+  if (!players.length) {                                  // off-day: slim survival-only tracker
+    el.hidden = false;
+    el.innerHTML = `<div class="xitoday__head"><span class="xitoday__label">⚡ YOUR XI</span></div>${survLine}`;
+    return;
+  }
   const anyLive = (window._liveMatchesCache || []).some(m => m.status === 'in_progress');
   const totG = players.reduce((s, p) => s + p.g, 0);
   const totA = players.reduce((s, p) => s + p.a, 0);
@@ -1923,7 +1981,25 @@ function renderXITodayPanel() {
       <span class="xitoday__label">${anyLive ? '🔴 YOUR XI — LIVE NOW' : '⚡ YOUR XI TODAY'}</span>
       <span class="xitoday__tally">${players.length} PLAYING${(totG || totA) ? ` · ⚽${totG} 🅰️${totA}` : ''}</span>
     </div>
-    <div class="xitoday__track">${chips}</div>`;
+    <div class="xitoday__track">${chips}</div>
+    ${survLine}`;
+}
+// 💀 Toast the moment one of your XI's nations gets knocked out of the real
+// tournament. Baselines on a new/changed XI; persists so it fires once per exit.
+function checkXIElimination() {
+  const xi = loadLastXI();
+  if (!xi) return;
+  const map = nationStatusMap();
+  const sig = xi.players.map(p => p.code + '|' + p.name).join(',');
+  const curOut = [...new Set(xi.players.filter(p => { const s = map[p.code]; return s && s.played && !s.alive; }).map(p => p.code))];
+  let rec; try { rec = JSON.parse(localStorage.getItem('pe_xi_survive') || 'null'); } catch (e) { rec = null; }
+  if (!rec || rec.sig !== sig) { try { localStorage.setItem('pe_xi_survive', JSON.stringify({ sig, out: curOut })); } catch (e) {} return; }
+  for (const code of curOut.filter(c => !rec.out.includes(c))) {
+    const n = NATIONS.find(x => x.code === code);
+    const cnt = xi.players.filter(p => p.code === code).length;
+    xiGoalToast(`💀 ${(n ? n.name : code).toUpperCase()} ARE OUT — ${cnt} OF YOUR XI ELIMINATED`, 'out');
+  }
+  try { localStorage.setItem('pe_xi_survive', JSON.stringify({ sig, out: curOut })); } catch (e) {}
 }
 // Toast the moment a drafted player's REAL goal count ticks up. Baselines on a
 // new XI (no alert flood) and persists last-seen so a reload mid-match is quiet.
@@ -1944,12 +2020,12 @@ function checkXIGoalAlerts() {
   }
   try { localStorage.setItem('pe_xi_goalseen', JSON.stringify({ sig, seen: cur })); } catch (e) {}
 }
-function xiGoalToast(msg) {
+function xiGoalToast(msg, kind = 'goal') {
   const t = document.createElement('div');
-  t.className = 'toast toast--goal';
+  t.className = `toast toast--${kind}`;
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 4200);
+  setTimeout(() => t.remove(), kind === 'out' ? 5200 : 4200);
 }
 
 function initLiveBadge() {

@@ -1967,6 +1967,17 @@ body.swap-mode .xi-pitch::after {
 .xitoday__chip img { width: 18px; height: 12px; object-fit: cover; border-radius: 2px; }
 .xitoday__chip--scored { border-color: rgba(74,222,128,0.6); background: rgba(74,222,128,0.1); }
 .xitoday__stat { color: var(--gold, #ffc400); font-weight: 800; }
+/* SURVIVOR — your XI's nations still alive in the real bracket */
+.xitoday__survive {
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px dashed var(--rule);
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+  color: var(--bone, #e8e6df);
+}
+.xitoday__survive b { color: rgba(74,222,128,0.95); font-weight: 800; letter-spacing: 0.04em; }
+.xitoday__survive--hit b { color: #ff6d6d; }   /* someone's been knocked out */
 
 /* Celebration toast when a drafted player scores for real */
 .toast--goal {
@@ -1976,6 +1987,15 @@ body.swap-mode .xi-pitch::after {
   font-weight: 800 !important;
   letter-spacing: 0.04em;
   box-shadow: 0 8px 30px rgba(74,222,128,0.25) !important;
+}
+/* 💀 Elimination toast when a drafted nation crashes out */
+.toast--out {
+  background: linear-gradient(135deg, #1a0c0c, #3a1414) !important;
+  border: 1px solid rgba(255,77,109,0.8) !important;
+  color: #ffe9ec !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.03em;
+  box-shadow: 0 8px 30px rgba(255,77,109,0.25) !important;
 }
 
 /* ⚽ real-tournament-goals chip on filled slots */

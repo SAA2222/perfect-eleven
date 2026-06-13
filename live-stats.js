@@ -242,6 +242,7 @@ async function refreshLiveMode() {
     buildMatchdayBonus(data.matches);          // tilt the spin wheel toward the live slate
     const anyLive = renderMatchdayStrip(data.matches);
     updateTournamentPhase(data.matches);
+    if (typeof checkXIElimination === 'function') { try { checkXIElimination(); } catch (e) {} }
     if (typeof renderXITodayPanel === 'function') { try { renderXITodayPanel(); } catch (e) {} }
     // Feed real scores into the top news ticker (replaces the stale pre-match line).
     try {
@@ -298,9 +299,10 @@ async function loadLiveStats() {
       // If a pick/swap modal is open, refresh it so form chips appear even when
       // it was opened before this fetch resolved (scroll position preserved).
       if (typeof rerenderOpenPickModal === 'function') { try { rerenderOpenPickModal(); } catch (e) {} }
-      // YOUR XI TODAY — alert on a drafted player's new real goal, then repaint
-      // the matchday "your XI" panel with fresh goals/assists.
+      // YOUR XI TODAY — alert on a drafted player's new real goal + on a nation
+      // getting knocked out (SURVIVOR), then repaint the panel with fresh data.
       if (typeof checkXIGoalAlerts === 'function') { try { checkXIGoalAlerts(); } catch (e) {} }
+      if (typeof checkXIElimination === 'function') { try { checkXIElimination(); } catch (e) {} }
       if (typeof renderXITodayPanel === 'function') { try { renderXITodayPanel(); } catch (e) {} }
     }
   } catch (e) { /* silent */ }
