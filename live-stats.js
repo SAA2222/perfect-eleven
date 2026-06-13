@@ -294,6 +294,9 @@ async function loadLiveStats() {
       if (typeof state !== 'undefined' && state.roster && typeof fillSlot === 'function') {
         Object.keys(state.roster).forEach(k => { try { fillSlot(k); } catch (e) {} });
       }
+      // If a pick/swap modal is open, refresh it so form chips appear even when
+      // it was opened before this fetch resolved (scroll position preserved).
+      if (typeof rerenderOpenPickModal === 'function') { try { rerenderOpenPickModal(); } catch (e) {} }
     }
   } catch (e) { /* silent */ }
   // Goals land mid-match now — keep long-lived tabs fresh (awards on the

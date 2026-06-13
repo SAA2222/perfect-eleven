@@ -769,6 +769,24 @@ function canPlayerFit(player) {
 // ============================================================
 // PICK MODAL
 // ============================================================
+// Keep an OPEN pick/swap modal in sync when live data lands (form ▲/▼ chips,
+// ⚽/🎯 badges). The modal renders ONCE on open — without this, a modal opened
+// in the first second (before /api/live?view=stats resolves) would never show
+// form. Scroll position is preserved so a refresh never yanks the list.
+function rerenderOpenPickModal() {
+  const modal = document.getElementById('pickModal');
+  if (!modal || modal.hidden) return;
+  const scroller = modal.querySelector('.modal__panel');   // the actual scroll container
+  const scroll = scroller ? scroller.scrollTop : 0;
+  try {
+    if (state.mode === 'tactical') { if (state.currentSlot != null) openTacticalPickModal(); }
+    else if (state.pickSwapMode) rerenderPickModalForSwapIn();
+    else if (state.currentNation) openPickModal();
+  } catch (e) { /* leave the modal as-is on any error */ }
+  const scroller2 = modal.querySelector('.modal__panel');
+  if (scroller2) scroller2.scrollTop = scroll;
+}
+
 function openPickModal() {
   if (state.mode === 'tactical') return openTacticalPickModal();
   const n = state.currentNation;
