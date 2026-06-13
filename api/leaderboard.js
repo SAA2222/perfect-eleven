@@ -30,8 +30,21 @@ function makeKv() {
 const kv = makeKv();
 
 const KEY = 'pe:lineups:v1';
-const MAX_STORED = 200;
-const TOP_RETURN = 100;
+const MAX_STORED = 600;       // retain more history so low-volume modes don't age out
+const TOP_RETURN = 100;       // (legacy global cap — superseded by PER_MODE_RETURN below)
+const PER_MODE_RETURN = 50;   // top-N per mode so EVERY mode tab is populated regardless
+                              // of the global OVR race (TOP50 lineups league-mix → low
+                              // chem → low OVR, and were falling below the global cutoff)
+// Mirror of the client normalizeMode so per-mode bucketing agrees with the tabs.
+function normMode(m) {
+  const v = String(m || 'CLASSIC').toUpperCase().replace(/\s+/g, '');
+  if (v === 'TOP50' || v === 'TOP-50') return 'TOP50';
+  if (v === 'LEGEND' || v === 'LEGENDS') return 'LEGENDS';
+  if (v === 'TACTICAL') return 'TACTICAL';
+  if (v === 'DAILY') return 'DAILY';
+  if (v === 'CLASSIC') return 'CLASSIC';
+  return v;
+}
 const RL_WINDOW_SEC = 60;
 const RL_MAX_PER_WINDOW = 3;
 
@@ -109,10 +122,22 @@ export default async function handler(req, res) {
           try { return typeof e === 'string' ? JSON.parse(e) : e; }
           catch { return null; }
         })
-        .filter(Boolean)
-        .sort((a, b) => (b.ovr || 0) - (a.ovr || 0))
-        .slice(0, TOP_RETURN);
-      return res.status(200).json({ entries: parsed });
+        .filter(Boolean);
+      // Top-N PER MODE so every mode tab is populated even when one mode's OVRs
+      // dominate the global ranking (TOP50 = world-best players from many leagues
+      // → low chem → low OVR, was getting buried under high-chem CLASSIC builds).
+      const byMode = {};
+      for (const e of parsed) {
+        const m = normMode(e.mode);
+        (byMode[m] || (byMode[m] = [])).push(e);
+      }
+      const balanced = [];
+      for (const m of Object.keys(byMode)) {
+        byMode[m].sort((a, b) => (b.ovr || 0) - (a.ovr || 0));
+        balanced.push(...byMode[m].slice(0, PER_MODE_RETURN));
+      }
+      balanced.sort((a, b) => (b.ovr || 0) - (a.ovr || 0));
+      return res.status(200).json({ entries: balanced });
     } catch (e) {
       return res.status(500).json({ error: e.message });
     }
