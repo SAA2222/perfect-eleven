@@ -1474,11 +1474,13 @@ function updateChemistryViz() {
 // ============================================================
 // PROGRESS / RATINGS — applies -1 OOP penalty per out-of-position player
 // ============================================================
-// LIVE FORM — real World Cup match ratings (avg, ≥20-min games) move a player's
-// effective rating by a bounded delta (server-computed: +3 hot … −2 cold).
-// OFF in seeded modes: the Daily and H2H stay equal-terms on base ratings.
+// LIVE FORM — real World Cup match ratings (avg, ≥20-min games) + goals move a
+// player's effective rating by a bounded delta (server-computed: +5 hot … −5 cold).
+// Applies in ALL modes incl. Daily/H2H (user: real form should make players rise
+// and fall in value everywhere) — the daily challenge stays the SAME 11 spins for
+// everyone (form changes ratings, not which nations spin), so it's still fair: a
+// live contest where picking the in-form player matters.
 function liveFormDelta(p) {
-  if (state.daily || state.h2h) return 0;
   if (typeof liveStatFor !== 'function') return 0;
   const s = liveStatFor(p);
   return (s && typeof s.f === 'number') ? s.f : 0;
@@ -3278,6 +3280,14 @@ async function submitLineupToLeaderboard() {
     const p = state.roster[i];
     return shortName(p.name);
   }).join(' · ');
+  // Structured XI + the form sum baked in right now → the board can recompute a
+  // LIVE score as these players perform in the real tournament (form moves it).
+  const xi = ordered.map(i => { const p = state.roster[i]; return [p.code, p.name]; });
+  const bfs = ordered.reduce((s, i) => {
+    const p = state.roster[i];
+    const st = (typeof liveStatFor === 'function') ? liveStatFor({ code: p.code, name: p.name }) : null;
+    return s + (st && typeof st.f === 'number' ? st.f : 0);
+  }, 0);
 
   const entry = {
     by: `BUILT BY ${name}`,
@@ -3285,6 +3295,8 @@ async function submitLineupToLeaderboard() {
     chem,
     mode: state.daily ? 'DAILY' : state.mode.toUpperCase().replace('U25', 'U-25'),
     lineup,
+    xi,
+    bfs,
     finish: state.lastFinishTier || (typeof deriveFinishTier === 'function' ? deriveFinishTier(final, chem) : null),
     expert: state.lastResult ? !!state.lastResult.expert : !!state.blind,   // blind draft → 2× score
     user: true,

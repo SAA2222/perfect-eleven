@@ -46,6 +46,21 @@ function sanitize(s, maxLen) {
 
 // Profanity guard for the public "by" field (the only free-text input).
 const PROFANITY_RE = /(nigg|\bfagg|\bfag\b|kike|\bspic\b|chink|\bcoon\b|trann|retard|\bcunt|fuck|\bshit|bitch|whore|\bslut|pussy|asshole|bastard|motherf|\bwank|\bkys\b|\bporn|nazi|dickhead)/i;
+// Structured XI for LIVE scoring: [[code, name], …] ≤ 11. Lets the client
+// recompute each entry's live form delta (real-world goals/ratings) so the
+// board reshuffles through the day. Bounded + sanitized.
+function cleanXI(xi) {
+  if (!Array.isArray(xi)) return null;
+  const out = [];
+  for (const it of xi.slice(0, 11)) {
+    if (!Array.isArray(it)) continue;
+    const code = sanitize(String(it[0] || ''), 4).toUpperCase().replace(/[^A-Z]/g, '');
+    const name = sanitize(String(it[1] || ''), 28);
+    if (code && name) out.push([code, name]);
+  }
+  return out.length ? out : null;
+}
+
 function cleanBy(s) {
   const v = sanitize(s, 48);   // room for "BUILT BY NAME · CITY"
   if (!v) return 'BUILT BY ANONYMOUS · EARTH';
@@ -109,7 +124,7 @@ export default async function handler(req, res) {
       let body = req.body;
       // Some Vercel runtimes don't auto-parse JSON
       if (typeof body === 'string') { try { body = JSON.parse(body); } catch {} }
-      const { by, ovr, chem, mode, lineup, finish, expert } = body || {};
+      const { by, ovr, chem, mode, lineup, finish, expert, xi, bfs } = body || {};
       const FINISH_TIERS = ['CHAMPIONS','RUNNERS_UP','THIRD','FOURTH','QUARTERFINAL','R16','R32','GROUP_OUT'];
 
       const entry = {
@@ -118,6 +133,8 @@ export default async function handler(req, res) {
         chem:   Math.max(0, Math.min(99, parseInt(chem) || 0)),
         mode:   sanitize(mode, 16).toUpperCase() || 'CLASSIC',
         lineup: sanitize(lineup, 320),
+        xi:     cleanXI(xi),                              // structured 11 → live form recompute
+        bfs:    Math.max(-55, Math.min(55, parseInt(bfs) || 0)),  // form sum baked in at submit
         finish: FINISH_TIERS.includes(String(finish)) ? String(finish) : null,
         expert: expert === true || expert === 'true',   // blind/expert draft → 2× leaderboard score
         createdAt: Date.now(),

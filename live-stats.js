@@ -304,6 +304,12 @@ async function loadLiveStats() {
       if (typeof checkXIGoalAlerts === 'function') { try { checkXIGoalAlerts(); } catch (e) {} }
       if (typeof checkXIElimination === 'function') { try { checkXIElimination(); } catch (e) {} }
       if (typeof renderXITodayPanel === 'function') { try { renderXITodayPanel(); } catch (e) {} }
+      // Live leaderboard: form just changed → re-rank + repaint so scores visibly
+      // move through the day (only if the board is already on screen).
+      if (typeof paintLeaderboard === 'function') {
+        const g = document.getElementById('leaderboardGrid');
+        if (g && g.children.length) { try { paintLeaderboard(); } catch (e) {} }
+      }
     }
   } catch (e) { /* silent */ }
   // Goals land mid-match now — keep long-lived tabs fresh (awards on the complete

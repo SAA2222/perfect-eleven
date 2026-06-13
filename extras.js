@@ -158,6 +158,8 @@ async function storeLineup(entry) {
   const result = await submitGlobalLineup({
     by: entry.by, ovr: entry.ovr, chem: entry.chem,
     mode: entry.mode, lineup: entry.lineup,
+    xi: entry.xi, bfs: entry.bfs,           // structured 11 + submit form sum → live scoring
+    finish: entry.finish, expert: entry.expert,
   });
   return result;
 }
@@ -269,8 +271,31 @@ function finishBadge(entry) {
 // Leaderboard score — an Expert (blind) draft earns a points MULTIPLIER (BLIND_MULT,
 // defined in xi-script.js). OVR stays raw; only the ranking points get the bonus.
 const _BLIND_MULT = (typeof BLIND_MULT === 'number') ? BLIND_MULT : 1.25;
+// ===== LIVE SCORING =====================================================
+// An entry's score MOVES through the day as its real players perform. From the
+// structured xi we recompute the squad's current form sum (liveStatFor.f) and
+// slide the score by (now − the form baked in at submit). A hot XI climbs the
+// board, a cold one slides — the scoreboard is alive. Old/demo entries (no xi)
+// stay static.
+function liveFormSum(e) {
+  if (!e || !Array.isArray(e.xi) || typeof liveStatFor !== 'function') return null;
+  let s = 0;
+  for (const pair of e.xi) {
+    const st = liveStatFor({ code: pair[0], name: pair[1] });
+    if (st && typeof st.f === 'number') s += st.f;
+  }
+  return s;
+}
+function liveDeltaFor(e) {
+  const now = liveFormSum(e);
+  if (now == null) return 0;
+  return now - (Number(e.bfs) || 0);
+}
+function liveOvr(e) {
+  return Math.max(0, (Number(e && e.ovr) || 0) + liveDeltaFor(e));
+}
 function lbScore(e) {
-  const ovr = Number(e && e.ovr) || 0;
+  const ovr = liveOvr(e);                          // live, form-adjusted
   return (e && e.expert) ? Math.round(ovr * _BLIND_MULT) : ovr;
 }
 function expertBadge(e) {
@@ -475,7 +500,13 @@ function paintLeaderboard() {
     return;
   }
 
-  const rowHTML = (row, pinned) => `
+  const rowHTML = (row, pinned) => {
+    const lo = liveOvr(row);
+    const ld = liveDeltaFor(row);
+    const liveChip = ld
+      ? `<span class="lb-row__live lb-row__live--${ld > 0 ? 'up' : 'down'}" title="Live form: real-world performances since this XI was posted">🔴 ${ld > 0 ? '+' : ''}${ld}</span>`
+      : '';
+    return `
     <article class="lb-row ${row.user ? 'lb-row--user' : ''}${pinned ? ' lb-row--pinned' : ''}">
       <div class="lb-row__rank">
         <span class="lb-row__rank-num">${String(row.rank).padStart(2, '0')}</span>
@@ -488,10 +519,11 @@ function paintLeaderboard() {
         <span class="lb-badges">${finishBadge(row)}${expertBadge(row)}</span>
       </div>
       <div class="lb-row__ovr">
-        <span class="lb-row__ovr-num" style="color:${ovrColor(row.ovr)}">${row.ovr}</span>
+        <span class="lb-row__ovr-num" style="color:${ovrColor(lo)}">${lo}${liveChip}</span>
         <span class="lb-row__ovr-label">OVR${row.chem ? ' · ' + row.chem + ' CHEM' : ''}</span>
       </div>
     </article>`;
+  };
 
   const pinnedHTML = pinnedUser ? `<div class="lb-pin-sep">⋯ YOUR RANK ⋯</div>` + rowHTML(pinnedUser, true) : '';
   const toggle = (isAll && (hiddenCount > 0 || _lbShowAll))

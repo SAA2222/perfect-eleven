@@ -3666,6 +3666,19 @@ body { padding-bottom: 56px; }
   letter-spacing: 0.14em;
   color: var(--mute);
 }
+/* Live form movement chip next to a board score (real-world performances) */
+.lb-row__live {
+  display: inline-block;
+  vertical-align: top;
+  margin-left: 5px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 800; letter-spacing: 0.02em;
+  line-height: 1.5;
+}
+.lb-row__live--up { color: #0c1410; background: rgba(74,222,128,0.95); }
+.lb-row__live--down { color: #fff; background: rgba(248,113,113,0.95); }
 
 /* ---------- ABOUT ---------- */
 .about {

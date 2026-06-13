@@ -66,30 +66,33 @@ async function getMatches(key) {
 // State and freshness are decoupled: the record lives 24h in KV (so partial
 // sweep progress is never lost to a freshness expiry — that bug cost us a
 // stuck-at-391 loop), and freshness is computed from its timestamp.
-const STATS_V = 7;   // bump to invalidate the cached sweep (v6: unique player keys — shared
-                     // surnames collided: all four KOR "Lee"s merged into one record and the
-                     // last writer DELETED Kang-in Lee's +2 form)
+const STATS_V = 8;   // bump to invalidate the cached sweep (v8: WIDER form range ±5 so
+                     // form moves people up/down the live leaderboard; v6: unique player keys)
 
-// Bounded FORM delta on the game OVR: avg real match rating (0-10) bands,
-// PLUS a goal-contribution kicker so scorers always read GREEN (a 7.1-rated
-// goalscorer in a loss is form, not neutral — user rule). Clamped to ±3.
-// Contribution rate is per RATED match, so one early goal stops carrying a
+// Bounded FORM delta on the game OVR: avg real match rating (0-10) bands, PLUS a
+// goal-contribution kicker so scorers always read GREEN (a 7.1-rated goalscorer
+// in a loss is form, not neutral — user rule). Clamped to ±5 (v8: widened from ±3
+// so standouts visibly carry a team up the LIVE leaderboard, and flops drag it
+// down). Contribution rate is per RATED match, so one early goal stops carrying a
 // striker who goes quiet for the rest of the tournament.
 function formDelta(avg, matches, ga) {
   let d = 0;
   if (matches && avg != null) {
-    if (avg >= 8.5) d = 3;
+    if (avg >= 9.0) d = 4;            // man-of-the-tournament level
+    else if (avg >= 8.5) d = 3;
     else if (avg >= 8.0) d = 2;
     else if (avg >= 7.5) d = 1;
+    else if (avg < 5.0) d = -3;       // a genuine stinker
     else if (avg < 6.0) d = -2;
     else if (avg < 6.5) d = -1;
   }
   // Ratings lag the final whistle — until they land, raw G+A drives the kicker
   // (a scorer flips green at the goal, mid-match).
   const rate = matches ? (ga || 0) / matches : (ga || 0);
-  if (rate >= 1.5) d += 2;
+  if (rate >= 2) d += 3;              // hat-trick hero
+  else if (rate >= 1.5) d += 2;
   else if (rate >= 0.75) d += 1;
-  return Math.max(-3, Math.min(3, d));
+  return Math.max(-5, Math.min(5, d));
 }
 
 // Response payload: only players with something to SHOW (goals/assists/MOTM/form).
