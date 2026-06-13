@@ -418,6 +418,30 @@ function moveHTML(m) {
   return '';
 }
 
+// Yesterday's DAILY champion — a collapsible hero atop the ⭐ TODAY'S DAILY board
+// so today's players see the bar to beat (name · final score · their full XI).
+function yesterdayDailyWinnerHTML() {
+  if (!Array.isArray(_lbRows) || !_lbRows.length) return '';
+  const eDay = (ms) => (typeof easternDayString === 'function')
+    ? easternDayString(new Date(ms)) : new Date(ms).toISOString().slice(0, 10);
+  const yest = eDay(Date.now() - 86400000);
+  const rows = _lbRows.filter(r => normalizeMode(r.mode) === 'DAILY' && eDay(r.createdAt || 0) === yest);
+  if (!rows.length) return '';
+  let win = rows[0];
+  for (const r of rows) if (lbScore(r) > lbScore(win)) win = r;
+  const score = lbScore(win);
+  const who = normalizeBy(win.by).replace(/^BUILT BY\s*/i, '');
+  return `
+    <details class="lb-ywin" open>
+      <summary class="lb-ywin__sum">
+        <span class="lb-ywin__crown">👑 YESTERDAY'S WINNER</span>
+        <span class="lb-ywin__name">${who}</span>
+        <span class="lb-ywin__score" style="color:${ovrColor(score)}">${score}</span>
+      </summary>
+      <p class="lb-ywin__lineup">${win.lineup}</p>
+    </details>`;
+}
+
 // Paints from _lbRows using the active mode filter. Tab clicks call this
 // directly — no network round-trip.
 function paintLeaderboard() {
@@ -530,7 +554,8 @@ function paintLeaderboard() {
     ? `<button class="lb-showall" id="lbShowAll" type="button">${_lbShowAll ? `▲ SHOW TOP ${LB_ALL_CAP}` : `▼ SHOW ALL ${ranked.length}`}</button>`
     : '';
 
-  grid.innerHTML = badge + legend + combined.map(r => rowHTML(r, false)).join('') + pinnedHTML + toggle;
+  const dailyBanner = (_lbFilter === 'DAILY') ? yesterdayDailyWinnerHTML() : '';
+  grid.innerHTML = badge + dailyBanner + legend + combined.map(r => rowHTML(r, false)).join('') + pinnedHTML + toggle;
   const sa = document.getElementById('lbShowAll');
   if (sa) sa.addEventListener('click', () => { _lbShowAll = !_lbShowAll; paintLeaderboard(); });
 }

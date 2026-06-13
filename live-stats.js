@@ -232,6 +232,28 @@ function buildMatchdayBonus(matches) {
     window._matchdayBonus = bonus;
   } catch (e) { /* keep any prior map — spin falls back to base tiers on its own */ }
 }
+// DAILY-spin bonus — same idea but DATE-based (today +3 / yesterday +2), NOT
+// live status. A match's DATE is fixed all day (a 'scheduled'→'completed' flip
+// doesn't change it), so this map is identical for every player on a given ET
+// day → the seeded daily stays "the same 11 for everyone." Yesterday included so
+// just-finished teams keep showing up. (user: daily spins should lean to teams
+// playing today/yesterday.)
+function buildDailyMatchdayBonus() {
+  try {
+    const today = _etDayStr(Date.now());
+    const yest = _etDayStr(Date.now() - 86400000);
+    const bonus = {};
+    const bump = (code, pts) => { if (code && pts) bonus[code] = Math.max(bonus[code] || 0, pts); };
+    for (const m of (window._liveMatchesCache || [])) {
+      const t = m.dt ? Date.parse(m.dt) : NaN;
+      if (isNaN(t)) continue;
+      const d = _etDayStr(t);
+      const pts = d === today ? 3 : (d === yest ? 2 : 0);
+      if (pts) { bump(m.home && m.home.code, pts); bump(m.away && m.away.code, pts); }
+    }
+    window._dailyMatchdayBonus = bonus;
+  } catch (e) { /* leave any prior map */ }
+}
 
 async function refreshLiveMode() {
   try {
@@ -240,6 +262,7 @@ async function refreshLiveMode() {
     if (!data || !data.ok) { const s = document.getElementById('matchdayStrip'); if (s) s.hidden = true; return; }
     window._liveMatchesCache = data.matches;   // lets the stats loader refresh the strip
     buildMatchdayBonus(data.matches);          // tilt the spin wheel toward the live slate
+    buildDailyMatchdayBonus();                 // frozen date-based bonus for the seeded daily
     const anyLive = renderMatchdayStrip(data.matches);
     updateTournamentPhase(data.matches);
     if (typeof checkXIElimination === 'function') { try { checkXIElimination(); } catch (e) {} }

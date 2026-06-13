@@ -209,11 +209,13 @@ let _submittingLineup = false;   // re-entry guard: one post per completed XI
 const BLIND_MULT = 1.25;   // Expert/blind draft → +25% leaderboard points (single source of truth)
 
 function weightedPick(pool) {
-  // Base tier (1=minnow … 6=elite) + LIVE matchday bonus (playing today/just
-  // played/about to play spins more — see buildMatchdayBonus in live-stats.js).
-  // The bonus is SKIPPED in seeded modes (Daily/H2H): those reproduce the same
-  // 11 for everyone from the seed alone, and live fixtures drift through the day.
-  const bonus = (!state.daily && !state.h2h) ? window._matchdayBonus : null;
+  // Base tier (1=minnow … 6=elite) + a matchday bonus on top:
+  //  · CLASSIC etc → window._matchdayBonus (LIVE: today/just-played/about-to-play)
+  //  · DAILY       → window._dailyMatchdayBonus (FROZEN date-based today/yesterday,
+  //                  identical for everyone today → the seeded daily stays "same 11")
+  //  · H2H         → no bonus (pure seed, so you and your challenger replay identical)
+  const bonus = state.daily ? window._dailyMatchdayBonus
+              : (state.h2h ? null : window._matchdayBonus);
   const weights = pool.map(n => (NATION_TIER[n.code] || 2) + (bonus ? (bonus[n.code] || 0) : 0));
   const total = weights.reduce((a, b) => a + b, 0);
   let r = _spinRng() * total;
@@ -255,6 +257,11 @@ function startDailyChallenge() {
   state.h2h = null;                           // Daily and H2H are mutually exclusive
   clearBlindForSeededRun();                   // fair board: no inherited hidden 1.25×
   document.body.classList.remove('is-h2h');
+  // Make sure the frozen date-based daily bonus is ready (today/yesterday teams
+  // spin more) before we seed — best-effort if fixtures have loaded.
+  if (typeof buildDailyMatchdayBonus === 'function' && window._liveMatchesCache && !window._dailyMatchdayBonus) {
+    try { buildDailyMatchdayBonus(); } catch (e) {}
+  }
   _spinRng = mulberry32(fnv1a('PE-DAILY-' + dailyDayString()));
   document.querySelectorAll('.xi-mode').forEach(b => b.classList.toggle('xi-mode--active', b.dataset.mode === 'classic'));
   resetRoster();

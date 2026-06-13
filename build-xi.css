@@ -3680,6 +3680,46 @@ body { padding-bottom: 56px; }
 .lb-row__live--up { color: #0c1410; background: rgba(74,222,128,0.95); }
 .lb-row__live--down { color: #fff; background: rgba(248,113,113,0.95); }
 
+/* Yesterday's DAILY winner — collapsible hero atop the daily board */
+.lb-ywin {
+  margin: 6px 0 14px;
+  border: 1px solid rgba(255,210,74,0.4);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(255,210,74,0.08), rgba(255,210,74,0.02));
+  overflow: hidden;
+}
+.lb-ywin__sum {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+.lb-ywin__sum::-webkit-details-marker { display: none; }
+.lb-ywin__crown {
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 800; letter-spacing: 0.12em;
+  color: #ffd24a;
+  white-space: nowrap;
+}
+.lb-ywin__name {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+  color: var(--bone, #e8e6df);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.lb-ywin__score { font-family: var(--font-display); font-size: 26px; line-height: 0.9; }
+.lb-ywin__lineup {
+  margin: 0; padding: 0 14px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.03em; line-height: 1.6;
+  color: var(--mute-2, #8a96a0);
+  border-top: 1px dashed rgba(255,210,74,0.25);
+  padding-top: 10px;
+}
+
 /* ---------- ABOUT ---------- */
 .about {
   max-width: var(--max);
