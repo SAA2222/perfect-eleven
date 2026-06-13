@@ -851,6 +851,8 @@ body.is-daily .xi-expert { display: none; }
   color: var(--bone);
   letter-spacing: 0.02em;
   margin-top: 4px;
+  white-space: nowrap;   /* nameFit() shrinks long surnames so they stay on one line */
+  max-width: 100%;
 }
 .slot__filled-rating {
   font-family: var(--font-mono);

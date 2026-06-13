@@ -1342,7 +1342,7 @@ function doPickSwap(p, target) {
     el.classList.add('slot--filled');
     el.innerHTML = `
       <img class="slot__filled-flag" src="${flagURL(state.currentNation.iso, 80)}" srcset="${flagURL2x(state.currentNation.iso, 80)} 2x" alt="${state.currentNation.name}" />
-      <span class="slot__filled-name">${shortName(p.name)}</span>
+      <span class="slot__filled-name"${nameFit(p.name)}>${shortName(p.name)}</span>
       <span class="slot__filled-rating">${maskRating(p.rating)}</span>
       <span class="slot__filled-chem" data-slot-chem="${slotIdx}"></span>
     `;
@@ -1607,7 +1607,7 @@ function fillSlot(slotIdx) {
   el.classList.remove('slot--empty-target');
   el.innerHTML = `
     <img class="slot__filled-flag" src="${flagURL(p.iso, 80)}" srcset="${flagURL2x(p.iso, 80)} 2x" alt="${p.nation}" />
-    <span class="slot__filled-name">${shortName(p.name)}</span>
+    <span class="slot__filled-name"${nameFit(p.name)}>${shortName(p.name)}</span>
     <span class="slot__filled-rating">${maskRating(p.rating)}</span>
     <span class="slot__filled-chem" data-slot-chem="${slotIdx}"></span>
     ${(typeof liveChipFor === 'function') ? liveChipFor(p) : ''}
@@ -1624,8 +1624,21 @@ function shortName(name) {
   let idx = parts.length - 1;
   while (idx > 0 && SUFFIX.test(parts[idx])) idx--;
   const last = parts[idx].toUpperCase();
-  if (last.length > 9) return last.slice(0, 9);
+  // Don't chop mid-word ("DONNARUMM", "AUBAMEYAN") — surnames run to ~12 chars.
+  // CSS auto-shrinks the card name so the full last name fits. Only genuinely
+  // huge tokens (14+) get clipped, and with an ellipsis so it reads as cut.
+  if (last.length > 14) return last.slice(0, 13) + '…';
   return last;
+}
+// Inline font-shrink for long surnames so they FIT a card instead of overflowing
+// (em-relative → works on every card size). DONNARUMMA, AUBAMEYANG, LEWANDOWSKI…
+function nameFit(name) {
+  const n = shortName(name).length;
+  if (n >= 13) return ' style="font-size:0.68em;letter-spacing:-0.02em;"';
+  if (n >= 12) return ' style="font-size:0.72em;letter-spacing:-0.02em;"';
+  if (n >= 11) return ' style="font-size:0.78em;letter-spacing:-0.01em;"';
+  if (n >= 10) return ' style="font-size:0.84em;letter-spacing:-0.01em;"';
+  return '';
 }
 
 // ============================================================
@@ -2853,7 +2866,7 @@ function showCompleteModal() {
             ${injuryBadge}
             <span class="xi-final-slot__role">${def.role}</span>
             <img class="xi-final-slot__flag" src="${flagURL(p.iso, 80)}" srcset="${flagURL2x(p.iso, 80)} 2x" alt="${p.nation}" />
-            <span class="xi-final-slot__name">${shortName(p.name)}</span>
+            <span class="xi-final-slot__name"${nameFit(p.name)}>${shortName(p.name)}</span>
             <div class="xi-final-slot__row">
               <span class="xi-final-slot__rating">${p.rating}</span>
               <span class="xi-final-slot__league xi-final-slot__league--${p.league.toLowerCase()}">${p.league}</span>
